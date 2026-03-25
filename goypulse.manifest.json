@@ -2,9 +2,9 @@
   "module": "goypulse.py",
   "version": "9.0.0",
   "module_url": "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/goypulse.py",
-  "sha256": "fba281adbb671b8b58af3468562fbdf49f6a6221da4df610af0d0eb47d837038",
+  "sha256": "649376a0084ebe110428610ec66f88349e7ecf212219a86445b084eb3dd1f6ac",
   "mandatory": false,
   "min_version": "9.0.0",
   "ts": 1741123200,
-  "signature": "fHHRSlT6+0VggHGKEQcBMsk+DaJVCg6wOCEtFL18ytybGOVIv+Dw9c+pzob7MzZuid7Onm/6kIAJ58kC6nqUDA=="
+  "signature": "jBJvC5pT91kBvplbB9qhM1ynL8/iqt3Usl5x2xR3DSz2c/RiEDvCFcp3CKEKFFQLVV67rLHnnXbMAnGvrtG5Bw=="
 }
