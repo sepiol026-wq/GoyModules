@@ -1,10 +1,10 @@
 {
   "module": "goypulse.py",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "module_url": "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/goypulse.py",
-  "sha256": "649376a0084ebe110428610ec66f88349e7ecf212219a86445b084eb3dd1f6ac",
+  "sha256": "c873fee13bf7422e5fd3e9794b2f932bda20696a201c6fe152e71dc14206c28e",
   "mandatory": false,
   "min_version": "9.0.0",
-  "ts": 1741123200,
-  "signature": "jBJvC5pT91kBvplbB9qhM1ynL8/iqt3Usl5x2xR3DSz2c/RiEDvCFcp3CKEKFFQLVV67rLHnnXbMAnGvrtG5Bw=="
+  "ts": 1774450775,
+  "signature": "vChsawYAqUPiN5q0/Ky82JGODH/85rydKffUXiPv9pIidXy/r7V0tKvs9waUU0isOFJ41yx2rpb0JsIVbxkYDA=="
 }

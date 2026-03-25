@@ -1,3 +1,4 @@
+# requires: cryptography
 import asyncio, base64, hashlib, hmac, json, math, os, random, re, sqlite3, time, zlib, threading, urllib.error, urllib.parse, urllib.request
 from collections import Counter, defaultdict, deque
 from dataclasses import dataclass, field
@@ -187,7 +188,7 @@ class GoyPulseMod(loader.Module):
         self._max_backup_chats = 500
         self._max_chat_tokens = 400000
         self._max_markov_edges = 1200000
-        self._module_version = "9.0.0"
+        self._module_version = "9.0.1"
         self._module_file_name = "goypulse.py"
         self._sub_channel = "@goy_ai"
         self._upd_manifest_url = "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/goypulse.manifest.json"
@@ -575,7 +576,11 @@ class GoyPulseMod(loader.Module):
 
     async def _startup_self_check(self):
         try:
-            local_hash = await asyncio.get_event_loop().run_in_executor(None, self._sha256_file, self._module_file_path())
+            fp = self._module_file_path()
+            if not os.path.isfile(fp):
+                self._tamper_mode = False
+                return
+            local_hash = await asyncio.get_event_loop().run_in_executor(None, self._sha256_file, fp)
             verified_hash = str(self.get("gpupd_verified_sha256", "") or "").strip().lower()
             baseline_hash = str(self.get("gp_selfcheck_sha256", "") or "").strip().lower()
             ref_hash = verified_hash or baseline_hash
@@ -592,6 +597,8 @@ class GoyPulseMod(loader.Module):
             self._tamper_mode = False
             self.set("gp_tamper_mode", False)
             self.set("gp_selfcheck_sha256", local_hash)
+        except (FileNotFoundError, OSError):
+            self._tamper_mode = False
         except Exception as e:
             self._tamper_mode = True
             self.set("gp_tamper_mode", True)
