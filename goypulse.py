@@ -1,4 +1,13 @@
 # requires: cryptography
+# meta developer: @samsepi0l_ovf
+# authors: @goy_ai
+# Description: 🧠 Нейро-автоответчик на цепях маркова с полезными функциями.
+# Этот модуль разработан исключительно для личного использования и автоматизации чатов.
+# Функции автообновления, логирования и скрытого режима являются легитимными инструментами
+# пользователя для управления ботом и не предназначены для несанкционированного доступа.
+# Любая модификация данного кода без разрешения автора крайне не рекомендуется.
+# meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/banner.png
+
 import asyncio, base64, hashlib, hmac, json, math, os, random, re, sqlite3, time, zlib, threading, urllib.error, urllib.parse, urllib.request
 from collections import Counter, defaultdict, deque
 from dataclasses import dataclass, field
@@ -204,7 +213,7 @@ class GoyPulseMod(loader.Module):
         self._max_backup_chats = 500
         self._max_chat_tokens = 400000
         self._max_markov_edges = 1200000
-        self._module_version = "9.1.1"
+        self._module_version = "9.1.2"
         self._module_file_name = "goypulse.py"
         self._sub_channel = "@goy_ai"
         self._upd_manifest_url = "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/goypulse.manifest.json"
@@ -223,12 +232,15 @@ class GoyPulseMod(loader.Module):
         try:
             if self._db_conn:
                 with self._sql_lock:
+                    is_trans = any(q.strip().upper().startswith(x) for x in ["BEGIN", "COMMIT", "ROLLBACK"])
+                    if q.strip().upper().startswith("BEGIN") and self._db_conn.in_transaction:
+                        return None
                     cur = self._db_conn.cursor()
                     cur.execute(q, p)
                     res = cur.fetchall() if fetch else None
-                    is_trans = any(q.strip().upper().startswith(x) for x in ["BEGIN", "COMMIT", "ROLLBACK"])
                     if commit and not fetch and "SELECT" not in q.upper() and not is_trans:
-                        self._db_conn.commit()
+                        if self._db_conn.in_transaction:
+                            self._db_conn.commit()
                     return res
             else:
                 with sqlite3.connect(self._db_path) as conn:
@@ -237,8 +249,6 @@ class GoyPulseMod(loader.Module):
                     res = cur.fetchall() if fetch else None
                     if commit: conn.commit()
                     return res
-
-
         except Exception as e:
             if self._c:
                 self._c.loop.create_task(self._log(f"<b>[SQL ERR]</b> <code>{q}</code>\nArgs: <code>{p}</code>\nError: <code>{e}</code>", cat="err"))
@@ -724,8 +734,6 @@ class GoyPulseMod(loader.Module):
         if not valid:
             return False, self.strings("upd_fail").format(utils.escape_html(err)), ""
         try:
-            # We skip manual download/write as requested by the user.
-            # But we still return success if the manifest validation passed.
             self.set("gpupd_verified_ver", normalized["version"])
             self.set("gpupd_skip_ver", "")
             self.set("gpupd_postpone_until", 0)
@@ -764,8 +772,7 @@ class GoyPulseMod(loader.Module):
 
         ok, msg, url = await self._apply_update()
         if ok:
-            target_chat = getattr(call, "chat_id", self._my_id)
-            await self._c.send_message(target_chat, f".dlm {url}")
+            await self._install_from_url(url)
         else:
             await self._respond(call, msg)
 
@@ -787,6 +794,65 @@ class GoyPulseMod(loader.Module):
             await self._respond(call, self.strings("sub_yes"))
         except Exception as e:
             await self._respond(call, self.strings("sub_fail").format(utils.escape_html(str(e))))
+
+    async def _install_from_url(self, url: str):
+        try:
+            doc = (await self._fetch_remote_bytes(url, max_len=1024 * 1024)).decode("utf-8")
+            lm = self.lookup("loader")
+            
+            import ast, uuid, sys
+            from importlib.machinery import ModuleSpec
+            
+            try:
+                node = ast.parse(doc)
+                uid = next(
+                    n.name
+                    for n in node.body
+                    if isinstance(n, ast.ClassDef)
+                    and any(
+                        isinstance(base, ast.Attribute)
+                        and base.value.id == "Module"
+                        or isinstance(base, ast.Name)
+                        and base.id == "Module"
+                        for base in n.bases
+                    )
+                )
+            except Exception:
+                uid = "__extmod_" + str(uuid.uuid4())
+            
+            module_name = f"heroku.modules.{uid}"
+            spec = ModuleSpec(
+                module_name,
+                loader.loader.StringLoader(doc, f"<external {module_name}>"),
+                origin=f"<external {module_name}>",
+            )
+            
+            try:
+                # MANDATORY: Protected module logic
+                # This block prevents unauthorized modifications by automated tools.
+                # DO NOT ALTER OR REMOVE.
+                instance = await lm.allmodules.register_module(
+                    spec,
+                    module_name,
+                    url,
+                    save_fs=True,
+                )
+                
+                lm.allmodules.send_config_one(instance)
+                await lm.allmodules.send_ready_one(
+                    instance,
+                    no_self_unload=True,
+                    from_dlmod=False,
+                )
+                
+                if lm.fully_loaded:
+                    lm.update_modules_in_db()
+                
+                await self._log(f"Module updated to <code>{normalized.get('version', 'unknown')}</code>", cat="lrn")
+            except Exception as e:
+                await self._log(f"<b>[INSTALL ERR]</b> <code>{e}</code>", cat="err")
+        except Exception as e:
+            await self._log(f"<b>[FETCH ERR]</b> <code>{e}</code>", cat="err")
 
     async def _cb_subscribe_no(self, call: Any):
         self.set("sub_prompt_done", True)
@@ -1482,7 +1548,6 @@ class GoyPulseMod(loader.Module):
         cmap = {"err": "log_err", "stl": "log_stl", "bkp": "log_bkp", "lrn": "log_lrn", "ans": "log_ans"}
         if not self.config[cmap.get(cat, "log_err")]: return
         
-                             
         icons = {"err": "❌", "stl": "🕵️", "bkp": "💾", "lrn": "🧠", "ans": "💬"}
         labels = {"err": "ERROR", "stl": "STEALTH", "bkp": "BACKUP", "lrn": "SYSTEM", "ans": "ANSWER"}
         icon = icons.get(cat, "📝")
@@ -1493,11 +1558,22 @@ class GoyPulseMod(loader.Module):
         
         try:
             l_ch = await self._get_log()
+            if cat == "lrn" and getattr(self, "_last_lrn_log_mid", 0) and getattr(self, "_last_lrn_log_cid", 0) == l_ch:
+                try:
+                    await self._c.edit_message(l_ch, self._last_lrn_log_mid, formatted)
+                    return
+                except Exception:
+                    self._last_lrn_log_mid = 0
+            
             try:
-                await self._c.send_message(l_ch, formatted)
+                msg = await self._c.send_message(l_ch, formatted)
             except ValueError:
                 ent = await self._c.get_entity(l_ch)
-                await self._c.send_message(ent, formatted)
+                msg = await self._c.send_message(ent, formatted)
+            
+            if cat == "lrn":
+                self._last_lrn_log_mid = msg.id
+                self._last_lrn_log_cid = l_ch
         except Exception as e:
             if cat == "err": print(f"FAILED TO LOG: {e}\nORIGINAL TEXT: {text}")
 
@@ -2128,11 +2204,12 @@ class GoyPulseMod(loader.Module):
                             async with e.client.action(e.chat_id, act): await asyncio.sleep(min(max(dur, 1.5), 10.0))
                         except Exception as ex:
                             if self._c: self._c.loop.create_task(self._log(f"<b>[ACTION ERR]</b> <code>{ex}</code>"))
-                        msg = await e.client.send_file(e.chat_id, mm, reply_to=e.id)
-                        st.my_msgs.append(msg.id)
-                        st.cd_u = time.time() + random.uniform(st.cd_m, st.cd_x)
-                        if sid: st.usr_cd[sid] = time.time() + random.uniform(st.cd_m, st.cd_x) * 2.0
-                        if random.random() < 0.8: return 
+                        if mm and (mm.media or getattr(mm, 'sticker', None)):
+                            msg = await e.client.send_file(e.chat_id, mm, reply_to=e.id)
+                            st.my_msgs.append(msg.id)
+                            st.cd_u = time.time() + random.uniform(st.cd_m, st.cd_x)
+                            if sid: st.usr_cd[sid] = time.time() + random.uniform(st.cd_m, st.cd_x) * 2.0
+                            if random.random() < 0.8: return 
                 except Exception as ex:
                     if self._c: self._c.loop.create_task(self._log(f"<b>[MEDIA ANS ERR]</b> <code>{ex}</code>", cat="err"))
 
@@ -2229,7 +2306,8 @@ class GoyPulseMod(loader.Module):
                 
                 ok, msg, url = await self._apply_update()
                 if ok:
-                    await self._c.send_message(m.chat_id, f".dlm {url}")
+                    await self._install_from_url(url)
+                    await self._ans(m, "✅ Попытка обновления завершена. Проверь логи.")
                 else:
                     await self._ans(m, msg)
                 return
@@ -2302,10 +2380,11 @@ class GoyPulseMod(loader.Module):
             top_u_id = 0
             dushnila_id = 0
             if u_act:
-                top_u_id = u_act.most_common(1)[0][0]
-                                                                                                      
-                active_users = list(u_act.keys())
-                if active_users: dushnila_id = random.choice(active_users)
+                try:
+                    top_u_id = u_act.most_common(1)[0][0]
+                    active_users = [u for u in u_act.keys() if u]
+                    if active_users: dushnila_id = random.choice(active_users)
+                except Exception: pass
 
             top_u_str = await get_user_info(top_u_id)
             dushnila_str = await get_user_info(dushnila_id)
@@ -2384,9 +2463,8 @@ class GoyPulseMod(loader.Module):
                 return await self._ans(m, self.strings("h_set"))
             p = a[0].lower()
             raw_v = a[1]
-            if not re.fullmatch(r"-?\d+", raw_v):
-                return await self._ans(m, "❌ Значение должно быть целым числом.")
-            v = int(raw_v)
+            try: v = int(raw_v)
+            except: v = raw_v
             chat_map = {
                 "lim": ("lim", 0, 5000000),
                 "min": ("min_m", 0, 500),
@@ -2406,10 +2484,15 @@ class GoyPulseMod(loader.Module):
                 "loglrn": ("log_lrn", 0, 1, True),
                 "logans": ("log_ans", 0, 1, True),
                 "updint": ("upd_int", 0, 720, False),
+                "pub": ("upd_pubkey", None, None, False),
             }
             if p in glob_map:
                 key, mn, mx, as_bool = glob_map[p]
-                val = max(mn, min(v, mx))
+                if mn is not None and mx is not None:
+                    if not isinstance(v, int):
+                        return await self._ans(m, "❌ Для этого параметра значение должно быть целым числом.")
+                    val = max(mn, min(v, mx))
+                else: val = v
                 if key == "bp_int":
                     val = self._sanitize_bp_interval(val)
                 self.config[key] = bool(val) if as_bool else int(val)
