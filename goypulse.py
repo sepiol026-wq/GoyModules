@@ -912,11 +912,21 @@ class GoyPulseMod(loader.Module):
             actual_sha = self._sha256_bytes(doc.encode("utf-8")).lower()
             if expected_sha and not hmac.compare_digest(actual_sha, expected_sha):
                 raise ValueError("sha256 mismatch")
-            lm = self.lookup("loader")
-            
-            import ast, uuid, sys
+            lm = self.lookup("loader") or self.lookup("Loader")
+            if not lm:
+                raise RuntimeError("loader module not found")
+            if not hasattr(lm, "allmodules"):
+                raise RuntimeError("loader allmodules unavailable")
+
+            current_class = self.__class__.__name__
+            current_name = str(getattr(self, "name", "") or "").strip()
+            current_source = str(getattr(self, "__source__", "") or "")
+            previous_sha = self._sha256_bytes(current_source.encode("utf-8")).lower() if current_source else ""
+
+            import ast
+            import uuid
             from importlib.machinery import ModuleSpec
-            
+
             try:
                 node = ast.parse(doc)
                 uid = next(
@@ -925,7 +935,7 @@ class GoyPulseMod(loader.Module):
                     if isinstance(n, ast.ClassDef)
                     and any(
                         isinstance(base, ast.Attribute)
-                        and base.value.id == "Module"
+                        and getattr(base.value, "id", None) == "Module"
                         or isinstance(base, ast.Name)
                         and base.id == "Module"
                         for base in n.bases
@@ -933,44 +943,48 @@ class GoyPulseMod(loader.Module):
                 )
             except Exception:
                 uid = "__extmod_" + str(uuid.uuid4())
-            
+
             module_name = f"heroku.modules.{uid}"
             spec = ModuleSpec(
                 module_name,
-                loader.loader.StringLoader(doc, f"<external {module_name}>"),
+                loader.StringLoader(doc, f"<external {module_name}>"),
                 origin=f"<external {module_name}>",
             )
-            
-            try:
-                # MANDATORY: Protected module logic
-                # This block prevents unauthorized modifications by automated tools.
-                # DO NOT ALTER OR REMOVE.
-                instance = await lm.allmodules.register_module(
-                    spec,
-                    module_name,
-                    url,
-                    save_fs=True,
-                )
-                
-                lm.allmodules.send_config_one(instance)
-                await lm.allmodules.send_ready_one(
-                    instance,
-                    no_self_unload=True,
-                    from_dlmod=False,
-                )
-                
-                if lm.fully_loaded:
-                    lm.update_modules_in_db()
-                
-                self.set("gpupd_last_installed_ver", version or self._module_version)
-                self.set("gpupd_last_installed_ts", int(time.time()))
-                await self._log(
-                    f"Module updated to <code>{utils.escape_html(version or 'unknown')}</code>\n"
-                    f"SHA256: <code>{actual_sha}</code>",
-                    cat="lrn",
-                )
-            except Exception as e:
-                await self._log(f"<b>[INSTALL ERR]</b> <code>{e}</code>", cat="err")
+
+            instance = await lm.allmodules.register_module(
+                spec,
+                module_name,
+                url,
+                save_fs=True,
+            )
+            lm.allmodules.send_config_one(instance)
+            await lm.allmodules.send_ready_one(
+                instance,
+                no_self_unload=True,
+                from_dlmod=False,
+            )
+
+            reloaded = self.lookup(current_class) or (self.lookup(current_name) if current_name else False)
+            if not reloaded:
+                raise RuntimeError("updated module instance not found after register_module")
+
+            loaded_source = str(getattr(reloaded, "__source__", "") or "")
+            loaded_sha = self._sha256_bytes(loaded_source.encode("utf-8")).lower() if loaded_source else ""
+            if loaded_sha and not hmac.compare_digest(loaded_sha, actual_sha):
+                raise RuntimeError("loaded module sha256 mismatch")
+            if previous_sha and hmac.compare_digest(previous_sha, actual_sha) and reloaded is self:
+                raise RuntimeError("loader kept the previous module instance")
+
+            if getattr(lm, "fully_loaded", False) and callable(getattr(lm, "update_modules_in_db", None)):
+                lm.update_modules_in_db()
+
+            self.set("gpupd_last_installed_ver", version or self._module_version)
+            self.set("gpupd_last_installed_ts", int(time.time()))
+            await self._log(
+                f"Module updated to <code>{utils.escape_html(version or 'unknown')}</code>\n"
+                f"SHA256: <code>{actual_sha}</code>",
+                cat="lrn",
+            )
         except Exception as e:
             await self._log(f"<b>[FETCH ERR]</b> <code>{e}</code>", cat="err")
 
