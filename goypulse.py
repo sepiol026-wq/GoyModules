@@ -230,7 +230,7 @@ class GoyPulseMod(loader.Module):
         self._backup_keep_limit = 24
         self._max_chat_tokens = 400000
         self._max_markov_edges = 1200000
-        self._module_version = "9.1.9"
+        self._module_version = "9.2.0"
         self._module_file_name = "goypulse.py"
         self._sub_channel = "@goy_ai"
         self._upd_manifest_url = "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/goypulse.manifest.json"
@@ -1424,19 +1424,23 @@ class GoyPulseMod(loader.Module):
         if not os.path.exists(self._df): return
         try:
             with open(self._df, "r", encoding="utf-8") as f: d = json.load(f)
+            self._sql("BEGIN")
             for cid_s, dat in d.items():
                 cid = int(cid_s)
-                self._sql("INSERT OR REPLACE INTO chats (cid, parsed_cnt, last_mid) VALUES (?, ?, ?)", (cid, dat.get("parsed_cnt", 0), dat.get("last_mid", 0)))
+                self._sql("INSERT OR REPLACE INTO chats (cid, parsed_cnt, last_mid) VALUES (?, ?, ?)", (cid, dat.get("parsed_cnt", 0), dat.get("last_mid", 0)), commit=False)
                 for tk, c in dat.get("tfq", {}).items():
-                    self._sql("INSERT OR REPLACE INTO tokens (cid, tk, cnt) VALUES (?, ?, ?)", (cid, tk, c))
+                    self._sql("INSERT OR REPLACE INTO tokens (cid, tk, cnt) VALUES (?, ?, ?)", (cid, tk, c), commit=False)
                 for k, v in dat.get("mkv", {}).items():
-                    for nxt, c in v.items(): self._sql("INSERT OR REPLACE INTO markov (cid, d, pref, nxt, cnt) VALUES (?, 2, ?, ?, ?)", (cid, k, nxt, c))
+                    for nxt, c in v.items(): self._sql("INSERT OR REPLACE INTO markov (cid, d, pref, nxt, cnt) VALUES (?, 2, ?, ?, ?)", (cid, k, nxt, c), commit=False)
                 for k, v in dat.get("mkv3", {}).items():
-                    for nxt, c in v.items(): self._sql("INSERT OR REPLACE INTO markov (cid, d, pref, nxt, cnt) VALUES (?, 3, ?, ?, ?)", (cid, k, nxt, c))
+                    for nxt, c in v.items(): self._sql("INSERT OR REPLACE INTO markov (cid, d, pref, nxt, cnt) VALUES (?, 3, ?, ?, ?)", (cid, k, nxt, c), commit=False)
                 for k, v in dat.get("mkv4", {}).items():
-                    for nxt, c in v.items(): self._sql("INSERT OR REPLACE INTO markov (cid, d, pref, nxt, cnt) VALUES (?, 4, ?, ?, ?)", (cid, k, nxt, c))
+                    for nxt, c in v.items(): self._sql("INSERT OR REPLACE INTO markov (cid, d, pref, nxt, cnt) VALUES (?, 4, ?, ?, ?)", (cid, k, nxt, c), commit=False)
+            self._sql("COMMIT")
             os.rename(self._df, self._df + ".bak")
         except Exception as e:
+            try: self._sql("ROLLBACK")
+            except Exception: pass
             if self._c: self._c.loop.create_task(self._log(f"<b>[MIGRATE ERR]</b> <code>{e}</code>"))
 
     def _sv_br(self):
