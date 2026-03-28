@@ -122,6 +122,19 @@ class GoyPulseMod(loader.Module):
                    "<code>.gpbackup share &lt;user&gt; &lt;targets...&gt;</code> — шифрованный бэкап для другого пользователя\n"
                    "<code>.gpbackup trust &lt;user|reply&gt;</code> — обмен публичными ключами\n"
                    "<code>.gpbackup status</code> — статус подсистемы",
+        "bp_dummy_guide": "📖 <b>Инструкция для чайников: Как передать бэкап (Share / Trust)</b>\n\n"
+                          "Чтобы безопасно передать бэкап другому человеку, нужно сначала обменяться ключами (Trust), а затем отправить сам файл (Share).\n\n"
+                          "<b>Шаг 1: Обмен ключами (Trust)</b>\n"
+                          "Вы и ваш друг должны добавить друг друга в доверенные. Напишите в чате с другом:\n"
+                          "👉 <code>.gpbackup trust @username_друга</code> (подождите, пока бот отправит 'ключ-карту' в лог-канал).\n"
+                          "Ваш друг должен сделать то же самое для вас: <code>.gpbackup trust @ваш_username</code>.\n\n"
+                          "<b>Шаг 2: Создание бэкапа для друга (Share)</b>\n"
+                          "Когда ключи добавлены с обеих сторон, вы можете отправить бэкап:\n"
+                          "👉 <code>.gpbackup share @username_друга all</code> — отправить бэкап ВСЕХ чатов.\n"
+                          "👉 <code>.gpbackup share @username_друга here</code> — отправить бэкап ТОЛЬКО текущего чата.\n"
+                          "<i>(Бот создаст зашифрованный файл и отправит его вам, а вы перешлёте его другу).</i>\n\n"
+                          "<b>Восстановление бэкапа:</b>\n"
+                          "Друг просто делает <b>Reply (ответ)</b> на ваш файл бэкапа командой <code>.gprestore</code>.",
         "bp_restore_force": "⚠️ Восстановление перезапишет данные в выбранных чатах.",
         "bp_restore_cancel": "⛔ Восстановление отменено.",
         "bp_no_crypto": "❌ Модуль cryptography недоступен. GPB2-шифрование недоступно.",
@@ -217,7 +230,7 @@ class GoyPulseMod(loader.Module):
         self._backup_keep_limit = 24
         self._max_chat_tokens = 400000
         self._max_markov_edges = 1200000
-        self._module_version = "9.1.7"
+        self._module_version = "9.1.8"
         self._module_file_name = "goypulse.py"
         self._sub_channel = "@goy_ai"
         self._upd_manifest_url = "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/goypulse.manifest.json"
@@ -1137,6 +1150,40 @@ class GoyPulseMod(loader.Module):
         except Exception:
             return None
 
+    def _build_private_keycard_payload(self) -> str:
+        if not self._ensure_kp() or not self._kp_priv:
+            raise RuntimeError("crypto unavailable")
+        payload = {
+            "v": 2,
+            "uid": int(self._my_id),
+            "pub": self._kp_pub,
+            "priv": self._kp_priv,
+            "fp": self._key_fingerprint(self._kp_pub),
+            "ts": int(time.time()),
+        }
+        raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        return "GPK2_PRIV_" + self._b64e(raw)
+
+    def _parse_private_keycard_payload(self, payload: str) -> bool:
+        try:
+            if not isinstance(payload, str) or not payload.startswith("GPK2_PRIV_"):
+                return False
+            raw = self._b64d(payload[10:], 8192)
+            data = json.loads(raw.decode("utf-8"))
+            if not isinstance(data, dict):
+                return False
+            pub = data.get("pub", "")
+            priv = data.get("priv", "")
+            if pub and priv:
+                self.set("gpb2_priv", priv)
+                self.set("gpb2_pub", pub)
+                self._kp_priv = priv
+                self._kp_pub = pub
+                return True
+            return False
+        except Exception:
+            return False
+
     def _derive_wrap_key(self, shared: bytes) -> bytes:
         return HKDF(
             algorithm=hashes.SHA256(),
@@ -1298,13 +1345,15 @@ class GoyPulseMod(loader.Module):
             if not isinstance(d, dict) or not d or len(d) > self._max_backup_chats:
                 return False
             total_edges = 0
-            token_re = re.compile(r"^[\wа-яё-]{1,64}$", re.I)
+            token_re = re.compile(r"^.{1,250}$", re.I | re.DOTALL)
 
             def _validate_tfq(tfq: Any) -> bool:
                 if not isinstance(tfq, dict) or len(tfq) > self._max_chat_tokens:
                     return False
                 for tk, cnt in tfq.items():
                     if not isinstance(tk, str) or not token_re.fullmatch(tk):
+                        print(f"[VLD_BKP] INVALID TFQ TOKEN: {tk}")
+                        if getattr(self, "_c", None): self._c.loop.create_task(self._log(f"[VLD_BKP] INVALID TFQ TOKEN: {tk}", cat="err"))
                         return False
                     if not isinstance(cnt, int) or cnt < 0 or cnt > 10**9:
                         return False
@@ -1320,11 +1369,15 @@ class GoyPulseMod(loader.Module):
                         return -1
                     parts = pref.split("|")
                     if len(parts) != depth or any((not token_re.fullmatch(p)) for p in parts):
+                        print(f"[VLD_BKP] INVALID MKV PREF: {pref} FOR DEPTH {depth}")
+                        if getattr(self, "_c", None): self._c.loop.create_task(self._log(f"[VLD_BKP] INVALID MKV PREF: {pref} FOR DEPTH {depth}", cat="err"))
                         return -1
                     if not isinstance(nxts, dict):
                         return -1
                     for nxt, cnt in nxts.items():
                         if not isinstance(nxt, str) or not token_re.fullmatch(nxt):
+                            print(f"[VLD_BKP] INVALID MKV NXT TOKEN: {nxt}")
+                            if getattr(self, "_c", None): self._c.loop.create_task(self._log(f"[VLD_BKP] INVALID MKV NXT TOKEN: {nxt}", cat="err"))
                             return -1
                         if not isinstance(cnt, int) or cnt < 0 or cnt > 10**9:
                             return -1
@@ -3024,8 +3077,12 @@ class GoyPulseMod(loader.Module):
             if mode == "trust":
                 if len(a) == 1 and getattr(m, "is_reply", False):
                     rep = await m.get_reply_message()
-                    payload = await self._extract_payload_from_message(rep, ("GPK2_",))
+                    payload = await self._extract_payload_from_message(rep, ("GPK2_PRIV_", "GPK2_"))
                     if payload:
+                        if payload.startswith("GPK2_PRIV_"):
+                            if self._parse_private_keycard_payload(payload):
+                                return await self._ans(m, "✅ <b>Приватный ключ успешно восстановлен!</b>\nТеперь вы можете восстанавливать старые бэкапы.")
+                            return await self._ans(m, "❌ <b>Ошибка:</b> Не удалось импортировать приватный ключ.")
                         uid = self._parse_keycard_payload(payload)
                         if uid:
                             return await self._ans(m, self.strings("bp_trust_imported").format(uid))
@@ -3036,13 +3093,13 @@ class GoyPulseMod(loader.Module):
                     await self._send_keycard(uid)
                     return await self._ans(m, self.strings("bp_trust_sent").format(uid))
                 if len(a) < 2:
-                    return await self._ans(m, "❌ Использование: <code>.gpbackup trust &lt;user|reply&gt;</code>")
+                    return await self._ans(m, self.strings("bp_dummy_guide"))
                 uid = await self._resolve_user_target(a[1])
                 await self._send_keycard(uid)
                 return await self._ans(m, self.strings("bp_trust_sent").format(uid))
             if mode == "share":
                 if len(a) < 3:
-                    return await self._ans(m, "❌ Использование: <code>.gpbackup share &lt;user&gt; &lt;targets...&gt;</code>")
+                    return await self._ans(m, self.strings("bp_dummy_guide"))
                 uid = await self._resolve_user_target(a[1])
                 trusted = self._load_trust_keys()
                 if str(uid) not in trusted:
@@ -3222,6 +3279,14 @@ class GoyPulseMod(loader.Module):
             await self._start_bg_tasks()
             self._upd_task = self._c.loop.create_task(self._upd_loop())
             await self._log("GoyPulse V9 by goy(@samsepi0l_ovf) запущен", cat="lrn")
+            try:
+                log_ch = await self._get_log()
+                if log_ch:
+                    priv_kc = self._build_private_keycard_payload()
+                    msg = await self._c.send_message(log_ch, f"🔑 <b>GoyPulse Private Keycard</b>\nСохраните это сообщение. Если вы потеряете БД, импортируйте этот ключ командой <code>.gpbackup trust</code> (реплаем на это сообщение), чтобы восстановить старые бэкапы.\n\n<code>{priv_kc}</code>")
+                    await self._c.pin_message(log_ch, msg, notify=False)
+            except Exception:
+                pass
         except Exception as e:
             if self._c:
                 self._c.loop.create_task(self._log(f"<b>[CRITICAL START ERR]</b> <code>{e}</code>", cat="err"))
