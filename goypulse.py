@@ -217,7 +217,7 @@ class GoyPulseMod(loader.Module):
         self._backup_keep_limit = 24
         self._max_chat_tokens = 400000
         self._max_markov_edges = 1200000
-        self._module_version = "9.1.6"
+        self._module_version = "9.1.7"
         self._module_file_name = "goypulse.py"
         self._sub_channel = "@goy_ai"
         self._upd_manifest_url = "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/goypulse.manifest.json"
@@ -1426,9 +1426,9 @@ class GoyPulseMod(loader.Module):
                 st.last_mid = r[12] or 0
                 st.parsed_cnt = r[13] or 0
                 st.w_cnt = r[14] or 0
-                st.cd_u = r[15] or 0.0
-                st.mute_u = r[16] or 0.0
-                st.auto_off_u = r[17] or 0.0
+                st.cd_u = float(r[15] or 0.0)
+                st.mute_u = float(r[16] or 0.0)
+                st.auto_off_u = float(r[17] or 0.0)
                 st.last_usr = r[18] or 0
                 st.last_tone = r[19] or "нейтрал"
                 st.last_t = r[20] or 0.0
@@ -2570,7 +2570,7 @@ class GoyPulseMod(loader.Module):
         now = time.time()
         changed = False
         for cid, st in self._chs.items():
-            if st.on and st.auto_off_u and now >= st.auto_off_u:
+            if st.on and st.auto_off_u and float(now) >= float(st.auto_off_u):
                 st.on = False
                 st.auto_off_u = 0.0
                 changed = True
@@ -2600,7 +2600,7 @@ class GoyPulseMod(loader.Module):
             if getattr(sender, 'bot', False) or getattr(e, 'fwd_from', None): return
             st = self._chs[e.chat_id]
             sid = getattr(e, 'sender_id', None)
-            if not st.on or st.lrn or time.time() < st.mute_u or (sid in st.ign): return
+            if not st.on or st.lrn or time.time() < float(st.mute_u) or (sid in st.ign): return
             t = (e.raw_text or "").strip()
             tk = self._tks(t)
             hm = bool(getattr(e, "media", None))
@@ -2628,7 +2628,7 @@ class GoyPulseMod(loader.Module):
 
             ch = st.my_ch if tme else st.r_ch
             if ch < 100:
-                if (st.cd_m > 0 and time.time() < st.cd_u) or len(st.msgs) < int(st.min_m): return
+                if (float(st.cd_m) > 0 and time.time() < float(st.cd_u)) or len(st.msgs) < int(st.min_m): return
                 if sid and time.time() < st.usr_cd.get(sid, 0): return 
                 if random.randint(1, 100) > int(ch): return
 
@@ -2679,8 +2679,8 @@ class GoyPulseMod(loader.Module):
                         if mm and (mm.media or getattr(mm, 'sticker', None)):
                             msg = await e.client.send_file(e.chat_id, mm, reply_to=e.id)
                             st.my_msgs.append(msg.id)
-                            st.cd_u = time.time() + random.uniform(st.cd_m, st.cd_x)
-                            if sid: st.usr_cd[sid] = time.time() + random.uniform(st.cd_m, st.cd_x) * 2.0
+                            st.cd_u = time.time() + random.uniform(float(st.cd_m), float(st.cd_x))
+                            if sid: st.usr_cd[sid] = time.time() + random.uniform(float(st.cd_m), float(st.cd_x)) * 2.0
                             if random.random() < 0.8: return 
                 except Exception as ex:
                     if self._c: self._c.loop.create_task(self._log(f"<b>[MEDIA ANS ERR]</b> <code>{ex}</code>", cat="err"))
@@ -2707,8 +2707,8 @@ class GoyPulseMod(loader.Module):
                     if self._c: self._c.loop.create_task(self._log(f"<b>[TEXT ANS ERR]</b> <code>{ex}</code>", cat="err"))
 
 
-            st.cd_u = time.time() + random.uniform(st.cd_m, st.cd_x)
-            if sid: st.usr_cd[sid] = time.time() + random.uniform(st.cd_m, st.cd_x) * 2.0
+            st.cd_u = time.time() + random.uniform(float(st.cd_m), float(st.cd_x))
+            if sid: st.usr_cd[sid] = time.time() + random.uniform(float(st.cd_m), float(st.cd_x)) * 2.0
         except Exception as ex:
             if self._c: self._c.loop.create_task(self._log(f"<b>[WATCHER GLOBAL ERR]</b> <code>{ex}</code>"))
     @loader.command(ru_doc="<on/off> | Включить/выключить автоответчик")
