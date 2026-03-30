@@ -3,7 +3,7 @@
 # authors: @goy_ai
 # Description: QwenCLI — продвинутый интерфейс для Qwen CLI с поддержкой AI-анализа и авто-ответов.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/banner.png
-__version__ = (1, 0, 1)
+__version__ = (1, 0, 2)
 
 import asyncio
 import contextlib
@@ -73,6 +73,7 @@ QWEN_STREAM_BUFFER_LIMIT = 120
 QWEN_MAX_HISTORY_MESSAGES = 16
 QWEN_MAX_HISTORY_ENTRY_CHARS = 1200
 QWEN_MAX_PROMPT_TEXT_CHARS = 12000
+QWEN_DEFAULT_MAX_SESSION_TURNS = 12
 
 TEXT_MIME_TYPES = {
     "text/plain",
@@ -1569,8 +1570,10 @@ class QwenCLI(loader.Module):
                             raise RuntimeError(
                                 f"Qwen CLI завис на старте и не выдал вывод за {QWEN_STARTUP_TIMEOUT} сек."
                             )
-                        if now - progress_state["started_at"] >= QWEN_TIMEOUT:
-                            raise asyncio.TimeoutError
+                        if now - progress_state["last_activity_at"] >= QWEN_TIMEOUT:
+                            raise RuntimeError(
+                                f"Qwen CLI не подавал признаков жизни {QWEN_TIMEOUT} сек."
+                            )
                         await asyncio.sleep(1)
                 except QwenRequestInterrupted:
                     await self._terminate_process(proc)
@@ -1578,7 +1581,7 @@ class QwenCLI(loader.Module):
                         stdout_task, stderr_task, return_exceptions=True
                     )
                     raise
-                except (asyncio.TimeoutError, RuntimeError):
+                except RuntimeError as exc:
                     await self._terminate_process(proc)
                     await asyncio.gather(
                         stdout_task, stderr_task, return_exceptions=True
@@ -1587,9 +1590,7 @@ class QwenCLI(loader.Module):
                         raise RuntimeError(
                             f"Qwen CLI завис на старте и не выдал вывод за {QWEN_STARTUP_TIMEOUT} сек."
                         )
-                    raise RuntimeError(
-                        f"Qwen CLI превысил таймаут ({QWEN_TIMEOUT} сек)."
-                    )
+                    raise RuntimeError(str(exc))
                 finally:
                     self._active_processes.pop(request_id, None)
                     session = self._request_sessions.get(chat_id)
@@ -3006,14 +3007,7 @@ class QwenCLI(loader.Module):
                 with contextlib.suppress(Exception):
                     with open(settings_path, "r", encoding="utf-8") as file_obj:
                         settings = json.load(file_obj) or {}
-            if not isinstance(settings, dict):
-                settings = {}
-            security = settings.setdefault("security", {})
-            auth = security.setdefault("auth", {})
-            auth["selectedType"] = self.config["auth_type"]
-            model = settings.setdefault("model", {})
-            model["name"] = (self.config["qwen_model"] or "coder-model").strip()
-            settings["$version"] = settings.get("$version", 3)
+            settings = self._normalize_runtime_settings(settings)
             with open(
                 os.path.join(runtime_qwen, "settings.json"), "w", encoding="utf-8"
             ) as file_obj:
@@ -3042,7 +3036,7 @@ class QwenCLI(loader.Module):
             },
             "model": {
                 "name": (self.config["qwen_model"] or "coder-model").strip(),
-                "maxSessionTurns": 1,
+                "maxSessionTurns": QWEN_DEFAULT_MAX_SESSION_TURNS,
                 "enableOpenAILogging": False,
             },
             "security": {
@@ -3056,6 +3050,20 @@ class QwenCLI(loader.Module):
         ) as file_obj:
             json.dump(settings, file_obj, ensure_ascii=False, indent=2)
         return runtime_home
+
+    def _normalize_runtime_settings(self, settings):
+        if not isinstance(settings, dict):
+            settings = {}
+        security = settings.setdefault("security", {})
+        auth = security.setdefault("auth", {})
+        auth["selectedType"] = self.config["auth_type"]
+        model = settings.setdefault("model", {})
+        model["name"] = (self.config["qwen_model"] or "coder-model").strip()
+        current_turns = model.get("maxSessionTurns")
+        if not isinstance(current_turns, int) or current_turns < 2:
+            model["maxSessionTurns"] = QWEN_DEFAULT_MAX_SESSION_TURNS
+        settings["$version"] = settings.get("$version", 3)
+        return settings
 
     def _persist_qwen_runtime_state(self, runtime_home: str):
         runtime_qwen = os.path.join(runtime_home, ".qwen")
