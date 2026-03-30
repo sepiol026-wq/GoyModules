@@ -3,7 +3,7 @@
 # authors: @goy_ai
 # Description: QwenCLI — продвинутый интерфейс для Qwen CLI с поддержкой AI-анализа и авто-ответов.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/banner.png
-__version__ = (1, 0, 0)
+__version__ = (1, 0, 1)
 
 import asyncio
 import contextlib
@@ -21,6 +21,7 @@ import tarfile
 import tempfile
 import uuid
 import zipfile
+from collections import deque
 from datetime import datetime
 from hashlib import sha256
 from urllib import error as urllib_error
@@ -36,6 +37,11 @@ try:
     from markdown_it import MarkdownIt
 except ImportError:
     MarkdownIt = None
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 from telethon import types as tg_types
 from telethon.errors.rpcerrorlist import (
@@ -62,6 +68,10 @@ DB_PRESETS_KEY = "qwencli_prompt_presets"
 DB_MEMORY_DISABLED_KEY = "qwencli_memory_disabled_chats"
 
 QWEN_TIMEOUT = 300
+QWEN_STREAM_BUFFER_LIMIT = 120
+QWEN_MAX_HISTORY_MESSAGES = 16
+QWEN_MAX_HISTORY_ENTRY_CHARS = 1200
+QWEN_MAX_PROMPT_TEXT_CHARS = 12000
 
 TEXT_MIME_TYPES = {
     "text/plain",
@@ -76,6 +86,10 @@ TEXT_MIME_TYPES = {
     "application/javascript",
     "application/x-sh",
 }
+
+
+class QwenRequestInterrupted(Exception):
+    pass
 
 
 class QwenCLI(loader.Module):
@@ -101,6 +115,7 @@ class QwenCLI(loader.Module):
         "cfg_approval_mode_doc": "Режим подтверждений Qwen CLI.",
         "cfg_max_concurrent_requests_doc": "Максимум одновременно выполняемых Qwen CLI запросов.",
         "cfg_auto_bootstrap_doc": "Автоматически пытаться установить локальные Node.js и Qwen CLI в user-space при отсутствии бинарника.",
+        "cfg_resource_profile_doc": "Профиль расхода ресурсов: off, medium или max.",
         "qwen_not_found": "<tg-emoji emoji-id=5332431395266524007>❗️</tg-emoji> <b>Команда <code>qwen</code> не найдена в системе.</b>\nПроверьте PATH или заполните <code>qwen_path</code> в cfg.",
         "qwen_auth_missing": "<tg-emoji emoji-id=5332431395266524007>❗️</tg-emoji> <b>Qwen CLI не готов к работе.</b>\nНастройте авторизацию.",
         "qwen_oauth_missing": "<tg-emoji emoji-id=5332431395266524007>❗️</tg-emoji> <b>Qwen OAuth не настроен.</b>\nЗапустите <code>.qwauth qwen</code> и подтвердите вход в браузере.",
@@ -138,8 +153,12 @@ class QwenCLI(loader.Module):
         "btn_regenerate": "🔄 Другой ответ",
         "btn_retry_request": "🔄 Повторить запрос",
         "btn_cancel_request": "❌ Отменить запрос",
+        "btn_stop_request": "⛔ Стоп",
         "no_last_request": "Последний запрос не найден для повторной генерации.",
         "request_cancelled": "<tg-emoji emoji-id=5350470691701407492>⛔</tg-emoji>️ <b>Запрос отменен.</b>",
+        "request_patched": "<tg-emoji emoji-id=5875145601682771643>✍️</tg-emoji> <b>Запрос обновлен и перезапущен.</b>",
+        "no_active_request": "<tg-emoji emoji-id=5278753302023004775>ℹ️</tg-emoji> <b>Сейчас нет активного запроса.</b>",
+        "qwpatch_usage": "<b>Использование:</b> <code>.qwpatch &lt;что исправить/добавить&gt;</code>",
         "memory_fully_cleared": "<tg-emoji emoji-id=6007942490076745785>🧹</tg-emoji> <b>Вся память полностью очищена (затронуто {} чатов).</b>",
         "auto_memory_fully_cleared": "<tg-emoji emoji-id=6007942490076745785>🧹</tg-emoji> <b>Вся память авто-ответа очищена (затронуто {} чатов).</b>",
         "no_memory_to_fully_clear": "<tg-emoji emoji-id=5278753302023004775>ℹ️</tg-emoji> <b>Память и так пуста.</b>",
@@ -211,6 +230,9 @@ class QwenCLI(loader.Module):
             "• <code>vision-model</code> — задачи с изображениями\n\n"
             "Если у вас настроен другой runtime-модель-id, его тоже можно указать вручную."
         ),
+        "resource_profile_usage": "<b>Использование:</b> <code>.qwperf off|medium|max</code>",
+        "resource_profile_current": "<b>Профиль ресурсов:</b> <code>{}</code>",
+        "resource_profile_updated": "<b>Профиль ресурсов обновлен:</b> <code>{}</code>",
     }
 
     _PHASE_EMOJI = {
@@ -219,6 +241,36 @@ class QwenCLI(loader.Module):
         "running tool": "⚙️",
         "writing answer": "✍️",
         "completed": "<tg-emoji emoji-id=5330561907671727296>✅</tg-emoji>",
+    }
+
+    _RESOURCE_PROFILES = {
+        "off": {
+            "pre_cleanup": False,
+            "force_lean": False,
+            "heap_mb": None,
+            "minimal_runtime_settings": False,
+            "history_messages": None,
+            "history_entry_chars": None,
+            "prompt_text_chars": None,
+        },
+        "medium": {
+            "pre_cleanup": True,
+            "force_lean": True,
+            "heap_mb": 128,
+            "minimal_runtime_settings": True,
+            "history_messages": 24,
+            "history_entry_chars": 2200,
+            "prompt_text_chars": 22000,
+        },
+        "max": {
+            "pre_cleanup": True,
+            "force_lean": True,
+            "heap_mb": 80,
+            "minimal_runtime_settings": True,
+            "history_messages": QWEN_MAX_HISTORY_MESSAGES,
+            "history_entry_chars": QWEN_MAX_HISTORY_ENTRY_CHARS,
+            "prompt_text_chars": QWEN_MAX_PROMPT_TEXT_CHARS,
+        },
     }
 
     def __init__(self):
@@ -342,6 +394,12 @@ class QwenCLI(loader.Module):
                 validator=loader.validators.Integer(minimum=1, maximum=4),
             ),
             loader.ConfigValue(
+                "resource_profile",
+                "max",
+                self.strings["cfg_resource_profile_doc"],
+                validator=loader.validators.Choice(["off", "medium", "max"]),
+            ),
+            loader.ConfigValue(
                 "auto_bootstrap",
                 True,
                 self.strings["cfg_auto_bootstrap_doc"],
@@ -360,6 +418,7 @@ class QwenCLI(loader.Module):
             int(self.config["max_concurrent_requests"])
         )
         self._active_processes = {}
+        self._request_sessions = {}
         self._chat_running = set()
         self._runtime_limits_cache = {
             "max_concurrent_requests": int(self.config["max_concurrent_requests"])
@@ -395,6 +454,7 @@ class QwenCLI(loader.Module):
     async def on_unload(self):
         procs = list(self._active_processes.values())
         self._active_processes.clear()
+        self._request_sessions.clear()
         self._chat_running.clear()
         for proc in procs:
             with contextlib.suppress(Exception):
@@ -405,7 +465,11 @@ class QwenCLI(loader.Module):
         """[текст или reply] — спросить у Qwen CLI."""
         await self._sync_runtime_config()
         status_msg = await self._create_processing_status(
-            message, self.strings["processing"]
+            message,
+            self.strings["processing"],
+            buttons=self._get_processing_buttons(
+                utils.get_chat_id(message), message.id
+            ),
         )
         payload, warnings = await self._prepare_request_payload(message)
         if warnings and status_msg:
@@ -421,6 +485,69 @@ class QwenCLI(loader.Module):
             )
         await self._send_request(
             message=message, payload=payload, status_msg=status_msg
+        )
+
+    @loader.command()
+    async def qwstop(self, message: Message):
+        """— остановить активный запрос в текущем чате."""
+        await self._sync_runtime_config()
+        chat_id = utils.get_chat_id(message)
+        stopped = await self._interrupt_active_request(chat_id, reason="cancel")
+        if not stopped:
+            return await self._answer_html(message, self.strings["no_active_request"])
+        await self._answer_html(message, self.strings["request_cancelled"])
+
+    @loader.command()
+    async def qwpatch(self, message: Message):
+        """<текст> — остановить активный запрос и перезапустить с правкой."""
+        await self._sync_runtime_config()
+        patch_text = utils.get_args_raw(message).strip()
+        if not patch_text:
+            return await self._answer_html(message, self.strings["qwpatch_usage"])
+
+        chat_id = utils.get_chat_id(message)
+        session = self._request_sessions.get(chat_id)
+        if not session:
+            return await self._answer_html(message, self.strings["no_active_request"])
+
+        patched_payload = self._compose_patch_payload(
+            session.get("payload") or {}, patch_text
+        )
+        await self._interrupt_active_request(chat_id, reason="patch")
+        for _ in range(50):
+            if chat_id not in self._chat_running:
+                break
+            await asyncio.sleep(0.2)
+
+        status_msg = await self._create_processing_status(
+            message,
+            self.strings["request_patched"],
+            buttons=self._get_processing_buttons(chat_id, message.id),
+        )
+        await self._send_request(
+            message=message, payload=patched_payload, status_msg=status_msg
+        )
+
+    @loader.command()
+    async def qwperf(self, message: Message):
+        """[off|medium|max] — профиль расхода ресурсов."""
+        await self._sync_runtime_config()
+        args = utils.get_args_raw(message).strip().lower()
+        if not args:
+            return await self._answer_html(
+                message,
+                self.strings["resource_profile_current"].format(
+                    utils.escape_html(self.config["resource_profile"])
+                ),
+            )
+        if args not in {"off", "medium", "max"}:
+            return await self._answer_html(
+                message, self.strings["resource_profile_usage"]
+            )
+        self.config["resource_profile"] = args
+        await self._answer_html(
+            message,
+            self.strings["resource_profile_updated"].format(utils.escape_html(args)),
         )
 
     @loader.command()
@@ -1100,7 +1227,6 @@ class QwenCLI(loader.Module):
                 current_payload,
                 display_prompt,
             )
-
         if chat_id in self._chat_running:
             if impersonation_mode:
                 return None
@@ -1114,6 +1240,18 @@ class QwenCLI(loader.Module):
             return await self._answer_html(
                 target_entity, self.strings["request_busy_same_chat"]
             )
+
+        self._request_sessions[chat_id] = {
+            "chat_id": chat_id,
+            "base_message_id": base_message_id,
+            "payload": current_payload,
+            "display_prompt": display_prompt,
+            "status_message_id": self._resolve_entity_message_id(status_msg or call),
+            "cancel_requested": False,
+            "interrupt_reason": "",
+            "proc": None,
+            "request_id": None,
+        }
 
         try:
             if impersonation_mode:
@@ -1233,6 +1371,18 @@ class QwenCLI(loader.Module):
                 await self._send_qwen_generated_files(
                     chat_id, generated_files, reply_target_id
                 )
+        except QwenRequestInterrupted:
+            session = self._request_sessions.get(chat_id) or {}
+            reason = session.get("interrupt_reason")
+            if not impersonation_mode and reason == "cancel":
+                target_entity = call or status_msg or msg_obj or message
+                with contextlib.suppress(Exception):
+                    await self._answer_html(
+                        target_entity,
+                        self.strings["request_cancelled"],
+                        reply_markup=None,
+                    )
+            return None if impersonation_mode else ""
         except Exception as e:
             error_text = self._handle_error(e)
             if impersonation_mode:
@@ -1254,6 +1404,10 @@ class QwenCLI(loader.Module):
                     await self._answer_html(
                         target_message, error_text, reply_markup=buttons
                     )
+        finally:
+            session = self._request_sessions.get(chat_id)
+            if session and session.get("base_message_id") == base_message_id:
+                self._request_sessions.pop(chat_id, None)
         return None if impersonation_mode else ""
 
     async def _run_qwen_request_guarded(
@@ -1265,6 +1419,9 @@ class QwenCLI(loader.Module):
         history_override=None,
         status_entity=None,
     ):
+        resource_profile = self._get_resource_profile()
+        if resource_profile.get("pre_cleanup"):
+            await self._kill_zombie_processes()
         if auto and self._request_semaphore.locked():
             raise RuntimeError(self.strings["request_busy_global"])
         if not auto and self._request_semaphore.locked() and status_entity is not None:
@@ -1276,34 +1433,15 @@ class QwenCLI(loader.Module):
         await self._request_semaphore.acquire()
         self._chat_running.add(chat_id)
         try:
-            try:
-                return await self._run_qwen_request(
-                    chat_id=chat_id,
-                    payload=payload,
-                    system_prompt=system_prompt,
-                    auto=auto,
-                    history_override=history_override,
-                    status_entity=status_entity,
-                    lean_mode=False,
-                )
-            except Exception as e:
-                message = str(e)
-                if (
-                    "WebAssembly.instantiate(): Out of memory" in message
-                    or "Cannot allocate Wasm memory" in message
-                ):
-                    await self._ensure_qwen_cli_available(force=True)
-                    self._pin_detected_qwen_path()
-                    return await self._run_qwen_request(
-                        chat_id=chat_id,
-                        payload=payload,
-                        system_prompt=system_prompt,
-                        auto=auto,
-                        history_override=history_override,
-                        status_entity=status_entity,
-                        lean_mode=True,
-                    )
-                raise
+            return await self._run_qwen_request(
+                chat_id=chat_id,
+                payload=payload,
+                system_prompt=system_prompt,
+                auto=auto,
+                history_override=history_override,
+                status_entity=status_entity,
+                lean_mode=bool(resource_profile.get("force_lean")),
+            )
         finally:
             self._chat_running.discard(chat_id)
             self._request_semaphore.release()
@@ -1369,8 +1507,16 @@ class QwenCLI(loader.Module):
             self._active_processes[request_id] = proc
             progress_state = self._make_qwen_progress_state()
             progress_state["model"] = selected_model or "coder-model"
-            stdout_lines = []
-            stderr_lines = []
+            session = self._request_sessions.get(chat_id)
+            progress_state["reply_markup"] = self._get_processing_buttons(
+                chat_id,
+                session.get("base_message_id") if session else None,
+            )
+            stdout_lines = deque(maxlen=QWEN_STREAM_BUFFER_LIMIT)
+            stderr_lines = deque(maxlen=QWEN_STREAM_BUFFER_LIMIT)
+            if session is not None:
+                session["proc"] = proc
+                session["request_id"] = request_id
             stdout_task = asyncio.create_task(
                 self._read_qwen_stdout_stream(
                     proc.stdout,
@@ -1390,7 +1536,16 @@ class QwenCLI(loader.Module):
                 raise RuntimeError(f"Qwen CLI превысил таймаут ({QWEN_TIMEOUT} сек).")
             finally:
                 self._active_processes.pop(request_id, None)
+                session = self._request_sessions.get(chat_id)
+                if session and session.get("request_id") == request_id:
+                    session["proc"] = None
+                    session["request_id"] = None
             await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
+            session = self._request_sessions.get(chat_id)
+            if session and session.get("cancel_requested"):
+                raise QwenRequestInterrupted(
+                    session.get("interrupt_reason") or "cancel"
+                )
             if status_entity and not auto:
                 await self._update_qwen_status_message(
                     status_entity, progress_state, force=True
@@ -1768,16 +1923,27 @@ class QwenCLI(loader.Module):
     ):
         now = asyncio.get_running_loop().time()
         text = self._format_qwen_status(state)
-        if not force and now - state["last_status_at"] < 1.2:
+        if not force and now - state["last_status_at"] < 2.0:
             return
         if not force and text == state["last_status_text"]:
             return
         state["last_status_at"] = now
         state["last_status_text"] = text
         try:
-            await self._edit_html(entity, text, reply_markup=None, link_preview=False)
+            await self._edit_html(
+                entity,
+                text,
+                reply_markup=state.get("reply_markup"),
+                link_preview=False,
+            )
         except Exception:
             pass
+
+    @staticmethod
+    def _append_limited_line(buffer, text: str, limit: int = QWEN_STREAM_BUFFER_LIMIT):
+        buffer.append(text)
+        while len(buffer) > limit:
+            buffer.popleft()
 
     async def _read_qwen_stdout_stream(
         self, stream, stdout_lines: list, state: dict, status_entity=None
@@ -1789,7 +1955,7 @@ class QwenCLI(loader.Module):
             text = line.decode("utf-8", errors="ignore").strip()
             if not text:
                 continue
-            stdout_lines.append(text)
+            self._append_limited_line(stdout_lines, text)
             try:
                 payload = json.loads(text)
             except json.JSONDecodeError:
@@ -1806,7 +1972,7 @@ class QwenCLI(loader.Module):
             text = line.decode("utf-8", errors="ignore").strip()
             if not text:
                 continue
-            stderr_lines.append(text)
+            self._append_limited_line(stderr_lines, text)
             if "error" in text.lower() and not state["final_error"]:
                 state["final_error"] = text[:300]
 
@@ -1851,16 +2017,54 @@ class QwenCLI(loader.Module):
                 parse_mode="html",
             )
 
-    async def _create_processing_status(self, message: Message, text: str):
+    async def _create_processing_status(
+        self, message: Message, text: str, buttons=None
+    ):
         if self.config["interactive_buttons"]:
             with contextlib.suppress(Exception):
-                form = await self.inline.form(text=text, message=message, silent=True)
+                form = await self.inline.form(
+                    text=text, message=message, silent=True, reply_markup=buttons
+                )
                 if form:
                     return form
-        return await self._answer_html(message, text)
+        return await self._answer_html(message, text, reply_markup=buttons)
 
     async def _edit_processing_status(self, entity, text: str):
         await self._edit_html(entity, text, reply_markup=None, link_preview=False)
+
+    def _resolve_entity_message_id(self, entity):
+        if entity is None:
+            return None
+        for attr in ("message_id", "id"):
+            value = getattr(entity, attr, None)
+            if value:
+                return value
+        return None
+
+    def _compose_patch_payload(self, payload: dict, patch_text: str) -> dict:
+        original_text = (payload or {}).get("text") or ""
+        patched_text = (
+            f"{original_text.rstrip()}\n\n"
+            f"[УТОЧНЕНИЕ / ПРАВКА К ТЕКУЩЕМУ ЗАПРОСУ]\n{patch_text.strip()}"
+        ).strip()
+        return {
+            "text": patched_text,
+            "files": list((payload or {}).get("files") or []),
+            "display_prompt": patch_text.strip(),
+        }
+
+    async def _interrupt_active_request(self, chat_id: int, reason: str = "cancel"):
+        session = self._request_sessions.get(chat_id)
+        if not session:
+            return False
+
+        session["cancel_requested"] = True
+        session["interrupt_reason"] = reason
+        proc = session.get("proc")
+        if proc and getattr(proc, "returncode", None) is None:
+            with contextlib.suppress(Exception):
+                await self._terminate_process(proc)
+        return True
 
     async def _prepare_request_payload(self, message: Message, custom_text: str = None):
         warnings = []
@@ -1942,10 +2146,19 @@ class QwenCLI(loader.Module):
                 ].lower() in {"txt", "py", "js", "json", "md", "html", "css", "sh"}:
                     try:
                         data = await self.client.download_media(media_source, bytes)
-                        file_content = data.decode("utf-8")
+                        safe_name = (
+                            re.sub(r"[^a-zA-Z0-9._-]+", "_", filename) or "file.txt"
+                        )
+                        file_specs.append(
+                            {
+                                "name": f"input/{safe_name}",
+                                "data": data,
+                                "type": "text",
+                            }
+                        )
                         prompt_chunks.insert(
                             0,
-                            f"[Содержимое файла '{filename}']:\n```\n{file_content}\n```",
+                            f"[Приложен текстовый файл '{safe_name}'. Изучи файл напрямую через @input/{safe_name}]",
                         )
                     except Exception as e:
                         warnings.append(
@@ -1997,6 +2210,10 @@ class QwenCLI(loader.Module):
             if history_override is None
             else history_override
         )
+        resource_profile = self._get_resource_profile()
+        history_limit = resource_profile.get("history_messages")
+        if history_limit and len(history) > history_limit:
+            history = history[-history_limit:]
         lines = [
             "Ты отвечаешь внутри Telegram-модуля.",
             "Если запрос требует действий в рабочей директории, используй инструменты Qwen CLI и реально выполняй нужные шаги.",
@@ -2012,6 +2229,12 @@ class QwenCLI(loader.Module):
                 role = "ASSISTANT" if entry.get("role") == "assistant" else "USER"
                 content = entry.get("content", "")
                 if content:
+                    entry_limit = resource_profile.get("history_entry_chars")
+                    if entry_limit and len(content) > entry_limit:
+                        content = (
+                            content[:entry_limit]
+                            + "\n...[history truncated for runtime stability]..."
+                        )
                     lines.append(f"{role}: {content}")
         file_specs = payload.get("files") or []
         if file_specs:
@@ -2020,13 +2243,21 @@ class QwenCLI(loader.Module):
                 lines.append(f"@{spec['name']}")
         lines.append("")
         lines.append("ТЕКУЩИЙ ЗАПРОС:")
-        lines.append(
-            self._prepend_now_note(
-                payload.get("text")
-                or "Обработай приложенные файлы и ответь пользователю."
-            )
+        request_text = (
+            payload.get("text") or "Обработай приложенные файлы и ответь пользователю."
         )
+        prompt_limit = resource_profile.get("prompt_text_chars")
+        if prompt_limit and len(request_text) > prompt_limit:
+            request_text = (
+                request_text[:prompt_limit]
+                + "\n...[request truncated for runtime stability]..."
+            )
+        lines.append(self._prepend_now_note(request_text))
         return "\n".join(lines), file_specs
+
+    def _get_resource_profile(self):
+        name = (self.config["resource_profile"] or "max").strip().lower()
+        return self._RESOURCE_PROFILES.get(name, self._RESOURCE_PROFILES["max"])
 
     def _get_proxy(self):
         proxy = self.config["proxy"].strip()
@@ -2339,6 +2570,8 @@ class QwenCLI(loader.Module):
 
     def _build_subprocess_env(self):
         env = os.environ.copy()
+        resource_profile = self._get_resource_profile()
+        heap_mb = resource_profile.get("heap_mb")
         proxy = self._get_proxy()
         if proxy:
             for key in [
@@ -2354,29 +2587,220 @@ class QwenCLI(loader.Module):
             os.path.dirname(self._get_local_node_binary()),
             os.path.dirname(self._get_local_qwen_binary()),
         ]
-        
+
         if os.name != "nt":
             wrapper_dir = os.path.join(self._get_bootstrap_base_dir(), "wrapper")
             os.makedirs(wrapper_dir, exist_ok=True)
             wrapper_path = os.path.join(wrapper_dir, "node")
-            if not os.path.isfile(wrapper_path):
-                with open(wrapper_path, "w") as f:
-                    f.write(f'#!/bin/bash\nexec {self._get_local_node_binary()} --disable-wasm-trap-handler "$@"\n')
-                os.chmod(wrapper_path, 0o755)
+            heap_arg = f"--max-old-space-size={heap_mb} " if heap_mb else ""
+            with open(wrapper_path, "w") as f:
+                f.write(
+                    "#!/bin/bash\n"
+                    f"exec {self._get_local_node_binary()} "
+                    "--disable-wasm-trap-handler "
+                    f"{heap_arg}"
+                    '"$@"\n'
+                )
+            os.chmod(wrapper_path, 0o755)
             local_paths.insert(0, wrapper_dir)
 
         env["PATH"] = os.pathsep.join(
             [part for part in local_paths + [env.get("PATH", "")] if part]
         )
         node_options = env.get("NODE_OPTIONS", "").strip()
-        heap_flag = "--max-old-space-size=128"
-        if heap_flag not in node_options:
-            node_options = (node_options + " " + heap_flag).strip()
+        node_options = re.sub(
+            r"--(?:max-old-space-size|max-semi-space-size)=\d+",
+            "",
+            node_options,
+        ).strip()
+        for flag in ("--gc-interval=100", "--optimize-for-size"):
+            node_options = node_options.replace(flag, "").strip()
+        if heap_mb:
+            node_options = " ".join(
+                part
+                for part in [node_options, f"--max-old-space-size={heap_mb}"]
+                if part
+            ).strip()
         env["NODE_OPTIONS"] = node_options
+        if resource_profile.get("minimal_runtime_settings"):
+            env["UV_THREADPOOL_SIZE"] = "1"
+            env["NODE_DISABLE_COMPILE_CACHE"] = "1"
+            if os.name != "nt":
+                env["MALLOC_ARENA_MAX"] = "2"
+        else:
+            env.pop("UV_THREADPOOL_SIZE", None)
+            env.pop("NODE_DISABLE_COMPILE_CACHE", None)
+            env.pop("MALLOC_ARENA_MAX", None)
         env["CI"] = "1"
         env["NO_COLOR"] = "1"
         env["FORCE_COLOR"] = "0"
         return env
+
+    def _is_qwen_related_process(
+        self, name: str = "", exe: str = "", cmdline=None, cwd: str = ""
+    ) -> bool:
+        cmdline = cmdline or []
+        parts = [name or "", exe or "", cwd or ""]
+        parts.extend(str(item) for item in cmdline if item)
+        haystack = " ".join(parts).lower()
+        if not haystack:
+            return False
+
+        bootstrap_base = os.path.abspath(self._get_bootstrap_base_dir()).lower()
+        local_node = os.path.abspath(self._get_local_node_binary()).lower()
+        local_qwen = os.path.abspath(self._get_local_qwen_binary()).lower()
+        qwen_binary = self._get_qwen_binary()
+        qwen_binary = os.path.abspath(qwen_binary).lower() if qwen_binary else ""
+        process_markers = ("node", "qwen", "npm", "npx")
+        qwen_markers = [
+            "qwencli_",
+            "/runtime-home/.qwen",
+            "\\runtime-home\\.qwen",
+            bootstrap_base,
+            local_node,
+            local_qwen,
+        ]
+        if qwen_binary:
+            qwen_markers.append(qwen_binary)
+
+        return any(marker in haystack for marker in process_markers) and any(
+            marker and marker in haystack for marker in qwen_markers
+        )
+
+    async def _kill_process_tree_by_pid(self, pid: int):
+        if not pid or pid <= 0:
+            return
+
+        if psutil:
+            with contextlib.suppress(Exception):
+                proc = psutil.Process(pid)
+                children = proc.children(recursive=True)
+                for child in reversed(children):
+                    with contextlib.suppress(Exception):
+                        child.terminate()
+                with contextlib.suppress(Exception):
+                    proc.terminate()
+                gone, alive = psutil.wait_procs(children + [proc], timeout=3)
+                for survivor in alive:
+                    with contextlib.suppress(Exception):
+                        survivor.kill()
+                return
+
+        if os.name != "nt":
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(os.getpgid(pid), signal.SIGTERM)
+            await asyncio.sleep(1)
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(os.getpgid(pid), signal.SIGKILL)
+            return
+
+        for force in (False, True):
+            args = ["taskkill", "/PID", str(pid), "/T"]
+            if force:
+                args.append("/F")
+            with contextlib.suppress(Exception):
+                proc = await asyncio.create_subprocess_exec(
+                    *args,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await proc.communicate()
+
+    async def _list_child_processes_fallback(self):
+        if os.name == "nt":
+            return []
+
+        result = []
+        with contextlib.suppress(Exception):
+            proc = await asyncio.create_subprocess_exec(
+                "ps",
+                "-eo",
+                "pid=,ppid=,comm=,args=",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            stdout, _ = await proc.communicate()
+            if proc.returncode != 0:
+                return []
+
+            records = {}
+            for raw_line in stdout.decode("utf-8", "ignore").splitlines():
+                line = raw_line.strip()
+                if not line:
+                    continue
+                parts = line.split(None, 3)
+                if len(parts) < 3:
+                    continue
+                pid = int(parts[0])
+                ppid = int(parts[1])
+                name = parts[2]
+                args = parts[3] if len(parts) > 3 else ""
+                records[pid] = {
+                    "pid": pid,
+                    "ppid": ppid,
+                    "name": name,
+                    "exe": "",
+                    "cmdline": args.split(),
+                    "cwd": "",
+                }
+
+            descendants = set()
+            queue = [os.getpid()]
+            while queue:
+                parent_pid = queue.pop()
+                for info in records.values():
+                    if info["ppid"] == parent_pid and info["pid"] not in descendants:
+                        descendants.add(info["pid"])
+                        queue.append(info["pid"])
+
+            result = [records[pid] for pid in descendants if pid in records]
+
+        return result
+
+    async def _kill_zombie_processes(self):
+        active_pids = {
+            proc.pid
+            for proc in self._active_processes.values()
+            if getattr(proc, "pid", None) and proc.returncode is None
+        }
+        stale_pids = set()
+
+        if psutil:
+            with contextlib.suppress(Exception):
+                current = psutil.Process(os.getpid())
+                for child in current.children(recursive=True):
+                    pid = child.pid
+                    if pid in active_pids:
+                        continue
+                    with contextlib.suppress(Exception):
+                        info = child.as_dict(attrs=["name", "exe", "cmdline", "cwd"])
+                        if self._is_qwen_related_process(
+                            name=info.get("name") or "",
+                            exe=info.get("exe") or "",
+                            cmdline=info.get("cmdline") or [],
+                            cwd=info.get("cwd") or "",
+                        ):
+                            stale_pids.add(pid)
+        else:
+            for info in await self._list_child_processes_fallback():
+                pid = info.get("pid")
+                if pid in active_pids:
+                    continue
+                if self._is_qwen_related_process(
+                    name=info.get("name") or "",
+                    exe=info.get("exe") or "",
+                    cmdline=info.get("cmdline") or [],
+                    cwd=info.get("cwd") or "",
+                ):
+                    stale_pids.add(pid)
+
+        if not stale_pids:
+            return
+
+        logger.warning("Cleaning up stale Qwen/Node processes: %s", sorted(stale_pids))
+        for pid in sorted(stale_pids):
+            with contextlib.suppress(Exception):
+                await self._kill_process_tree_by_pid(pid)
 
     async def _terminate_process(self, proc):
         if proc.returncode is not None:
@@ -2484,20 +2908,59 @@ class QwenCLI(loader.Module):
             if os.path.exists(src):
                 with open(src, "rb") as src_f, open(dst, "wb") as dst_f:
                     dst_f.write(src_f.read())
-        settings = {}
-        settings_path = os.path.join(source_qwen, "settings.json")
-        if os.path.exists(settings_path):
-            with contextlib.suppress(Exception):
-                with open(settings_path, "r", encoding="utf-8") as file_obj:
-                    settings = json.load(file_obj) or {}
-        if not isinstance(settings, dict):
+        resource_profile = self._get_resource_profile()
+        if not resource_profile.get("minimal_runtime_settings"):
             settings = {}
-        security = settings.setdefault("security", {})
-        auth = security.setdefault("auth", {})
-        auth["selectedType"] = self.config["auth_type"]
-        model = settings.setdefault("model", {})
-        model["name"] = (self.config["qwen_model"] or "coder-model").strip()
-        settings["$version"] = settings.get("$version", 3)
+            settings_path = os.path.join(source_qwen, "settings.json")
+            if os.path.exists(settings_path):
+                with contextlib.suppress(Exception):
+                    with open(settings_path, "r", encoding="utf-8") as file_obj:
+                        settings = json.load(file_obj) or {}
+            if not isinstance(settings, dict):
+                settings = {}
+            security = settings.setdefault("security", {})
+            auth = security.setdefault("auth", {})
+            auth["selectedType"] = self.config["auth_type"]
+            model = settings.setdefault("model", {})
+            model["name"] = (self.config["qwen_model"] or "coder-model").strip()
+            settings["$version"] = settings.get("$version", 3)
+            with open(
+                os.path.join(runtime_qwen, "settings.json"), "w", encoding="utf-8"
+            ) as file_obj:
+                json.dump(settings, file_obj, ensure_ascii=False, indent=2)
+            return runtime_home
+        settings = {
+            "$version": 3,
+            "general": {
+                "enableAutoUpdate": False,
+                "checkpointing": {"enabled": False},
+            },
+            "privacy": {
+                "usageStatisticsEnabled": False,
+            },
+            "telemetry": {
+                "enabled": False,
+                "logPrompts": False,
+            },
+            "context": {
+                "fileName": [],
+                "includeDirectories": [],
+                "loadFromIncludeDirectories": False,
+                "fileFiltering": {
+                    "respectGitIgnore": True,
+                },
+            },
+            "model": {
+                "name": (self.config["qwen_model"] or "coder-model").strip(),
+                "maxSessionTurns": 1,
+                "enableOpenAILogging": False,
+            },
+            "security": {
+                "auth": {
+                    "selectedType": self.config["auth_type"],
+                }
+            },
+        }
         with open(
             os.path.join(runtime_qwen, "settings.json"), "w", encoding="utf-8"
         ) as file_obj:
@@ -2878,6 +3341,20 @@ class QwenCLI(loader.Module):
             ]
         ]
 
+    def _get_processing_buttons(self, chat_id, base_message_id):
+        if base_message_id is None:
+            return None
+        return [
+            [
+                {
+                    "text": self.strings["btn_stop_request"],
+                    "callback": self._stop_request_callback,
+                    "args": (base_message_id, chat_id),
+                    "icon_custom_emoji_id": "5350470691701407492",
+                }
+            ]
+        ]
+
     def _get_error_buttons(self, chat_id, base_message_id):
         return [
             [
@@ -2909,7 +3386,19 @@ class QwenCLI(loader.Module):
             mid, payload, regeneration=True, call=call, chat_id_override=cid
         )
 
+    async def _stop_request_callback(self, call: InlineCall, mid, cid):
+        stopped = await self._interrupt_active_request(cid, reason="cancel")
+        if not stopped:
+            return await call.answer(
+                re.sub(r"<.*?>", "", self.strings["no_active_request"]),
+                show_alert=True,
+            )
+        await self._edit_html(
+            call, self.strings["request_cancelled"], reply_markup=None
+        )
+
     async def _cancel_request_callback(self, call: InlineCall, mid, cid):
+        await self._interrupt_active_request(cid, reason="cancel")
         self.last_requests.pop(f"{cid}:{mid}", None)
         await self._edit_html(
             call, self.strings["request_cancelled"], reply_markup=None
