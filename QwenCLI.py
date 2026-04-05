@@ -1530,6 +1530,20 @@ class QwenCLI(loader.Module):
             result_text = ""
             generated_files = []
             original_task_text = current_payload.get("text") or ""
+            if (
+                not impersonation_mode
+                and not regeneration
+                and self.config["allow_telegram_tools"]
+            ):
+                fast_track_text = await self._try_auto_action(chat_id, original_task_text)
+                if fast_track_text:
+                    target_entity = call or status_msg or msg_obj or message
+                    await self._answer_html(
+                        target_entity,
+                        fast_track_text,
+                        reply_markup=None,
+                    )
+                    return ""
             max_tool_turns = 5
             agent_started_at = asyncio.get_running_loop().time()
             agent_tool_step = 0
@@ -1707,6 +1721,101 @@ class QwenCLI(loader.Module):
                             f"Не удалось выполнить {action_done}. "
                             f"Точная ошибка: {forced_json.get('error') or 'unknown error'}"
                         )
+            if self.config["allow_telegram_tools"] and not impersonation_mode:
+                lowered_task = (original_task_text or "").lower()
+                has_tool_markup = bool(
+                    re.search(
+                        r"<telegram_tool>.*?</telegram_tool>",
+                        raw_result_text or "",
+                        flags=re.IGNORECASE | re.DOTALL,
+                    )
+                )
+                looks_like_raw_dump = bool(
+                    re.search(r"(id\s*:|участник|participants?)", result_text or "", re.IGNORECASE)
+                )
+                has_analysis = bool(
+                    re.search(
+                        r"(считаю|вывод|итог|похож|бот|админ|admin|likely|вероят)",
+                        (result_text or "").lower(),
+                    )
+                )
+                if (
+                    looks_like_raw_dump
+                    and not has_analysis
+                    and ("кто бот" in lowered_task or "похож на бота" in lowered_task)
+                ):
+                    agent_extra = await self._run_agent_agent(
+                        "bot_finder", {"text": result_text}
+                    )
+                    result_text = f"{result_text}\n\n{agent_extra}".strip()
+                if looks_like_raw_dump and not has_analysis and "кто админ" in lowered_task:
+                    agent_extra = await self._run_agent_agent(
+                        "admin_finder", {"text": result_text}
+                    )
+                    result_text = f"{result_text}\n\n{agent_extra}".strip()
+
+                wants_like = bool(
+                    re.search(r"(поставь.*лайк|реакц|лайк на последнее)", lowered_task)
+                )
+                wants_send = bool(
+                    re.search(r"(отправь сообщение|напиши последнему|сообщение последнему)", lowered_task)
+                )
+                if wants_like and not has_tool_markup:
+                    auto_tool = {
+                        "action": "send_reaction_last",
+                        "target_chat": chat_id,
+                        "emoji": "👍",
+                    }
+                    auto_result_raw = await self._execute_telegram_tool(
+                        chat_id, json.dumps(auto_tool, ensure_ascii=False)
+                    )
+                    with contextlib.suppress(Exception):
+                        auto_result = json.loads(auto_result_raw)
+                        if auto_result.get("status") == "success":
+                            detail = auto_result.get("details") or {}
+                            report = (
+                                "⚙️ Auto-completion: реакция поставлена автоматически "
+                                f"(msg_id={detail.get('message_id')}, emoji={detail.get('emoji')})."
+                            )
+                            result_text = f"{result_text}\n\n{report}".strip()
+                if wants_send and not has_tool_markup:
+                    outbound_text = "Привет! Это авто-ответ по вашему запросу."
+                    custom_msg = re.search(
+                        r"(?:отправь сообщение|напиши последнему)\s*[:\-]?\s*[\"«](.+?)[\"»]",
+                        original_task_text or "",
+                        flags=re.IGNORECASE | re.DOTALL,
+                    )
+                    if custom_msg:
+                        outbound_text = custom_msg.group(1).strip() or outbound_text
+                    target_user_id_match = re.search(
+                        r"ID\s*:\s*(\d{5,})",
+                        raw_result_text or "",
+                        flags=re.IGNORECASE,
+                    )
+                    auto_tool = {
+                        "action": "send_message_last",
+                        "target_chat": chat_id,
+                        "text": outbound_text,
+                    }
+                    if target_user_id_match:
+                        auto_tool = {
+                            "action": "send_message",
+                            "target_chat": int(target_user_id_match.group(1)),
+                            "text": outbound_text,
+                        }
+                    auto_result_raw = await self._execute_telegram_tool(
+                        chat_id, json.dumps(auto_tool, ensure_ascii=False)
+                    )
+                    with contextlib.suppress(Exception):
+                        auto_result = json.loads(auto_result_raw)
+                        if auto_result.get("status") == "success":
+                            detail = auto_result.get("details") or {}
+                            report = (
+                                "⚙️ Auto-completion: сообщение отправлено автоматически "
+                                f"(target={detail.get('target_user') or detail.get('target_chat')}, "
+                                f"message_id={detail.get('message_id')})."
+                            )
+                            result_text = f"{result_text}\n\n{report}".strip()
             result_text = re.sub(
                 r"<telegram_tool>.*?</telegram_tool>",
                 "",
@@ -2728,6 +2837,73 @@ class QwenCLI(loader.Module):
             return None
         return payload
 
+    async def _try_auto_action(self, chat_id: int, user_text: str) -> str | None:
+        text = (user_text or "").strip().lower()
+        if not text:
+            return None
+        try:
+            if (
+                "поставь реакцию на прошлое" in text
+                or "лайк на последнее" in text
+                or "реакцию на последнее" in text
+            ):
+                entity = await self.client.get_entity(chat_id)
+                messages = await self.client.get_messages(entity, limit=1)
+                if not messages:
+                    return "⚠️ В чате нет сообщений для реакции."
+                last_msg = messages[0]
+                await self.client(
+                    SendReactionRequest(
+                        peer=entity,
+                        msg_id=last_msg.id,
+                        reaction=[ReactionEmoji(emoticon="👍")],
+                    )
+                )
+                return "✨ Реакция поставлена на последнее сообщение."
+            if "напиши последнему" in text:
+                entity = await self.client.get_entity(chat_id)
+                messages = await self.client.get_messages(entity, limit=1)
+                if not messages:
+                    return "⚠️ В чате нет сообщений для отправки в ЛС."
+                last_msg = messages[0]
+                sender = await last_msg.get_sender()
+                if not sender:
+                    return "⚠️ Не удалось определить автора последнего сообщения."
+                await self.client.send_message(
+                    sender,
+                    "Привет! Пишу по запросу из последнего чата.",
+                )
+                return "✨ Сообщение последнему отправлено в ЛС."
+        except Exception as e:
+            return f"⚠️ Авто-действие не выполнено: {utils.escape_html(str(e))}"
+        return None
+
+    async def _run_agent_agent(self, agent_key: str, data: dict) -> str:
+        source_text = str((data or {}).get("text") or "")
+        lines = [line.strip() for line in source_text.splitlines() if line.strip()]
+        if agent_key == "bot_finder":
+            bot_lines = []
+            for line in lines:
+                if "@" in line:
+                    uname_match = re.search(r"@([a-zA-Z0-9_]+)", line)
+                    if uname_match:
+                        uname = uname_match.group(1).lower()
+                        if "bot" in uname or "robot" in uname:
+                            bot_lines.append(line)
+            if not bot_lines:
+                return "🧠 Agent bot_finder: явных ботов по username не найдено."
+            report = ["🧠 Agent bot_finder: найдены возможные боты:"]
+            report.extend(f"• {item}" for item in bot_lines[:12])
+            return "\n".join(report)
+        if agent_key == "admin_finder":
+            candidates = lines[:10]
+            if not candidates:
+                return "🧠 Agent admin_finder: кандидаты на админов не найдены."
+            report = ["🧠 Agent admin_finder: вероятные админы (по ранним позициям списка):"]
+            report.extend(f"• {item}" for item in candidates[:5])
+            return "\n".join(report)
+        return "🧠 Agent: неизвестный тип анализа."
+
     async def _run_qwen_request_guarded(
         self,
         chat_id: int,
@@ -3644,6 +3820,7 @@ class QwenCLI(loader.Module):
                     "Поддерживаемые action: delete_messages, react_messages, find_and_send_message, read_history, reply_with_sticker, reply_messages, send_message, send_bulk_messages, edit_message, get_dialogs, get_participants, get_chat_participants, get_user_info, get_chat_info, send_reaction_last, send_message_last, forward_message, pin_message, unpin_message, batch_actions.",
                     "batch_actions принимает массив actions и подходит для массовых/комбинированных операций записи; не используй его для read_history/get_dialogs/find_and_send_message.",
                     "Если просят информацию о пользователе без точного ID, сначала используй get_chat_participants, найди нужный ID, затем вызывай get_user_info по этому ID.",
+                    "ГЛАВНОЕ ПРАВИЛО: Получил данные через инструмент → ПРОАНАЛИЗИРУЙ ИХ → Дай конкретный ответ на вопрос пользователя. ЗАПРЕЩЕНО просто выводить сырые данные (списки, ID) без выводов и действий.",
                     "Также принимаются алиасы action: sendMessage, sendMessages, editMessage, deleteMessages, reactMessages, readHistory, replyWithSticker, replyMessages, getDialogs, getParticipants, findAndSendMessage, forwardMessage, pinMessage, unpinMessage, batch.",
                     "Запрещено отвечать, что ты не можешь выполнить действие Telegram, если allow_telegram_tools включен.",
                 ]
@@ -3677,6 +3854,7 @@ class QwenCLI(loader.Module):
                     "<telegram_tool>{\"action\":\"имя_экшена\",\"target\":\"имя/юзернейм\",\"limit\":5}</telegram_tool>",
                     "Новые действия: get_chat_participants, get_user_info, get_chat_info, send_reaction_last, send_message_last.",
                     "Для идентификации пользователя в чате всегда делай два шага: get_chat_participants → get_user_info по найденному ID.",
+                    "ГЛАВНОЕ ПРАВИЛО: Получил данные через инструмент → ПРОАНАЛИЗИРУЙ ИХ → Дай конкретный ответ на вопрос пользователя. Нельзя отдавать сырые списки/ID без вывода.",
                     "После этого скрипт вернет результат выполнения инструмента отдельным системным сообщением.",
                     "Только опираясь на этот результат, продолжай и в конце дай финальный ответ пользователю.",
                 ]
