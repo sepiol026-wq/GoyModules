@@ -74,12 +74,17 @@ from telethon.errors.rpcerrorlist import (
     ChatAdminRequiredError,
     UserNotParticipantError,
 )
+from telethon.tl.functions.channels import GetFullChannelRequest
 from telethon.tl.functions.messages import SendReactionRequest
+from telethon.tl.functions.users import GetFullUserRequest
 from telethon.tl.types import (
+    Channel,
+    Chat,
     DocumentAttributeFilename,
     DocumentAttributeSticker,
     Message,
     ReactionEmoji,
+    User,
 )
 from telethon.utils import get_display_name, get_peer_id
 
@@ -207,6 +212,10 @@ class QwenCLI(loader.Module):
         "qwen_status_final_error": "<tg-emoji emoji-id=5350470691701407492>⛔</tg-emoji> error: <code>{}</code>",
         "qwclear_usage": "<tg-emoji emoji-id=5278753302023004775>ℹ️</tg-emoji> <b>Использование:</b> <code>.qwclear [auto]</code>",
         "qwreset_usage": "<tg-emoji emoji-id=5278753302023004775>ℹ️</tg-emoji> <b>Использование:</b> <code>.qwreset [auto]</code>",
+        "qwsend_usage": "ℹ️ Использование: .qwsend <@username/id> <текст>",
+        "qwchatinfo_usage": "ℹ️ Использование: .qwchatinfo [id/@username]",
+        "qwme_usage": "ℹ️ Использование: .qwme — информация об аккаунте",
+        "qwsend_sent": "✅ Сообщение отправлено в чат: {}",
         "auto_mode_on": "<tg-emoji emoji-id=5359441070201513074>🎭</tg-emoji> <b>Режим авто-ответа включен в этом чате.</b>\nЯ буду отвечать на сообщения с вероятностью {}%.",
         "auto_mode_off": "<tg-emoji emoji-id=5359441070201513074>🎭</tg-emoji> <b>Режим авто-ответа выключен в этом чате.</b>",
         "auto_mode_chats_title": "<tg-emoji emoji-id=5359441070201513074>🎭</tg-emoji> <b>Чаты с активным авто-ответом ({}):</b>",
@@ -897,6 +906,127 @@ class QwenCLI(loader.Module):
             )
             return await self._answer_html(message, txt)
         await self._answer_html(message, self.strings["auto_mode_usage"])
+
+    @loader.command()
+    async def qwsend(self, message: Message):
+        """<@username/id> <текст> — отправить сообщение в указанный чат/пользователю."""
+        await self._sync_runtime_config()
+        args = (utils.get_args_raw(message) or "").strip()
+        if not args:
+            return await self._answer_html(message, self.strings["qwsend_usage"])
+        parts = args.split(maxsplit=1)
+        if len(parts) < 2:
+            return await self._answer_html(message, self.strings["qwsend_usage"])
+        target, text = parts[0], parts[1].strip()
+        if not text:
+            return await self._answer_html(message, self.strings["qwsend_usage"])
+        try:
+            resolved = int(target) if re.fullmatch(r"-?\d+", target) else target
+            entity = await self.client.get_entity(resolved)
+            await self.client.send_message(entity, text)
+            title = utils.escape_html(
+                get_display_name(entity) or str(getattr(entity, "id", target))
+            )
+            await self._answer_html(
+                message, self.strings["qwsend_sent"].format(title)
+            )
+        except Exception as e:
+            await self._answer_html(
+                message,
+                self.strings["generic_error"].format(utils.escape_html(str(e))),
+            )
+
+    @loader.command()
+    async def qwchatinfo(self, message: Message):
+        """[id/@username] — информация о чате/пользователе."""
+        await self._sync_runtime_config()
+        raw = (utils.get_args_raw(message) or "").strip()
+        if raw and len(raw.split()) > 1:
+            return await self._answer_html(message, self.strings["qwchatinfo_usage"])
+        try:
+            resolved = (
+                int(raw)
+                if raw and re.fullmatch(r"-?\d+", raw)
+                else (raw or utils.get_chat_id(message))
+            )
+            entity = await self.client.get_entity(resolved)
+        except Exception as e:
+            return await self._answer_html(
+                message, self.strings["generic_error"].format(utils.escape_html(str(e)))
+            )
+
+        chat_type = "unknown"
+        participants = "N/A"
+        about = "—"
+        flags = []
+        if isinstance(entity, User):
+            chat_type = "user"
+            flags = [
+                f"bot={bool(getattr(entity, 'bot', False))}",
+                f"verified={bool(getattr(entity, 'verified', False))}",
+                f"scam={bool(getattr(entity, 'scam', False))}",
+                f"premium={bool(getattr(entity, 'premium', False))}",
+            ]
+            with contextlib.suppress(Exception):
+                full = await self.client(GetFullUserRequest(entity))
+                about = getattr(getattr(full, "full_user", None), "about", None) or "—"
+        else:
+            if isinstance(entity, Channel):
+                chat_type = "channel" if getattr(entity, "broadcast", False) else "group"
+                with contextlib.suppress(Exception):
+                    full = await self.client(GetFullChannelRequest(entity))
+                    participants = getattr(
+                        getattr(full, "full_chat", None), "participants_count", "N/A"
+                    )
+                    about = getattr(getattr(full, "full_chat", None), "about", None) or "—"
+            elif isinstance(entity, Chat):
+                chat_type = "group"
+            flags = [
+                f"verified={bool(getattr(entity, 'verified', False))}",
+                f"scam={bool(getattr(entity, 'scam', False))}",
+            ]
+            if participants == "N/A":
+                with contextlib.suppress(Exception):
+                    participants = len(await self.client.get_participants(entity, limit=200))
+
+        title = utils.escape_html(get_display_name(entity) or "Unknown")
+        username = getattr(entity, "username", None)
+        username_line = (
+            f"\n<b>Username:</b> @{utils.escape_html(username)}" if username else ""
+        )
+        info = (
+            f"📌 <b>Chat info</b>\n"
+            f"<b>Title:</b> {title}\n"
+            f"<b>ID:</b> <code>{getattr(entity, 'id', 'N/A')}</code>\n"
+            f"<b>Type:</b> <code>{chat_type}</code>\n"
+            f"<b>Participants:</b> <code>{participants}</code>"
+            f"{username_line}\n"
+            f"<b>About:</b> {utils.escape_html(str(about))}\n"
+            f"<b>Flags:</b> <code>{utils.escape_html(', '.join(flags) or 'none')}</code>"
+        )
+        await self._answer_html(message, info)
+
+    @loader.command()
+    async def qwme(self, message: Message):
+        """— информация о текущем аккаунте."""
+        await self._sync_runtime_config()
+        me = self.me
+        if not me:
+            return await self._answer_html(message, self.strings["qwme_usage"])
+        bio = "—"
+        with contextlib.suppress(Exception):
+            full = await self.client(GetFullUserRequest(me))
+            bio = getattr(getattr(full, "full_user", None), "about", None) or "—"
+        dc_id = getattr(getattr(me, "photo", None), "dc_id", None) or "N/A"
+        text = (
+            "👤 <b>My account</b>\n"
+            f"<b>ID:</b> <code>{getattr(me, 'id', 'N/A')}</code>\n"
+            f"<b>Name:</b> {utils.escape_html(get_display_name(me) or 'Unknown')}\n"
+            f"<b>Username:</b> <code>@{utils.escape_html(getattr(me, 'username', None) or 'none')}</code>\n"
+            f"<b>Bio:</b> {utils.escape_html(str(bio))}\n"
+            f"<b>DC:</b> <code>{dc_id}</code>"
+        )
+        await self._answer_html(message, text)
 
     @loader.command()
     async def qwchance(self, message: Message):
@@ -1878,6 +2008,16 @@ class QwenCLI(loader.Module):
                 "sendbulk": "send_bulk_messages",
                 "bulksend": "send_bulk_messages",
                 "sendmessages": "send_bulk_messages",
+                "getchatparticipants": "get_chat_participants",
+                "chatparticipants": "get_chat_participants",
+                "getuserinfo": "get_user_info",
+                "userinfo": "get_user_info",
+                "getchatinfo": "get_chat_info",
+                "chatinfo": "get_chat_info",
+                "sendreactionlast": "send_reaction_last",
+                "reactionlast": "send_reaction_last",
+                "sendmessagelast": "send_message_last",
+                "messagelast": "send_message_last",
             }
             action = aliases.get(action, action)
             if not action:
@@ -2238,6 +2378,161 @@ class QwenCLI(loader.Module):
                         "target_chat": getattr(entity, "id", target_chat),
                         "count": len(participants),
                         "participants": participants,
+                    }
+                )
+
+            if action == "get_chat_participants":
+                target_chat = (
+                    tool_data.get("target_chat")
+                    or tool_data.get("target")
+                    or tool_data.get("query")
+                    or chat_id
+                )
+                entity = await _resolve_target_entity(target_chat, chat_id)
+                users = await self.client.get_participants(entity, limit=20)
+                lines = []
+                for user in users:
+                    name = get_display_name(user) or "Unknown"
+                    username = (
+                        f"@{getattr(user, 'username', None)}"
+                        if getattr(user, "username", None)
+                        else "@no_username"
+                    )
+                    lines.append(
+                        f"{name} ({username}) — ID: {getattr(user, 'id', 'N/A')}"
+                    )
+                return _ok(
+                    {
+                        "action": action,
+                        "target_chat": getattr(entity, "id", target_chat),
+                        "count": len(lines),
+                        "participants": lines,
+                    }
+                )
+
+            if action == "get_user_info":
+                target_user = (
+                    tool_data.get("target_user")
+                    or tool_data.get("target")
+                    or tool_data.get("query")
+                )
+                if not target_user:
+                    return _err("missing target_user")
+                entity = await _resolve_target_entity(target_user, chat_id)
+                if not isinstance(entity, User):
+                    return _err("target_user must resolve to a user")
+                bio = ""
+                with contextlib.suppress(Exception):
+                    full = await self.client(GetFullUserRequest(entity))
+                    bio = getattr(getattr(full, "full_user", None), "about", None) or ""
+                summary = (
+                    f"ID: {getattr(entity, 'id', 'N/A')}; "
+                    f"bot: {bool(getattr(entity, 'bot', False))}; "
+                    f"verified: {bool(getattr(entity, 'verified', False))}; "
+                    f"premium: {bool(getattr(entity, 'premium', False))}; "
+                    f"scam: {bool(getattr(entity, 'scam', False))}; "
+                    f"bio: {bio or '—'}"
+                )
+                return _ok(
+                    {
+                        "action": action,
+                        "target_user": getattr(entity, "id", target_user),
+                        "info": summary,
+                    }
+                )
+
+            if action == "get_chat_info":
+                target_chat = (
+                    tool_data.get("target_chat")
+                    or tool_data.get("target")
+                    or tool_data.get("query")
+                    or chat_id
+                )
+                entity = await _resolve_target_entity(target_chat, chat_id)
+                title = get_display_name(entity) or "Unknown"
+                username = getattr(entity, "username", None)
+                participant_count = None
+                about = ""
+                if isinstance(entity, Channel):
+                    with contextlib.suppress(Exception):
+                        full = await self.client(GetFullChannelRequest(entity))
+                        participant_count = getattr(
+                            getattr(full, "full_chat", None), "participants_count", None
+                        )
+                        about = getattr(getattr(full, "full_chat", None), "about", None) or ""
+                if participant_count is None:
+                    with contextlib.suppress(Exception):
+                        participant_count = len(
+                            await self.client.get_participants(entity, limit=200)
+                        )
+                return _ok(
+                    {
+                        "action": action,
+                        "target_chat": getattr(entity, "id", target_chat),
+                        "title": title,
+                        "username": username,
+                        "participant_count": (
+                            participant_count if participant_count is not None else "N/A"
+                        ),
+                        "about": about or "—",
+                    }
+                )
+
+            if action == "send_reaction_last":
+                target_chat = (
+                    tool_data.get("target_chat")
+                    or tool_data.get("target")
+                    or tool_data.get("query")
+                    or chat_id
+                )
+                emoji = (str(tool_data.get("emoji") or "👍").strip() or "👍")[:10]
+                entity = await _resolve_target_entity(target_chat, chat_id)
+                messages = await self.client.get_messages(entity, limit=1)
+                if not messages:
+                    return _err("no messages in target chat")
+                last_msg = messages[0]
+                await self.client(
+                    SendReactionRequest(
+                        peer=entity,
+                        msg_id=last_msg.id,
+                        reaction=[ReactionEmoji(emoticon=emoji)],
+                    )
+                )
+                return _ok(
+                    {
+                        "action": action,
+                        "target_chat": getattr(entity, "id", target_chat),
+                        "message_id": getattr(last_msg, "id", None),
+                        "emoji": emoji,
+                    }
+                )
+
+            if action == "send_message_last":
+                target_chat = (
+                    tool_data.get("target_chat")
+                    or tool_data.get("target")
+                    or tool_data.get("query")
+                    or chat_id
+                )
+                text = str(tool_data.get("text") or "").strip()
+                if not text:
+                    return _err("missing text")
+                entity = await _resolve_target_entity(target_chat, chat_id)
+                messages = await self.client.get_messages(entity, limit=1)
+                if not messages:
+                    return _err("no messages in target chat")
+                last_msg = messages[0]
+                sender = await last_msg.get_sender()
+                if not sender:
+                    return _err("last message sender not found")
+                sent = await self.client.send_message(sender, text)
+                return _ok(
+                    {
+                        "action": action,
+                        "target_chat": getattr(entity, "id", target_chat),
+                        "target_user": getattr(sender, "id", None),
+                        "source_message_id": getattr(last_msg, "id", None),
+                        "message_id": getattr(sent, "id", None),
                     }
                 )
 
@@ -2699,8 +2994,6 @@ class QwenCLI(loader.Module):
         ]
         if not lean_mode:
             args.append("--include-partial-messages")
-        if any(spec.get("type") == "image" for spec in file_specs):
-            args.extend(["--vlm-switch-mode", "once"])
         if selected_model:
             args.extend(["--model", selected_model])
         if self.config["proxy"].strip():
@@ -3179,10 +3472,11 @@ class QwenCLI(loader.Module):
         prompt_chunks = []
         file_specs = []
         user_args = (
-            custom_text
+            (custom_text if isinstance(custom_text, str) else str(custom_text or ""))
             if custom_text is not None
-            else utils.get_args_raw(message).strip()
+            else str(utils.get_args_raw(message) or "")
         )
+        user_args = user_args.strip()
         reply = await message.get_reply_message()
 
         if reply and getattr(reply, "text", None):
@@ -3347,8 +3641,9 @@ class QwenCLI(loader.Module):
                     "Допустимые ключи: action, target, target_chat, query, text, limit, emoji, message_id, from_chat, to_chat, sticker.",
                     "Если пользователь пишет 'в чате' / 'в этой группе' / 'здесь' и не дал target_chat, используй текущий chat_id команды.",
                     "Если команда вызвана reply-сообщением и target не указан, target берется из автора replied-сообщения автоматически.",
-                    "Поддерживаемые action: delete_messages, react_messages, find_and_send_message, read_history, reply_with_sticker, reply_messages, send_message, send_bulk_messages, edit_message, get_dialogs, get_participants, forward_message, pin_message, unpin_message, batch_actions.",
+                    "Поддерживаемые action: delete_messages, react_messages, find_and_send_message, read_history, reply_with_sticker, reply_messages, send_message, send_bulk_messages, edit_message, get_dialogs, get_participants, get_chat_participants, get_user_info, get_chat_info, send_reaction_last, send_message_last, forward_message, pin_message, unpin_message, batch_actions.",
                     "batch_actions принимает массив actions и подходит для массовых/комбинированных операций записи; не используй его для read_history/get_dialogs/find_and_send_message.",
+                    "Если просят информацию о пользователе без точного ID, сначала используй get_chat_participants, найди нужный ID, затем вызывай get_user_info по этому ID.",
                     "Также принимаются алиасы action: sendMessage, sendMessages, editMessage, deleteMessages, reactMessages, readHistory, replyWithSticker, replyMessages, getDialogs, getParticipants, findAndSendMessage, forwardMessage, pinMessage, unpinMessage, batch.",
                     "Запрещено отвечать, что ты не можешь выполнить действие Telegram, если allow_telegram_tools включен.",
                 ]
@@ -3380,6 +3675,8 @@ class QwenCLI(loader.Module):
                     "ТЕБЕ РАЗРЕШЕНО ИСПОЛЬЗОВАТЬ TELEGRAM API ЧЕРЕЗ ИНСТРУМЕНТ.",
                     "Если нужно выполнить действие в Telegram, выдай СТРОГО ОДИН блок без любого дополнительного текста:",
                     "<telegram_tool>{\"action\":\"имя_экшена\",\"target\":\"имя/юзернейм\",\"limit\":5}</telegram_tool>",
+                    "Новые действия: get_chat_participants, get_user_info, get_chat_info, send_reaction_last, send_message_last.",
+                    "Для идентификации пользователя в чате всегда делай два шага: get_chat_participants → get_user_info по найденному ID.",
                     "После этого скрипт вернет результат выполнения инструмента отдельным системным сообщением.",
                     "Только опираясь на этот результат, продолжай и в конце дай финальный ответ пользователю.",
                 ]
