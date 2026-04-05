@@ -27,7 +27,7 @@
 # https://opensource.org/licenses/MIT
 # --------------------------------------------------------------------------
 
-__version__ = (1, 0, 7)
+__version__ = (1, 0, 8)
 
 import asyncio
 import contextlib
@@ -1535,8 +1535,31 @@ class QwenCLI(loader.Module):
                 and not regeneration
                 and self.config["allow_telegram_tools"]
             ):
+                if call or status_msg:
+                    with contextlib.suppress(Exception):
+                        await self._edit_processing_status(
+                            call or status_msg,
+                            self.strings["tool_exec_status"].format(
+                                utils.escape_html("fast_track_auto"),
+                                1,
+                                1,
+                            ),
+                        )
                 fast_track_text = await self._try_auto_action(chat_id, original_task_text)
                 if fast_track_text:
+                    action_title = utils.escape_html(
+                        getattr(self, "_last_auto_action_name", "") or "fast_track_auto"
+                    )
+                    if call or status_msg:
+                        with contextlib.suppress(Exception):
+                            await self._edit_processing_status(
+                                call or status_msg,
+                                self.strings["tool_exec_status"].format(
+                                    action_title,
+                                    1,
+                                    1,
+                                ),
+                            )
                     target_entity = call or status_msg or msg_obj or message
                     await self._answer_html(
                         target_entity,
@@ -1766,6 +1789,16 @@ class QwenCLI(loader.Module):
                         "target_chat": chat_id,
                         "emoji": "👍",
                     }
+                    if call or status_msg:
+                        with contextlib.suppress(Exception):
+                            await self._edit_processing_status(
+                                call or status_msg,
+                                self.strings["tool_exec_status"].format(
+                                    utils.escape_html("send_reaction_last"),
+                                    1,
+                                    1,
+                                ),
+                            )
                     auto_result_raw = await self._execute_telegram_tool(
                         chat_id, json.dumps(auto_tool, ensure_ascii=False)
                     )
@@ -1803,6 +1836,16 @@ class QwenCLI(loader.Module):
                             "target_chat": int(target_user_id_match.group(1)),
                             "text": outbound_text,
                         }
+                    if call or status_msg:
+                        with contextlib.suppress(Exception):
+                            await self._edit_processing_status(
+                                call or status_msg,
+                                self.strings["tool_exec_status"].format(
+                                    utils.escape_html(auto_tool.get("action") or "send_message_last"),
+                                    1,
+                                    1,
+                                ),
+                            )
                     auto_result_raw = await self._execute_telegram_tool(
                         chat_id, json.dumps(auto_tool, ensure_ascii=False)
                     )
@@ -2127,6 +2170,11 @@ class QwenCLI(loader.Module):
                 "reactionlast": "send_reaction_last",
                 "sendmessagelast": "send_message_last",
                 "messagelast": "send_message_last",
+                "getuserlastmessages": "get_user_last_messages",
+                "userlastmessages": "get_user_last_messages",
+                "mentionuser": "mention_user",
+                "sendmention": "mention_user",
+                "deletelastmessage": "delete_last_message",
             }
             action = aliases.get(action, action)
             if not action:
@@ -2645,6 +2693,101 @@ class QwenCLI(loader.Module):
                     }
                 )
 
+            if action == "get_user_last_messages":
+                target_chat = (
+                    tool_data.get("target_chat")
+                    or tool_data.get("target")
+                    or tool_data.get("query")
+                    or chat_id
+                )
+                target_user = (
+                    tool_data.get("target_user")
+                    or tool_data.get("user")
+                    or tool_data.get("username")
+                    or tool_data.get("target")
+                )
+                if not target_user:
+                    return _err("missing target_user")
+                limit = _normalize_limit(tool_data.get("limit", 10), default=10, maximum=30)
+                entity = await _resolve_target_entity(target_chat, chat_id)
+                user_entity = await _resolve_target_entity(target_user, chat_id)
+                if not isinstance(user_entity, User):
+                    return _err("target_user must resolve to user")
+                items = []
+                async for msg in self.client.iter_messages(entity, from_user=user_entity, limit=limit):
+                    content = (getattr(msg, "message", None) or "").strip()
+                    if not content:
+                        continue
+                    items.append(
+                        {
+                            "message_id": getattr(msg, "id", None),
+                            "date": str(getattr(msg, "date", "")),
+                            "text": content[:500],
+                        }
+                    )
+                return _ok(
+                    {
+                        "action": action,
+                        "target_chat": getattr(entity, "id", target_chat),
+                        "target_user": getattr(user_entity, "id", None),
+                        "count": len(items),
+                        "messages": items,
+                    }
+                )
+
+            if action == "mention_user":
+                target_chat = (
+                    tool_data.get("target_chat")
+                    or tool_data.get("chat_id")
+                    or chat_id
+                )
+                target_user = (
+                    tool_data.get("target_user")
+                    or tool_data.get("target")
+                    or tool_data.get("username")
+                )
+                text = str(tool_data.get("text") or "").strip()
+                if not target_user:
+                    return _err("missing target_user")
+                entity = await _resolve_target_entity(target_chat, chat_id)
+                user_entity = await _resolve_target_entity(target_user, chat_id)
+                mention_name = get_display_name(user_entity) or "user"
+                mention_prefix = (
+                    f"<a href=\"tg://user?id={getattr(user_entity, 'id', 0)}\">{utils.escape_html(mention_name)}</a>"
+                )
+                final_text = f"{mention_prefix}, {utils.escape_html(text)}" if text else mention_prefix
+                sent = await self.client.send_message(entity, final_text, parse_mode="html")
+                return _ok(
+                    {
+                        "action": action,
+                        "target_chat": getattr(entity, "id", target_chat),
+                        "target_user": getattr(user_entity, "id", None),
+                        "message_id": getattr(sent, "id", None),
+                    }
+                )
+
+            if action == "delete_last_message":
+                target_chat = (
+                    tool_data.get("target_chat")
+                    or tool_data.get("target")
+                    or chat_id
+                )
+                entity = await _resolve_target_entity(target_chat, chat_id)
+                messages = await self.client.get_messages(entity, limit=1)
+                if not messages:
+                    return _err("no messages in target chat")
+                msg_id = getattr(messages[0], "id", None)
+                if not msg_id:
+                    return _err("invalid last message id")
+                await self.client.delete_messages(entity, [msg_id])
+                return _ok(
+                    {
+                        "action": action,
+                        "target_chat": getattr(entity, "id", target_chat),
+                        "message_id": msg_id,
+                    }
+                )
+
             if action == "edit_message":
                 target_chat = tool_data.get("target_chat") or chat_id
                 message_id = tool_data.get("message_id")
@@ -2841,26 +2984,44 @@ class QwenCLI(loader.Module):
         text = (user_text or "").strip().lower()
         if not text:
             return None
+        self._last_auto_action_name = ""
         try:
             if (
                 "поставь реакцию на прошлое" in text
                 or "лайк на последнее" in text
                 or "реакцию на последнее" in text
             ):
+                emoji_match = re.search(
+                    r"(?:реакц(?:ию|ия)?|смайл|эмодзи)\s*(?:[:\-])?\s*([^\s]{1,4})",
+                    user_text or "",
+                    flags=re.IGNORECASE,
+                )
+                emoji = emoji_match.group(1) if emoji_match else "👍"
                 entity = await self.client.get_entity(chat_id)
                 messages = await self.client.get_messages(entity, limit=1)
                 if not messages:
                     return "⚠️ В чате нет сообщений для реакции."
                 last_msg = messages[0]
+                self._last_auto_action_name = "send_reaction_last"
                 await self.client(
                     SendReactionRequest(
                         peer=entity,
                         msg_id=last_msg.id,
-                        reaction=[ReactionEmoji(emoticon="👍")],
+                        reaction=[ReactionEmoji(emoticon=emoji)],
                     )
                 )
-                return "✨ Реакция поставлена на последнее сообщение."
+                return f"✨ Реакция {emoji} поставлена на последнее сообщение."
             if "напиши последнему" in text:
+                custom_text_match = re.search(
+                    r"напиши последнему\s*[:\-]?\s*[\"«](.+?)[\"»]",
+                    user_text or "",
+                    flags=re.IGNORECASE | re.DOTALL,
+                )
+                outbound_text = (
+                    custom_text_match.group(1).strip()
+                    if custom_text_match
+                    else "Привет! Пишу по запросу из последнего чата."
+                )
                 entity = await self.client.get_entity(chat_id)
                 messages = await self.client.get_messages(entity, limit=1)
                 if not messages:
@@ -2869,9 +3030,10 @@ class QwenCLI(loader.Module):
                 sender = await last_msg.get_sender()
                 if not sender:
                     return "⚠️ Не удалось определить автора последнего сообщения."
+                self._last_auto_action_name = "send_message_last"
                 await self.client.send_message(
                     sender,
-                    "Привет! Пишу по запросу из последнего чата.",
+                    outbound_text,
                 )
                 return "✨ Сообщение последнему отправлено в ЛС."
         except Exception as e:
@@ -3817,7 +3979,7 @@ class QwenCLI(loader.Module):
                     "Допустимые ключи: action, target, target_chat, query, text, limit, emoji, message_id, from_chat, to_chat, sticker.",
                     "Если пользователь пишет 'в чате' / 'в этой группе' / 'здесь' и не дал target_chat, используй текущий chat_id команды.",
                     "Если команда вызвана reply-сообщением и target не указан, target берется из автора replied-сообщения автоматически.",
-                    "Поддерживаемые action: delete_messages, react_messages, find_and_send_message, read_history, reply_with_sticker, reply_messages, send_message, send_bulk_messages, edit_message, get_dialogs, get_participants, get_chat_participants, get_user_info, get_chat_info, send_reaction_last, send_message_last, forward_message, pin_message, unpin_message, batch_actions.",
+                    "Поддерживаемые action: delete_messages, react_messages, find_and_send_message, read_history, reply_with_sticker, reply_messages, send_message, send_bulk_messages, edit_message, get_dialogs, get_participants, get_chat_participants, get_user_info, get_chat_info, send_reaction_last, send_message_last, get_user_last_messages, mention_user, delete_last_message, forward_message, pin_message, unpin_message, batch_actions.",
                     "batch_actions принимает массив actions и подходит для массовых/комбинированных операций записи; не используй его для read_history/get_dialogs/find_and_send_message.",
                     "Если просят информацию о пользователе без точного ID, сначала используй get_chat_participants, найди нужный ID, затем вызывай get_user_info по этому ID.",
                     "ГЛАВНОЕ ПРАВИЛО: Получил данные через инструмент → ПРОАНАЛИЗИРУЙ ИХ → Дай конкретный ответ на вопрос пользователя. ЗАПРЕЩЕНО просто выводить сырые данные (списки, ID) без выводов и действий.",
@@ -3852,7 +4014,7 @@ class QwenCLI(loader.Module):
                     "ТЕБЕ РАЗРЕШЕНО ИСПОЛЬЗОВАТЬ TELEGRAM API ЧЕРЕЗ ИНСТРУМЕНТ.",
                     "Если нужно выполнить действие в Telegram, выдай СТРОГО ОДИН блок без любого дополнительного текста:",
                     "<telegram_tool>{\"action\":\"имя_экшена\",\"target\":\"имя/юзернейм\",\"limit\":5}</telegram_tool>",
-                    "Новые действия: get_chat_participants, get_user_info, get_chat_info, send_reaction_last, send_message_last.",
+                    "Новые действия: get_chat_participants, get_user_info, get_chat_info, send_reaction_last, send_message_last, get_user_last_messages, mention_user, delete_last_message.",
                     "Для идентификации пользователя в чате всегда делай два шага: get_chat_participants → get_user_info по найденному ID.",
                     "ГЛАВНОЕ ПРАВИЛО: Получил данные через инструмент → ПРОАНАЛИЗИРУЙ ИХ → Дай конкретный ответ на вопрос пользователя. Нельзя отдавать сырые списки/ID без вывода.",
                     "После этого скрипт вернет результат выполнения инструмента отдельным системным сообщением.",
