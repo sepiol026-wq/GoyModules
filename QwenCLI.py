@@ -1917,7 +1917,11 @@ class QwenCLI(loader.Module):
                             candidate_text.lower(),
                         )
                     ):
-                        forced_tool = self._extract_direct_tool_from_text(original_task_text)
+                        forced_tool = (
+                            self._extract_direct_tool_from_text(original_task_text)
+                            if self.toolintent(original_task_text)
+                            else None
+                        )
                         if forced_tool:
                             tool_result = await self._execute_telegram_tool(
                                 chat_id,
@@ -2029,7 +2033,11 @@ class QwenCLI(loader.Module):
                     (result_text or "").lower(),
                 )
             ):
-                forced_tool = self._extract_direct_tool_from_text(original_task_text)
+                forced_tool = (
+                    self._extract_direct_tool_from_text(original_task_text)
+                    if self.toolintent(original_task_text)
+                    else None
+                )
                 if forced_tool:
                     tool_result = await self._execute_telegram_tool(
                         chat_id,
@@ -4679,11 +4687,11 @@ class QwenCLI(loader.Module):
         if not target:
             return None
         send_verb = re.search(r"(?:отправь|напиши)\s+(.+?)(?:\s+в\s+чат[:\s].*|\s+@[\w_]+|$)", text, flags=re.IGNORECASE | re.DOTALL)
-        message_text = ""
-        if send_verb:
-            message_text = send_verb.group(1).strip(" \n\t:;,")
+        if not send_verb:
+            return None
+        message_text = send_verb.group(1).strip(" \n\t:;,")
         if not message_text:
-            message_text = "привет"
+            return None
         return {
             "action": "send_message",
             "target_chat": target,
@@ -6212,18 +6220,28 @@ class QwenCLI(loader.Module):
         custom_prompt = (self.config["system_instruction"] or "").strip()
         if custom_prompt:
             parts.append(custom_prompt)
+        parts.append(
+            "БАЗОВЫЕ ПРАВИЛА ОТВЕТА:\n"
+            "1) Если пользователь просит обычный ответ/объяснение/анализ — отвечай текстом, БЕЗ tools.\n"
+            "2) execute_telegram_action используй только когда пользователь просит СДЕЛАТЬ действие в Telegram.\n"
+            "3) Если не уверен, что нужно действие — не запускай tools.\n"
+            "4) Никогда не отправляй сообщения в избранное/ЛС/другие чаты без явной просьбы."
+        )
         if self.config["allow_tg_tools"]:
             parts.append(self.toolsref())
+        else:
+            parts.append("Telegram tools отключены: никаких tool-call.")
         return "\n\n".join(part for part in parts if part).strip() or None
 
     def toolsref(self) -> str:
         actions = sorted(self.tools_registry.keys())
         chunks = ", ".join(actions)
         return (
-            "TELEGRAM TOOL ACTIONS (актуальный список, используй execute_telegram_action):\n"
+            "TELEGRAM TOOL ACTIONS (актуальный список):\n"
             f"{chunks}\n"
             "Используй tools ТОЛЬКО если пользователь просит действие в Telegram.\n"
             "Если запрос аналитический/обычный текстовый — tools не используй.\n"
+            "Для обычного вопроса всегда приоритет у текстового ответа.\n"
             "Для опасных действий передавай confirm=true."
         )
 
