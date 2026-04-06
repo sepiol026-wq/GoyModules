@@ -55,20 +55,9 @@ from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
-try:
-    import pytz
-except ImportError:
-    pytz = None
-
-try:
-    from markdown_it import MarkdownIt
-except ImportError:
-    MarkdownIt = None
-
-try:
-    import psutil
-except ImportError:
-    psutil = None
+import pytz
+from markdown_it import MarkdownIt
+import psutil
 
 from telethon import types as tg_types
 from telethon.errors.rpcerrorlist import (
@@ -1547,7 +1536,7 @@ class QwenCLI(loader.Module):
             and not message.out
             and (getattr(message, "raw_text", None) or "").strip()
         ):
-            await self._enqueue_automod_message(cid, message)
+            await self.aqmsg(cid, message)
         if cid not in self.impersonation_chats:
             return
         if message.is_private and not self.config["auto_in_pm"]:
@@ -1589,7 +1578,7 @@ class QwenCLI(loader.Module):
             await self._simulate_human_presence(cid, clean)
             await message.reply(clean)
 
-    async def _enqueue_automod_message(self, chat_id: int, message: Message):
+    async def aqmsg(self, chat_id: int, message: Message):
         bucket = self._automod_buffers.setdefault(chat_id, [])
         bucket.append(message)
         if len(bucket) > 25:
@@ -1597,11 +1586,9 @@ class QwenCLI(loader.Module):
         task = self._automod_tasks.get(chat_id)
         if task and not task.done():
             return
-        self._automod_tasks[chat_id] = asyncio.create_task(
-            self._run_automod_batch(chat_id)
-        )
+        self._automod_tasks[chat_id] = asyncio.create_task(self.arbatch(chat_id))
 
-    async def _run_automod_batch(self, chat_id: int):
+    async def arbatch(self, chat_id: int):
         await asyncio.sleep(4.0)
         items = list(self._automod_buffers.get(chat_id, []))
         self._automod_buffers[chat_id] = []
@@ -1642,7 +1629,7 @@ class QwenCLI(loader.Module):
                 status_entity=None,
             )
             raw = (result.get("text") or "").strip()
-            parsed = self._extract_function_tool_call(raw) or self._extract_json_object_fallback(raw)
+            parsed = self._extract_function_tool_call(raw) or self.jparse(raw)
             if not isinstance(parsed, dict):
                 return
             decisions = parsed.get("moderation") or []
@@ -1656,7 +1643,7 @@ class QwenCLI(loader.Module):
                     continue
                 mid = item.get("message_id")
                 reason = str(item.get("reason") or "Нарушение правил чата.").strip()[:220]
-                if not await self._can_apply_moderation_action(chat_id, action):
+                if not await self.canmod(chat_id, action):
                     continue
                 if action == "delete" and mid:
                     with contextlib.suppress(Exception):
@@ -1694,7 +1681,7 @@ class QwenCLI(loader.Module):
         finally:
             self._automod_tasks.pop(chat_id, None)
 
-    def _extract_json_object_fallback(self, raw_text: str):
+    def jparse(self, raw_text: str):
         text = (raw_text or "").strip()
         if text.startswith("```"):
             lines = text.splitlines()[1:]
@@ -1711,7 +1698,7 @@ class QwenCLI(loader.Module):
                 return obj
         return None
 
-    async def _can_apply_moderation_action(self, chat_id: int, action: str) -> bool:
+    async def canmod(self, chat_id: int, action: str) -> bool:
         with contextlib.suppress(Exception):
             entity = await self.client.get_entity(chat_id)
             if getattr(entity, "creator", False):
@@ -6169,10 +6156,10 @@ class QwenCLI(loader.Module):
         if custom_prompt:
             parts.append(custom_prompt)
         if self.config["allow_tg_tools"]:
-            parts.append(self._build_tools_reference_prompt())
+            parts.append(self.toolsref())
         return "\n\n".join(part for part in parts if part).strip() or None
 
-    def _build_tools_reference_prompt(self) -> str:
+    def toolsref(self) -> str:
         actions = sorted(self.tools_registry.keys())
         chunks = ", ".join(actions)
         return (
