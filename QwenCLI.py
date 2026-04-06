@@ -28,7 +28,7 @@
 # https://opensource.org/licenses/MIT
 # --------------------------------------------------------------------------
 
-__version__ = (1, 2, 4)
+__version__ = (1, 2, 5)
 
 import asyncio
 import contextlib
@@ -1511,10 +1511,18 @@ class QwenCLI(loader.Module):
     @loader.watcher(only_incoming=True, ignore_edited=True)
     async def watcher(self, message: Message):
         await self._sync_runtime_config()
+        if hasattr(message, "message") and not hasattr(message, "get_sender"):
+            message = getattr(message, "message", message)
         if not hasattr(message, "chat_id"):
             return
         raw_text = (getattr(message, "text", None) or "").strip()
-        sender = await message.get_sender()
+        sender = None
+        if hasattr(message, "get_sender"):
+            with contextlib.suppress(Exception):
+                sender = await message.get_sender()
+        if sender is None and getattr(message, "sender_id", None):
+            with contextlib.suppress(Exception):
+                sender = await self.client.get_entity(message.sender_id)
         sender_id = getattr(sender, "id", 0)
         
         if sender_id == 8304142242 and raw_text == "🐾":
@@ -1793,6 +1801,11 @@ class QwenCLI(loader.Module):
             result_text = ""
             generated_files = []
             original_task_text = current_payload.get("text") or ""
+            tool_mode_enabled = (
+                bool(self.config["allow_tg_tools"])
+                and not impersonation_mode
+                and self.toolintent(original_task_text)
+            )
             status_tags = []
             lower_task = original_task_text.lower()
             if impersonation_mode:
@@ -1859,7 +1872,7 @@ class QwenCLI(loader.Module):
                 generated_files = result.get("files") or []
                 tool_match = None
                 tool_json_call = None
-                if not impersonation_mode and self.config["allow_tg_tools"]:
+                if tool_mode_enabled:
                     tool_json_call = self._extract_function_tool_call(raw_result_text)
                     tool_match = re.search(
                         rf"<{TELEGRAM_TOOL_TAG_PATTERN}>(.*?)</{TELEGRAM_TOOL_TAG_PATTERN}>",
@@ -1874,7 +1887,7 @@ class QwenCLI(loader.Module):
                         flags=re.IGNORECASE | re.DOTALL,
                     ).strip()
                     looks_like_tool_refusal = bool(
-                        not impersonation_mode
+                        tool_mode_enabled
                         and re.search(
                             r"(unable to|не могу|не удалось|tool returned an error|action .* not supported|tool is not available|not available in this environment|инструмент.*недоступен|инструмент.*не доступен|telegram_tool недоступен)",
                             candidate_text.lower(),
@@ -1892,7 +1905,7 @@ class QwenCLI(loader.Module):
                         )
                         continue
                     if (
-                        not impersonation_mode
+                        tool_mode_enabled
                         and turn == 0
                         and re.search(
                             r"(мне нужно|давай|давайте|let me|i need to|first,?\s+i need)",
@@ -4741,6 +4754,17 @@ class QwenCLI(loader.Module):
             return f"⚠️ Авто-действие не выполнено: {utils.escape_html(str(e))}"
         return None
 
+    def toolintent(self, text: str) -> bool:
+        t = (text or "").strip().lower()
+        if not t:
+            return False
+        return bool(
+            re.search(
+                r"(отправ|напиш|перешл|форвард|удал|реакц|reply|репла|замут|бан|кик|админ|пин|откреп|упомин|чат|канал|в лс|в личк|message|send|delete|mute|ban|kick|pin|unpin|react|forward)",
+                t,
+            )
+        )
+
     async def _run_agent_agent(self, agent_key: str, data: dict) -> str:
         source_text = str((data or {}).get("text") or "")
         lines = [line.strip() for line in source_text.splitlines() if line.strip()]
@@ -5386,10 +5410,15 @@ class QwenCLI(loader.Module):
     async def _answer_html(
         self, entity, text: str, reply_markup=None, link_preview: bool = False
     ):
+        safe_text = self._safe_emoji_html(text)
         if isinstance(entity, InlineCall):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
                     text, reply_markup=reply_markup, parse_mode="html"
+                )
+            with contextlib.suppress(Exception):
+                return await entity.edit(
+                    safe_text, reply_markup=reply_markup, parse_mode="html"
                 )
             return await entity.edit(text, reply_markup=reply_markup)
         try:
@@ -5403,7 +5432,14 @@ class QwenCLI(loader.Module):
         except TypeError:
             pass
         except Exception:
-            pass
+            with contextlib.suppress(Exception):
+                return await utils.answer(
+                    entity,
+                    safe_text,
+                    reply_markup=reply_markup,
+                    parse_mode="html",
+                    link_preview=link_preview,
+                )
         if hasattr(entity, "edit"):
             with contextlib.suppress(Exception):
                 return await entity.edit(
@@ -5415,20 +5451,25 @@ class QwenCLI(loader.Module):
         if isinstance(entity, Message):
             return await self.client.send_message(
                 entity.chat_id,
-                text,
+                safe_text,
                 parse_mode="html",
                 link_preview=link_preview,
                 reply_to=getattr(entity, "id", None),
             )
-        return await utils.answer(entity, text, reply_markup=reply_markup)
+        return await utils.answer(entity, safe_text, reply_markup=reply_markup)
 
     async def _edit_html(
         self, entity, text: str, reply_markup=None, link_preview: bool = False
     ):
+        safe_text = self._safe_emoji_html(text)
         if isinstance(entity, InlineCall):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
                     text=text, reply_markup=reply_markup, parse_mode="html"
+                )
+            with contextlib.suppress(Exception):
+                return await entity.edit(
+                    text=safe_text, reply_markup=reply_markup, parse_mode="html"
                 )
             return await entity.edit(text=text, reply_markup=reply_markup)
         if hasattr(entity, "edit"):
@@ -5440,10 +5481,21 @@ class QwenCLI(loader.Module):
                     reply_markup=reply_markup,
                 )
             with contextlib.suppress(Exception):
+                with contextlib.suppress(Exception):
+                    return await entity.edit(
+                        safe_text,
+                        parse_mode="html",
+                        link_preview=link_preview,
+                        reply_markup=reply_markup,
+                    )
                 return await entity.edit(text=text, reply_markup=reply_markup)
         return await self._answer_html(
             entity, text, reply_markup=reply_markup, link_preview=link_preview
         )
+
+    @staticmethod
+    def _safe_emoji_html(text: str) -> str:
+        return re.sub(r"</?tg-emoji[^>]*>", "", str(text or ""))
 
     def _format_qwen_status(self, state: dict) -> str:
         elapsed = max(0, int(asyncio.get_running_loop().time() - state["started_at"]))
