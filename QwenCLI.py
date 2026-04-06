@@ -6851,8 +6851,7 @@ class QwenCLI(loader.Module):
                     "callback": self._clear_callback,
                     "args": (chat_id,),
                     "icon_custom_emoji_id": "6007942490076745785",
-                    "color": "yellow",
-                    "style": "warning",
+                    "color": "green",
                 },
                 {
                     "text": self.strings["btn_regenerate"],
@@ -6860,7 +6859,6 @@ class QwenCLI(loader.Module):
                     "args": (base_message_id, chat_id),
                     "icon_custom_emoji_id": "5404857686477015710",
                     "color": "blue",
-                    "style": "primary",
                 },
             ]
         ]
