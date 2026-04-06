@@ -28,7 +28,7 @@
 # https://opensource.org/licenses/MIT
 # --------------------------------------------------------------------------
 
-__version__ = (1, 2, 2)
+__version__ = (1, 2, 3)
 
 import asyncio
 import contextlib
@@ -162,6 +162,8 @@ class QwenCLI(loader.Module):
         "cfg_auto_bootstrap_doc": "Автоматически пытаться установить локальные Node.js и Qwen CLI в user-space при отсутствии бинарника.",
         "cfg_resource_profile_doc": "Профиль расхода ресурсов: off, medium или max.",
         "cfg_allow_tg_tools_doc": "Разрешить выполнение Telegram tools (системные действия через execute_telegram_action).",
+        "cfg_tool_action_budget_doc": "Макс. число tool-действий в рамках одного активного запроса чата.",
+        "cfg_tool_destructive_guard_doc": "Требовать confirm=true для опасных действий (ban/delete/purge/block и т.п.).",
         "qwen_not_found": "<tg-emoji emoji-id=5332431395266524007>❗️</tg-emoji> <b>Команда <code>qwen</code> не найдена в системе.</b>\nПроверьте PATH или заполните <code>qwen_path</code> в cfg.",
         "qwen_auth_missing": "<tg-emoji emoji-id=5332431395266524007>❗️</tg-emoji> <b>Qwen CLI не готов к работе.</b>\nНастройте авторизацию.",
         "qwen_oauth_missing": "<tg-emoji emoji-id=5332431395266524007>❗️</tg-emoji> <b>Qwen OAuth не настроен.</b>\nЗапустите <code>.qwauth qwen</code> и подтвердите вход в браузере.",
@@ -284,6 +286,8 @@ class QwenCLI(loader.Module):
         "status_missing": "не настроен",
         "status_ready": "готов",
         "status_not_ready": "не готов",
+        "prod_status_title": "<tg-emoji emoji-id=5256230583717079814>📋</tg-emoji> <b>QwenCLI production status</b>",
+        "prod_status_line": "• {}: <code>{}</code>",
         "cfg_check_title": "<tg-emoji emoji-id=5256230583717079814>📋</tg-emoji> <b>QwenCLI cfg-check</b>",
         "qwen_models_note": (
             "<tg-emoji emoji-id=5256230583717079814>📋</tg-emoji> <b>Быстрый список моделей:</b>\n"
@@ -479,6 +483,18 @@ class QwenCLI(loader.Module):
                 self.strings["cfg_allow_tg_tools_doc"],
                 validator=loader.validators.Boolean(),
             ),
+            loader.ConfigValue(
+                "tool_action_budget",
+                40,
+                self.strings["cfg_tool_action_budget_doc"],
+                validator=loader.validators.Integer(minimum=5, maximum=500),
+            ),
+            loader.ConfigValue(
+                "tool_destructive_guard",
+                True,
+                self.strings["cfg_tool_destructive_guard_doc"],
+                validator=loader.validators.Boolean(),
+            ),
         )
         self.prompt_presets = []
         self.conversations = {}
@@ -635,6 +651,31 @@ class QwenCLI(loader.Module):
             message,
             self.strings["resource_profile_updated"].format(utils.escape_html(args)),
         )
+
+    @loader.command()
+    async def qwprod(self, message: Message):
+        """— production-статус runtime, лимитов и safety-параметров."""
+        await self._sync_runtime_config()
+        ready, _ = await self._get_qwen_status_for_runtime()
+        runtime = await self._resolve_runtime_paths()
+        lines = [self.strings["prod_status_title"]]
+        lines.append(self.strings["prod_status_line"].format("version", ".".join(map(str, __version__))))
+        lines.append(self.strings["prod_status_line"].format("qwen_ready", "yes" if ready else "no"))
+        lines.append(self.strings["prod_status_line"].format("active_requests", str(len(self._request_sessions))))
+        lines.append(self.strings["prod_status_line"].format("running_chats", str(len(self._chat_running))))
+        lines.append(self.strings["prod_status_line"].format("tool_action_budget", str(int(self.config["tool_action_budget"]))))
+        lines.append(
+            self.strings["prod_status_line"].format(
+                "tool_destructive_guard",
+                "on" if self.config["tool_destructive_guard"] else "off",
+            )
+        )
+        lines.append(
+            self.strings["prod_status_line"].format(
+                "runtime_dir", utils.escape_html(runtime.get("qwen_home") or "-")
+            )
+        )
+        await self._answer_html(message, "\n".join(lines))
 
     @loader.command()
     async def qwcfgcheck(self, message: Message):
@@ -1548,6 +1589,7 @@ class QwenCLI(loader.Module):
             "proc": None,
             "request_id": None,
             "task": asyncio.current_task(),
+            "tool_actions_count": 0,
         }
 
         try:
@@ -2450,8 +2492,39 @@ class QwenCLI(loader.Module):
                 tool_data = nested
                 action = nested_action
 
+            session = self._request_sessions.get(chat_id)
+            if isinstance(session, dict):
+                used = int(session.get("tool_actions_count") or 0)
+                budget = int(self.config.get("tool_action_budget", 40) or 40)
+                if used >= budget:
+                    return _err(f"tool action budget exceeded: {used}/{budget}")
+
+            destructive_actions = {
+                "ban_user",
+                "kick_user",
+                "mute_user",
+                "delete_messages",
+                "delete_user_messages",
+                "delete_last_message",
+                "purge_chat_messages",
+                "block_user",
+            }
+            if self.config.get("tool_destructive_guard", True) and action in destructive_actions:
+                confirm = str(
+                    tool_data.get("confirm")
+                    or tool_data.get("force")
+                    or tool_data.get("approved")
+                    or ""
+                ).strip().lower()
+                if confirm not in {"1", "true", "yes", "ok", "confirm"}:
+                    return _err(
+                        f"destructive action '{action}' requires confirm=true"
+                    )
+
             if action not in self.tools_registry:
                 return _err(f"unsupported action: {action}")
+            if isinstance(session, dict):
+                session["tool_actions_count"] = int(session.get("tool_actions_count") or 0) + 1
 
             if action == "smart_flow":
                 flow = tool_data.get("flow")
