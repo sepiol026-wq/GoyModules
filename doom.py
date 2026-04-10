@@ -9,7 +9,7 @@ from .. import loader, utils
 
 @loader.tds
 class Doom(loader.Module):
-    strings = {"name": Doom"}
+    strings = {"name": "Doom"}
 
     def __init__(self):
         self.sessions = {}
