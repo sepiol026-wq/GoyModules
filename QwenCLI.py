@@ -5388,11 +5388,11 @@ class QwenCLI(loader.Module):
         if isinstance(entity, InlineCall):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
-                    text, reply_markup=reply_markup, parse_mode="html"
+                    safe_text, reply_markup=reply_markup, parse_mode="html"
                 )
             with contextlib.suppress(Exception):
                 return await entity.edit(
-                    safe_text, reply_markup=reply_markup, parse_mode="html"
+                    text, reply_markup=reply_markup, parse_mode="html"
                 )
             with contextlib.suppress(Exception):
                 return await entity.edit(
@@ -5402,7 +5402,7 @@ class QwenCLI(loader.Module):
         try:
             return await utils.answer(
                 entity,
-                text,
+                safe_text,
                 reply_markup=reply_markup,
                 parse_mode="html",
                 link_preview=link_preview,
@@ -5413,7 +5413,7 @@ class QwenCLI(loader.Module):
             with contextlib.suppress(Exception):
                 return await utils.answer(
                     entity,
-                    safe_text,
+                    text,
                     reply_markup=reply_markup,
                     parse_mode="html",
                     link_preview=link_preview,
@@ -5427,6 +5427,13 @@ class QwenCLI(loader.Module):
                     link_preview=link_preview,
                 )
         if hasattr(entity, "edit"):
+            with contextlib.suppress(Exception):
+                return await entity.edit(
+                    safe_text,
+                    parse_mode="html",
+                    link_preview=link_preview,
+                    reply_markup=reply_markup,
+                )
             with contextlib.suppress(Exception):
                 return await entity.edit(
                     text,
@@ -5464,11 +5471,11 @@ class QwenCLI(loader.Module):
         if isinstance(entity, InlineCall):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
-                    text=text, reply_markup=reply_markup, parse_mode="html"
+                    text=safe_text, reply_markup=reply_markup, parse_mode="html"
                 )
             with contextlib.suppress(Exception):
                 return await entity.edit(
-                    text=safe_text, reply_markup=reply_markup, parse_mode="html"
+                    text=text, reply_markup=reply_markup, parse_mode="html"
                 )
             with contextlib.suppress(Exception):
                 return await entity.edit(
@@ -5478,7 +5485,7 @@ class QwenCLI(loader.Module):
         if hasattr(entity, "edit"):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
-                    text,
+                    safe_text,
                     parse_mode="html",
                     link_preview=link_preview,
                     reply_markup=reply_markup,
@@ -5486,7 +5493,7 @@ class QwenCLI(loader.Module):
             with contextlib.suppress(Exception):
                 with contextlib.suppress(Exception):
                     return await entity.edit(
-                        safe_text,
+                        text,
                         parse_mode="html",
                         link_preview=link_preview,
                         reply_markup=reply_markup,
