@@ -122,7 +122,7 @@ class QwenCLI(loader.Module):
         "cfg_chat_reply_chances_doc": "Персональные шансы авто-ответа по чатам: chat_id:chance (0..1 или 0..100), по одному на строку.",
         "cfg_inline_pagination_doc": "Использовать инлайн-пагинацию для длинных ответов.",
         "cfg_chat_recording_doc": "Разрешить Qwen CLI сохранять свои session records в runtime-home.",
-        "cfg_approval_mode_doc": "Режим подтверждений Qwen CLI.",
+        "cfg_approval_mode_doc": "Режим подтверждений Qwen CLI: default (все действия с инлайн-подтверждением), plan (подтверждение только рискованных действий), auto-edit (авторазрешение редактирования/чтения, подтверждение shell/network/telegram), yolo (всё без подтверждений).",
         "cfg_max_concurrent_requests_doc": "Максимум одновременно выполняемых Qwen CLI запросов.",
         "cfg_auto_bootstrap_doc": "Автоматически пытаться установить локальные Node.js и Qwen CLI в user-space при отсутствии бинарника.",
         "cfg_resource_profile_doc": "Профиль расхода ресурсов: off, medium или max.",
@@ -168,10 +168,20 @@ class QwenCLI(loader.Module):
         "btn_retry_request": "🔃 Повторить запрос",
         "btn_cancel_request": "📛 Отменить запрос",
         "btn_stop_request": "📛 Стоп",
+        "btn_approve_action": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Принять",
+        "btn_reject_action": "<tg-emoji emoji-id=5258277659306932115>❌</tg-emoji> Отклонить",
+        "btn_stop_action": "📛 Стоп",
         "no_last_request": "Последний запрос не найден для повторной генерации.",
         "request_cancelled": "<tg-emoji emoji-id=5350470691701407492>⛔</tg-emoji>️ <b>Запрос отменен.</b>",
         "request_patched": "<tg-emoji emoji-id=5875145601682771643>✍️</tg-emoji> <b>Запрос обновлен и перезапущен.</b>",
         "no_active_request": "<tg-emoji emoji-id=5278753302023004775>ℹ️</tg-emoji> <b>Сейчас нет активного запроса.</b>",
+        "approval_request_title": "<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>Нужно подтверждение действия</b>",
+        "approval_request_line": "• <b>{}</b>: <code>{}</code>",
+        "approval_request_hint": "<i>Выберите действие кнопками ниже.</i>",
+        "approval_approved": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Действие подтверждено:</b> <code>{}</code>",
+        "approval_rejected": "<tg-emoji emoji-id=5258277659306932115>❌</tg-emoji> <b>Действие отклонено:</b> <code>{}</code>",
+        "approval_missing": "<tg-emoji emoji-id=5278753302023004775>ℹ️</tg-emoji> <b>Это подтверждение уже неактуально.</b>",
+        "approval_mode_details": "• <tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <code>approval_behavior</code>: <b>{}</b>",
         "qwpatch_usage": "<b>Использование:</b> <code>.qwpatch &lt;что исправить/добавить&gt;</code>",
         "memory_fully_cleared": "<tg-emoji emoji-id=6007942490076745785>🧹</tg-emoji> <b>Вся память полностью очищена (затронуто {} чатов).</b>",
         "auto_memory_fully_cleared": "<tg-emoji emoji-id=6007942490076745785>🧹</tg-emoji> <b>Вся память авто-ответа очищена (затронуто {} чатов).</b>",
@@ -426,7 +436,7 @@ class QwenCLI(loader.Module):
             ),
             loader.ConfigValue(
                 "approval_mode",
-                "yolo",
+                "default",
                 self.strings["cfg_approval_mode_doc"],
                 validator=loader.validators.Choice(
                     ["plan", "default", "auto-edit", "yolo"]
@@ -722,6 +732,11 @@ class QwenCLI(loader.Module):
                 f"• <tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <code>auto_reply_chats</code>: <b>{len(self.impersonation_chats)}</b> chat(s)",
                 f"• <tg-emoji emoji-id=5253961389285845297>📌</tg-emoji> <code>memory_disabled_chats</code>: <b>{len(self.memory_disabled_chats)}</b> chat(s)",
                 f"• <tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <code>approval_mode</code>: <b>{utils.escape_html(self.config['approval_mode'])}</b>",
+                self.strings["approval_mode_details"].format(
+                    utils.escape_html(
+                        self._approval_mode_behavior(self.config["approval_mode"])
+                    )
+                ),
                 f"• <tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <code>resource_profile</code>: <b>{utils.escape_html(self.config['resource_profile'])}</b>",
                 f"• <tg-emoji emoji-id=5256094480498436162>📦</tg-emoji> <code>max_concurrent_requests</code>: <b>{int(self.config['max_concurrent_requests'])}</b>",
                 f"• <tg-emoji emoji-id=5253647062104287098>🔓</tg-emoji> <code>auth_type</code>: <b>{utils.escape_html(self.config['auth_type'])}</b>",
@@ -1752,6 +1767,8 @@ class QwenCLI(loader.Module):
             "request_id": None,
             "task": asyncio.current_task(),
             "tool_actions_count": 0,
+            "pending_approvals": {},
+            "pending_approval_uid": None,
         }
 
         try:
@@ -2665,6 +2682,16 @@ class QwenCLI(loader.Module):
                 action = nested_action
 
             session = self._request_sessions.get(chat_id)
+            approval_summary = json.dumps(tool_data, ensure_ascii=False)[:500]
+            approved = await self._request_action_approval(
+                chat_id=chat_id,
+                action_name=action,
+                source="telegram_tool",
+                summary=approval_summary,
+                kind_hint=self._detect_action_kind(action, "telegram"),
+            )
+            if not approved:
+                return _err(f"action '{action}' rejected by approval gate")
             if isinstance(session, dict):
                 used = int(session.get("tool_actions_count") or 0)
                 budget = int(self.config.get("tool_action_budget", 40) or 40)
@@ -4879,7 +4906,7 @@ class QwenCLI(loader.Module):
 
                 creation_kwargs = {
                     "cwd": tempdir,
-                    "stdin": asyncio.subprocess.DEVNULL,
+                    "stdin": asyncio.subprocess.PIPE,
                     "stdout": asyncio.subprocess.PIPE,
                     "stderr": asyncio.subprocess.PIPE,
                     "env": env,
@@ -4912,6 +4939,8 @@ class QwenCLI(loader.Module):
                         stdout_lines,
                         progress_state,
                         status_entity if not auto else None,
+                        proc,
+                        chat_id,
                     )
                 )
                 stderr_task = asyncio.create_task(
@@ -5092,6 +5121,16 @@ class QwenCLI(loader.Module):
     @staticmethod
     def _fmt_num(n: int) -> str:
         return f"{int(n):,}"
+
+    def _approval_mode_behavior(self, mode: str) -> str:
+        mode = (mode or "default").strip().lower()
+        mapping = {
+            "default": "все действия требуют ручного подтверждения",
+            "plan": "подтверждаются только рискованные действия (shell/network/telegram/destructive)",
+            "auto-edit": "edit/read без подтверждения, остальное с подтверждением",
+            "yolo": "все действия выполняются без подтверждений",
+        }
+        return mapping.get(mode, mapping["default"])
 
     def _update_qwen_progress_state(self, state: dict, payload: dict):
         msg_type = payload.get("type")
@@ -5622,8 +5661,220 @@ class QwenCLI(loader.Module):
         while len(buffer) > limit:
             buffer.popleft()
 
+    def _approval_requires_confirmation(self, mode: str, action_kind: str) -> bool:
+        mode = (mode or "default").strip().lower()
+        kind = (action_kind or "tool").strip().lower()
+        if mode == "yolo":
+            return False
+        if mode == "plan":
+            return kind in {"shell", "telegram", "network", "destructive"}
+        if mode == "auto-edit":
+            return kind not in {"edit", "read"}
+        return True
+
+    def _detect_action_kind(self, action_name: str, source: str = "") -> str:
+        text = f"{action_name or ''} {source or ''}".lower()
+        if any(key in text for key in ("shell", "bash", "cmd", "powershell", "terminal", "exec", "command")):
+            return "shell"
+        if any(key in text for key in ("telegram", "tg_tool", "send_message", "kick", "ban", "delete_message")):
+            return "telegram"
+        if any(key in text for key in ("http", "curl", "wget", "fetch", "network", "web_request")):
+            return "network"
+        if any(key in text for key in ("edit", "patch", "write", "replace", "refactor")):
+            return "edit"
+        if any(key in text for key in ("read", "cat", "list", "search", "grep", "find")):
+            return "read"
+        if any(key in text for key in ("delete", "purge", "remove", "rm ", "ban", "block")):
+            return "destructive"
+        return "tool"
+
+    def _extract_approval_details(self, payload: dict) -> dict:
+        event = payload.get("event") or {}
+        source = "qwen"
+        action = "tool_action"
+        summary = ""
+        if payload.get("type") == "stream_event" and event.get("type") in {
+            "approval_request",
+            "permission_request",
+            "tool_approval_required",
+        }:
+            data = (
+                event.get("approval")
+                or event.get("request")
+                or event.get("tool")
+                or event.get("data")
+                or {}
+            )
+            action = (
+                data.get("name")
+                or data.get("tool_name")
+                or data.get("action")
+                or event.get("name")
+                or action
+            )
+            summary = (
+                data.get("command")
+                or data.get("description")
+                or data.get("reason")
+                or event.get("message")
+                or ""
+            )
+            source = str(data.get("source") or "qwen")
+        return {
+            "source": source,
+            "action": str(action or "tool_action"),
+            "summary": str(summary or ""),
+            "approval_id": (
+                event.get("approval_id")
+                or event.get("id")
+                or payload.get("approval_id")
+                or payload.get("id")
+            ),
+        }
+
+    def _build_approval_buttons(self, uid: str):
+        return [[
+            {
+                "text": self.strings["btn_approve_action"],
+                "callback": self._approval_decision_callback,
+                "args": (uid, "approve"),
+                "color": "green",
+                "style": "success",
+            },
+            {
+                "text": self.strings["btn_reject_action"],
+                "callback": self._approval_decision_callback,
+                "args": (uid, "reject"),
+                "color": "blue",
+                "style": "primary",
+            },
+            {
+                "text": self.strings["btn_stop_action"],
+                "callback": self._approval_decision_callback,
+                "args": (uid, "stop"),
+                "color": "red",
+                "style": "danger",
+            },
+        ]]
+
+    async def _request_action_approval(
+        self,
+        chat_id: int,
+        action_name: str,
+        source: str,
+        summary: str = "",
+        status_entity=None,
+        kind_hint: str = "",
+    ) -> bool:
+        session = self._request_sessions.get(chat_id) or {}
+        mode = str(self.config.get("approval_mode") or "default").strip().lower()
+        action_kind = kind_hint or self._detect_action_kind(action_name, source)
+        if not self._approval_requires_confirmation(mode, action_kind):
+            return True
+        if not self.config["interactive_buttons"]:
+            return False
+        uid = uuid.uuid4().hex[:12]
+        fut = asyncio.get_running_loop().create_future()
+        session.setdefault("pending_approvals", {})[uid] = {
+            "future": fut,
+            "chat_id": chat_id,
+            "action": action_name or "tool_action",
+            "source": source or "qwen",
+            "summary": summary or "",
+        }
+        session["pending_approval_uid"] = uid
+        title = self.strings["approval_request_title"]
+        lines = [
+            self.strings["approval_request_line"].format(
+                "Источник", utils.escape_html(source or "qwen")
+            ),
+            self.strings["approval_request_line"].format(
+                "Действие", utils.escape_html(action_name or "tool_action")
+            ),
+        ]
+        if summary:
+            lines.append(
+                self.strings["approval_request_line"].format(
+                    "Детали", utils.escape_html(self._short_status_text(summary, 300))
+                )
+            )
+        text = f"{title}\n" + "\n".join(lines) + f"\n\n{self.strings['approval_request_hint']}"
+        buttons = self._build_approval_buttons(uid)
+        try:
+            if status_entity is not None:
+                await self._edit_html(status_entity, text, reply_markup=buttons, link_preview=False)
+            else:
+                await self._answer_html(chat_id, text, reply_markup=buttons)
+        except Exception:
+            session.get("pending_approvals", {}).pop(uid, None)
+            session["pending_approval_uid"] = None
+            return False
+        try:
+            decision = await asyncio.wait_for(fut, timeout=QWEN_TIMEOUT)
+        except Exception:
+            session.get("pending_approvals", {}).pop(uid, None)
+            session["pending_approval_uid"] = None
+            return False
+        session.get("pending_approvals", {}).pop(uid, None)
+        session["pending_approval_uid"] = None
+        return decision == "approve"
+
+    async def _write_proc_approval_response(self, proc, approval_id, approved: bool):
+        if not proc or not getattr(proc, "stdin", None):
+            return
+        payloads = []
+        if approval_id:
+            payloads.append({"type": "approval_response", "approval_id": approval_id, "approve": approved})
+            payloads.append({"event": "approval_response", "id": approval_id, "approve": approved})
+        payloads.append({"approve": approved})
+        payloads.append({"accepted": approved})
+        payloads.append("y" if approved else "n")
+        for item in payloads:
+            try:
+                raw = (json.dumps(item, ensure_ascii=False) if isinstance(item, dict) else str(item)) + "\n"
+                proc.stdin.write(raw.encode("utf-8"))
+                await proc.stdin.drain()
+            except Exception:
+                break
+
+    async def _handle_qwen_approval_payload(self, chat_id: int, payload: dict, proc, status_entity, state: dict):
+        msg_type = payload.get("type")
+        event_type = ((payload.get("event") or {}).get("type") or "").strip()
+        if msg_type != "stream_event" or event_type not in {
+            "approval_request",
+            "permission_request",
+            "tool_approval_required",
+        }:
+            return
+        details = self._extract_approval_details(payload)
+        approved = await self._request_action_approval(
+            chat_id=chat_id,
+            action_name=details.get("action"),
+            source=details.get("source"),
+            summary=details.get("summary"),
+            status_entity=status_entity,
+            kind_hint=self._detect_action_kind(details.get("action"), details.get("summary")),
+        )
+        state["last_activity"] = (
+            "approval:approved" if approved else "approval:rejected"
+        )
+        state["action_stream"] = self._short_status_text(
+            f"{details.get('action')}: {'approved' if approved else 'rejected'}"
+        )
+        await self._write_proc_approval_response(
+            proc=proc,
+            approval_id=details.get("approval_id"),
+            approved=approved,
+        )
+
     async def _read_qwen_stdout_stream(
-        self, stream, stdout_lines: list, state: dict, status_entity=None
+        self,
+        stream,
+        stdout_lines: list,
+        state: dict,
+        status_entity=None,
+        proc=None,
+        chat_id: int = None,
     ):
         while True:
             line = await stream.readline()
@@ -5639,6 +5890,14 @@ class QwenCLI(loader.Module):
             except json.JSONDecodeError:
                 continue
             self._update_qwen_progress_state(state, payload)
+            if proc is not None and chat_id is not None:
+                await self._handle_qwen_approval_payload(
+                    chat_id=chat_id,
+                    payload=payload,
+                    proc=proc,
+                    status_entity=status_entity,
+                    state=state,
+                )
             if status_entity:
                 await self._update_qwen_status_message(status_entity, state)
 
@@ -5744,6 +6003,12 @@ class QwenCLI(loader.Module):
 
         session["cancel_requested"] = True
         session["interrupt_reason"] = reason
+        for pending in (session.get("pending_approvals") or {}).values():
+            fut = pending.get("future")
+            if fut and not fut.done():
+                fut.set_result("reject")
+        session["pending_approvals"] = {}
+        session["pending_approval_uid"] = None
         proc = session.get("proc")
         if proc and getattr(proc, "returncode", None) is None:
             with contextlib.suppress(Exception):
@@ -7669,6 +7934,38 @@ class QwenCLI(loader.Module):
         self.last_requests.pop(f"{cid}:{mid}", None)
         await self._edit_html(
             call, self.strings["request_cancelled"], reply_markup=None
+        )
+
+    async def _approval_decision_callback(self, call: InlineCall, uid: str, decision: str):
+        decision = (decision or "").strip().lower()
+        target = None
+        target_session = None
+        for session in self._request_sessions.values():
+            pending = (session.get("pending_approvals") or {}).get(uid)
+            if pending:
+                target = pending
+                target_session = session
+                break
+        if not target:
+            await self._edit_html(call, self.strings["approval_missing"], reply_markup=None)
+            return
+        fut = target.get("future")
+        action_name = target.get("action") or "tool_action"
+        if decision == "stop":
+            if target_session:
+                await self._interrupt_active_request(int(target_session.get("chat_id")), reason="cancel")
+            if fut and not fut.done():
+                fut.set_result("reject")
+            await self._edit_html(call, self.strings["request_cancelled"], reply_markup=None)
+            return
+        approved = decision == "approve"
+        if fut and not fut.done():
+            fut.set_result("approve" if approved else "reject")
+        key = "approval_approved" if approved else "approval_rejected"
+        await self._edit_html(
+            call,
+            self.strings[key].format(utils.escape_html(action_name)),
+            reply_markup=None,
         )
 
     async def _close_callback(self, call: InlineCall, uid: str):
