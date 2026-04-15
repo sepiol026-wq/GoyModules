@@ -1202,6 +1202,14 @@ class GoySecurity(loader.Module):
             return load_error(message)
         return RuntimeError(message)
 
+    def _guard_pretty_module_name(self, module_name: str, source: str) -> str:
+        with contextlib.suppress(Exception):
+            match = re.search(r"(?im)^class\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*loader\.Module\s*\)\s*:", source or "")
+            if match:
+                return match.group(1)
+        tail = str(module_name or "module").split(".")[-1]
+        return tail[:64] if tail else "module"
+
     async def _guard_ai_ready(self) -> bool:
         provider = self._active_provider()
         token = self._provider_token(provider)
@@ -1250,15 +1258,16 @@ class GoySecurity(loader.Module):
                         )
                     if not ai_result or ai_result.get("error"):
                         ai_reason = (ai_result or {}).get("reason", "no-response")
+                        pretty_name = self._guard_pretty_module_name(module_name, source)
                         allow_install = await self._guard_prompt_ai_unavailable(
                             guard_message,
-                            module_name,
+                            pretty_name,
                             scan_res,
                             ai_reason,
                         )
                         if not allow_install:
                             raise self._guard_block_error(
-                                f"GoySecurity preinstall guard blocked module {module_name} (ai=UNAVAILABLE)"
+                                f"GoySecurity: модуль '{pretty_name}' не установлен (AI недоступен)"
                             )
                         return await original(*args, **kwargs)
                     ai_verdict = str((ai_result or {}).get("verdict", "")).strip().upper()
@@ -1267,14 +1276,16 @@ class GoySecurity(loader.Module):
                             f"GoySecurity preinstall guard invalid AI verdict ({ai_verdict or 'empty'})"
                         )
                     if ai_verdict == "UNSAFE":
+                        pretty_name = self._guard_pretty_module_name(module_name, source)
                         block_text = (
                             "<b><tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> GoySecurity</b>\n"
-                            f"<b><tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Установка заблокирована:</b> <code>{html.escape(module_name)}</code>\n"
-                            "<b><tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Вердикт AI:</b> <code>UNSAFE</code>"
+                            f"<b><tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Модуль:</b> <code>{html.escape(pretty_name)}</code>\n"
+                            "<b><tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> Статус:</b> <code>НЕБЕЗОПАСЕН</code>\n"
+                            "<b><tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Установка автоматически отклонена GoySecurity</b>"
                         )
                         await self._guard_update_or_send(guard_message, block_text, delete_first=True)
                         raise self._guard_block_error(
-                            f"GoySecurity preinstall guard blocked module {module_name} (ai={ai_verdict})"
+                            f"GoySecurity: модуль '{pretty_name}' заблокирован как небезопасный (AI={ai_verdict})"
                         )
                 except Exception as e:
                     if "GoySecurity preinstall guard" in str(e):
