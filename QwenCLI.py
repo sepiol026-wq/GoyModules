@@ -132,7 +132,7 @@ class QwenCLI(loader.Module):
         "qwen_not_found": "<tg-emoji emoji-id=5332431395266524007>❗️</tg-emoji> <b>Команда <code>qwen</code> не найдена в системе.</b>\nПроверьте PATH или заполните <code>qwen_path</code> в cfg.",
         "qwen_auth_missing": "<tg-emoji emoji-id=5332431395266524007>❗️</tg-emoji> <b>Qwen CLI не готов к работе.</b>\nНастройте авторизацию.",
         "qwen_oauth_missing": "<tg-emoji emoji-id=5332431395266524007>❗️</tg-emoji> <b>Qwen OAuth не настроен.</b>\nЗапустите <code>.qwauth qwen</code> и подтвердите вход в браузере.",
-        "processing": "<tg-emoji emoji-id=5332688668102525212>⌛️</tg-emoji> <b>Обработка...</b>",
+        "processing": "<tg-emoji emoji-id=5415941463764667665>⏳</tg-emoji> <b>Обработка...</b>",
         "queue_wait": "<tg-emoji emoji-id=5415941463764667665>⏳</tg-emoji> <b>Ожидаю свободный слот выполнения...</b>",
         "bootstrap_wait": "<tg-emoji emoji-id=5415941463764667665>⏳</tg-emoji> <b>Подготавливаю локальный Qwen CLI runtime...</b>",
         "tool_exec_status": "<tg-emoji emoji-id=5962952497197748583>🔧</tg-emoji> <b>Выполняю Telegram-инструмент:</b> <code>{}</code> <i>(шаг {}/{})</i>",
