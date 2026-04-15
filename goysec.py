@@ -1160,7 +1160,7 @@ class GoySecurity(loader.Module):
 
     async def _guard_prompt_ai_unavailable(self, message, module_name: str, res: Dict[str, Any], ai_reason: str) -> bool:
         if not message or not getattr(self, "inline", None):
-            return True
+            return False
         token = f"{module_name}:{time.time_ns()}"
         fut = asyncio.get_running_loop().create_future()
         self._guard_pending_decisions[token] = fut
