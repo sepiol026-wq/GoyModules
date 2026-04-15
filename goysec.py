@@ -1,7 +1,7 @@
 # requires: requests aiohttp
 # meta developer: @samsepi0l_ovf
 # authors: @samsepi0l_ovf
-# Description: Security scanner module for Telegram userbot.
+# Description: Security scanner + optional pre-installation module guard.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/banner.png
 
 from __future__ import annotations
@@ -1042,6 +1042,9 @@ class GoySecurity(loader.Module):
             loader.ConfigValue("decode_depth", 7, "Глубина декодирования", validator=loader.validators.Integer(minimum=1, maximum=10)),
             loader.ConfigValue("max_files", 60, "Максимум файлов в архиве", validator=loader.validators.Integer(minimum=1, maximum=250)),
             loader.ConfigValue("ui_updates", True, "Показывать пошаговый статус", validator=loader.validators.Boolean()),
+            loader.ConfigValue("guard_preinstall_enabled", False, "Включить предустановочную проверку модулей (перехват register_module).", validator=loader.validators.Boolean()),
+            loader.ConfigValue("guard_preinstall_threshold", 70, "Порог risk-балла для блокировки установки при guard_preinstall_enabled.", validator=loader.validators.Integer(minimum=1, maximum=250)),
+            loader.ConfigValue("guard_preinstall_notify", True, "Писать предупреждения в лог при блокировке/ошибке preinstall guard.", validator=loader.validators.Boolean()),
         )
         self.av = Analyzer(depth=self.config["decode_depth"], mode="paranoid", max_files=self.config["max_files"])
         self._hist: List[Dict[str, Any]] = []
@@ -1051,6 +1054,8 @@ class GoySecurity(loader.Module):
         self._last_res = None
         self._custom_ai: Dict[str, Dict[str, Any]] = {}
         self._custom_ai_tokens: Dict[str, str] = {}
+        self._register_guard_patched = False
+        self._register_guard_original = None
 
     def config_complete(self):
         self.av.depth = self.config["decode_depth"]
@@ -1079,6 +1084,84 @@ class GoySecurity(loader.Module):
         self.av.mode = self._mode
         self._custom_ai = dict(self.db.get("GoySecurity", "gsec_custom_ai", {}) or {})
         self._custom_ai_tokens = dict(self.db.get("GoySecurity", "gsec_custom_ai_tokens", {}) or {})
+        self._ensure_preinstall_guard()
+
+    def _extract_register_module_payload(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Tuple[str, str]:
+        spec = args[0] if args else kwargs.get("spec")
+        module_name = ""
+        if len(args) > 1 and isinstance(args[1], str):
+            module_name = args[1]
+        module_name = module_name or str(getattr(spec, "name", "") or "external_module")
+        source = ""
+        loader_obj = getattr(spec, "loader", None) if spec else None
+
+        if loader_obj:
+            for attr in ("data", "source", "text", "code", "_data"):
+                val = getattr(loader_obj, attr, None)
+                if isinstance(val, bytes):
+                    source = val.decode("utf-8", errors="ignore")
+                    break
+                if isinstance(val, str):
+                    source = val
+                    break
+
+            if not source and callable(getattr(loader_obj, "get_source", None)):
+                with contextlib.suppress(Exception):
+                    fetched = loader_obj.get_source(module_name)
+                    if isinstance(fetched, str):
+                        source = fetched
+
+        if not source and isinstance(kwargs.get("source"), str):
+            source = kwargs["source"]
+        if not source and len(args) > 2 and isinstance(args[2], str):
+            source = args[2]
+
+        return module_name, source
+
+    def _should_block_preinstall(self, risk: str, score: int) -> bool:
+        if not self.config["guard_preinstall_enabled"]:
+            return False
+        return int(score) >= int(self.config["guard_preinstall_threshold"]) and risk in {"medium", "high", "critical"}
+
+    def _ensure_preinstall_guard(self) -> None:
+        if self._register_guard_patched:
+            return
+        lm = self.lookup("loader") or self.lookup("Loader")
+        allmodules = getattr(lm, "allmodules", None) if lm else None
+        original = getattr(allmodules, "register_module", None) if allmodules else None
+        if not callable(original):
+            return
+
+        async def guarded_register_module(*args, **kwargs):
+            module_name, source = self._extract_register_module_payload(args, kwargs)
+            if source:
+                try:
+                    prev_mode = self.av.mode
+                    self.av.mode = self._mode
+                    try:
+                        scan_res = self.av.scan([(module_name, source)])
+                    finally:
+                        self.av.mode = prev_mode
+                    risk = str(scan_res.get("risk", "clean"))
+                    score = int(scan_res.get("score", 0) or 0)
+                    if self._should_block_preinstall(risk, score):
+                        msg = (
+                            "GoySecurity preinstall guard blocked module "
+                            f"{module_name} (risk={risk}, score={score}, threshold={self.config['guard_preinstall_threshold']})"
+                        )
+                        if self.config["guard_preinstall_notify"]:
+                            log.warning(msg)
+                        raise RuntimeError(msg)
+                except RuntimeError:
+                    raise
+                except Exception as e:
+                    if self.config["guard_preinstall_notify"]:
+                        log.warning("GoySecurity preinstall guard fallback for %s: %s", module_name, e)
+            return await original(*args, **kwargs)
+
+        allmodules.register_module = guarded_register_module
+        self._register_guard_original = original
+        self._register_guard_patched = True
 
     def _persist(self) -> None:
         self.db.set("GoySecurity", "gsec_hist", self._hist)
