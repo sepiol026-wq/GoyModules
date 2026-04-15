@@ -979,7 +979,7 @@ class GoySecurity(loader.Module):
     """
     strings = {
         "name": "GoySecurity",
-        "loading": "<b>🛡 GoySecurity</b>",
+        "loading": "<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity</b>",
         "stage_fetch": "📥 <code>Сбор входных данных</code>",
         "stage_extract": "📦 <code>Извлечение содержимого</code>",
         "stage_decode": "🧬 <code>Декодирование слоёв</code>",
@@ -988,7 +988,7 @@ class GoySecurity(loader.Module):
         "stage_ai": "🤖 <code>AI-анализ: {provider}</code>",
         "stage_ai_wait": "🤖 <code>Жду ответ от {provider}</code>",
         "no_code": "<b>ошибка входа</b>: исходник не извлечён",
-        "header": "<b>🛡 Отчёт GoySecurity</b>\n",
+        "header": "<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> Отчёт GoySecurity</b>\n",
         "summary": (
             "<b>⚖️ Вердикт:</b> {verdict}\n"
             "<b>🧬 Семейство:</b> <code>{family}</code> | <b>Уверенность:</b> <code>{family_conf}%</code>\n"
@@ -997,7 +997,7 @@ class GoySecurity(loader.Module):
         "mode_line": "<b>🧱 Цепочка декодирования:</b> <code>{mode}</code>",
         "caps": "<b>🛰 Поведенческий профиль:</b>\n{caps}",
         "why_head": "<b>🚨 Статические находки:</b>\n",
-        "empty": "✅ <b>Высокодоверенных вредоносных индикаторов не найдено.</b>\n",
+        "empty": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Высокодоверенных вредоносных индикаторов не найдено.</b>\n",
         "section": "\n<b>┌ {title}</b>\n",
         "row": "├ <b>{title}</b> <i>(строка={line})</i>\n",
         "row_why": "├ <b>{title}</b>\n│ <i>{detail} • строка={line}</i>\n",
@@ -1216,8 +1216,8 @@ class GoySecurity(loader.Module):
                 f"🧠 <b>Текущая модель:</b> <code>{html.escape(current_model)}</code>\n"
                 f"📚 <b>Актуальные model id:</b> {suggested}\n"
                 f"🧾 <b>Тех. заметка:</b> {html.escape(meta['help'])}\n"
-                f"⚙️ <b>Быстрый выбор:</b> <code>.gai {html.escape(provider)} {html.escape(meta['models'][0])}</code>\n"
-                f"🔗 <b>Документация:</b> <code>{html.escape(str(meta.get('docs', '')))}</code>\n"
+                f"<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Быстрый выбор:</b> <code>.gai {html.escape(provider)} {html.escape(meta['models'][0])}</code>\n"
+                f"<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <b>Документация:</b> <code>{html.escape(str(meta.get('docs', '')))}</code>\n"
             )
         meta = self._custom_ai.get(provider, {})
         return (
@@ -1226,7 +1226,7 @@ class GoySecurity(loader.Module):
             f"🧠 <b>Текущая модель:</b> <code>{html.escape(current_model)}</code>\n"
             f"🌐 <b>Базовый URL:</b> <code>{html.escape(str(meta.get('base_url', '')))}</code>\n"
             f"🧱 <b>Совместимость:</b> <code>{html.escape(str(meta.get('style', 'openai')))}</code>\n"
-            f"⚙️ <b>Быстрый выбор:</b> <code>.gai {html.escape(provider)} {html.escape(current_model if current_model != 'не задана' else 'твоя-модель')}</code>\n"
+            f"<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Быстрый выбор:</b> <code>.gai {html.escape(provider)} {html.escape(current_model if current_model != 'не задана' else 'твоя-модель')}</code>\n"
         )
 
     def _provider_models_text(self, provider: str) -> str:
@@ -1703,7 +1703,7 @@ class GoySecurity(loader.Module):
         if risk == "high": return "🔴 Высокий риск"
         if risk == "medium": return "🟡 Подозрительная активность"
         if risk == "low": return "🔵 Низкий риск"
-        return "✅ Чисто"
+        return "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Чисто"
 
     def _short_title(self, title: str) -> str:
         mapping = {
@@ -2271,11 +2271,11 @@ class GoySecurity(loader.Module):
         conf = ai.get("confidence", 0)
         level = ai.get("threat_level", 0)
         
-        v_map = {"Clear": "✅ Чисто", "Suspicious": "🟡 Подозрительно", "Malicious": "🔴 Вредоносно", "Critical": "☠️ КРИТИЧЕСКИЙ РИСК"}
+        v_map = {"Clear": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Чисто", "Suspicious": "🟡 Подозрительно", "Malicious": "🔴 Вредоносно", "Critical": "☠️ КРИТИЧЕСКИЙ РИСК"}
         v_str = v_map.get(v, v)
         
         out.append(f"<b>⚖️ Вердикт:</b> <code>{v_str}</code> | <b>Уверенность:</b> <code>{conf}%</code>")
-        out.append(f"<b>🔥 Уровень угрозы:</b> <code>{level}/10</code>")
+        out.append(f"<b><tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Уровень угрозы:</b> <code>{level}/10</code>")
         
         fam = html.escape(str(ai.get("family", "N/A")))
         out.append(f"<b>🧬 Семейство:</b> <code>{fam}</code>")
@@ -2287,7 +2287,7 @@ class GoySecurity(loader.Module):
         
         inds = ai.get("indicators", [])
         if inds:
-            out.append("\n<b>📍 Индикаторы компрометации:</b>")
+            out.append("\n<b><tg-emoji emoji-id=5253713110111365241>📍</tg-emoji> Индикаторы компрометации:</b>")
             for i in inds[:4]:
                 t = html.escape(str(i.get("type", "Info")))
                 d = str(i.get("description", ""))

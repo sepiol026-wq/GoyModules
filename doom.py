@@ -170,7 +170,7 @@ class Doom(loader.Module):
             f"📺 <b>Action</b>:\n"
             f"<pre>{frame}</pre>\n"
             f"❤️ HP: <b>{st['hp']}</b> | 🔫 Ammo: <b>{st['ammo']}</b> | 💀 Kills: <b>{st['score']}</b>\n"
-            f"💬 <i>{st['log']}</i>"
+            f"<tg-emoji emoji-id=5253590213917158323>💬</tg-emoji> <i>{st['log']}</i>"
         )
         
         btn = [

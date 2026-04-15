@@ -1,7 +1,7 @@
 # requires: yt-dlp imageio-ffmpeg
 # meta developer: @samsepi0l_ovf
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/banner.png
-__version__ = (1, 1)
+__version__ = (1, 2)
 import asyncio
 import contextlib
 import json
@@ -23,47 +23,47 @@ class OmniLoad(loader.Module):
     
     strings = {
         "name": "OmniLoad",
-        "no_args": "👾 <b>No URL provided.</b> Please specify a link.",
-        "fetching": "⏳ <b>Parsing target...</b>",
-        "menu": "💉 <b>Target:</b> <i>{title}</i>\nChoose format & quality:",
-        "downloading": "🔥 <b>Downloading & rendering...</b>",
-        "uploading": "⏳ <b>Uploading to Telegram...</b>",
+        "no_args": "<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> <b>No URL provided.</b> Please specify a link.",
+        "fetching": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Parsing target...</b>",
+        "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Target:</b> <i>{title}</i>\nChoose format & quality:",
+        "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Downloading & rendering...</b>",
+        "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Uploading to Telegram...</b>",
         "error": "💀 <b>Error:</b> <code>{error}</code>",
         "expired": "💀 <b>Cache expired.</b> Please search again.",
-        "caption": "🎬 <b>{title}</b>\n👤 {author}\n🔗 <a href='{url}'>Source</a>"
+        "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Source</a>"
     }
     
     strings_ru = {
-        "no_args": "👾 <b>Аргументы где?</b> Укажи ссылку.",
-        "fetching": "⏳ <b>Паршу таргет...</b>",
-        "menu": "💉 <b>Таргет:</b> <i>{title}</i>\nВыбирай качество:",
-        "downloading": "🔥 <b>Дамплю сурс & рендерю...</b>",
-        "uploading": "⏳ <b>Аплоад в Telegram...</b>",
+        "no_args": "<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> <b>Аргументы где?</b> Укажи ссылку.",
+        "fetching": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Паршу таргет...</b>",
+        "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Таргет:</b> <i>{title}</i>\nВыбирай качество:",
+        "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Дамплю сурс & рендерю...</b>",
+        "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Аплоад в Telegram...</b>",
         "error": "💀 <b>Ошибка:</b> <code>{error}</code>",
         "expired": "💀 <b>Кэш устарел.</b> Сделай запрос заново.",
-        "caption": "🎬 <b>{title}</b>\n👤 {author}\n🔗 <a href='{url}'>Сурс</a>"
+        "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Сурс</a>"
     }
 
     strings_de = {
-        "no_args": "👾 <b>Kein URL angegeben.</b>",
-        "fetching": "⏳ <b>Ziel wird analysiert...</b>",
-        "menu": "💉 <b>Ziel:</b> <i>{title}</i>\nWählen Sie die Qualität:",
-        "downloading": "🔥 <b>Herunterladen & Verarbeiten...</b>",
-        "uploading": "⏳ <b>Hochladen zu Telegram...</b>",
+        "no_args": "<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> <b>Kein URL angegeben.</b>",
+        "fetching": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Ziel wird analysiert...</b>",
+        "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Ziel:</b> <i>{title}</i>\nWählen Sie die Qualität:",
+        "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Herunterladen & Verarbeiten...</b>",
+        "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Hochladen zu Telegram...</b>",
         "error": "💀 <b>Fehler:</b> <code>{error}</code>",
         "expired": "💀 <b>Cache abgelaufen.</b> Bitte erneut versuchen.",
-        "caption": "🎬 <b>{title}</b>\n👤 {author}\n🔗 <a href='{url}'>Quelle</a>"
+        "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Quelle</a>"
     }
 
     strings_jp = {
-        "no_args": "👾 <b>URLが提供されていません。</b>",
-        "fetching": "⏳ <b>ターゲットを解析中...</b>",
-        "menu": "💉 <b>ターゲット:</b> <i>{title}</i>\n品質を選択してください:",
-        "downloading": "🔥 <b>ダウンロードとレンダリング中...</b>",
-        "uploading": "⏳ <b>Telegramにアップロード中...</b>",
+        "no_args": "<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> <b>URLが提供されていません。</b>",
+        "fetching": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>ターゲットを解析中...</b>",
+        "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>ターゲット:</b> <i>{title}</i>\n品質を選択してください:",
+        "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>ダウンロードとレンダリング中...</b>",
+        "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Telegramにアップロード中...</b>",
         "error": "💀 <b>エラー:</b> <code>{error}</code>",
         "expired": "💀 <b>キャッシュの期限切れ。</b> 再試行してください。",
-        "caption": "🎬 <b>{title}</b>\n👤 {author}\n🔗 <a href='{url}'>ソース</a>"
+        "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>ソース</a>"
     }
 
     def __init__(self):
