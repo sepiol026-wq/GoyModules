@@ -5468,7 +5468,15 @@ class QwenCLI(loader.Module):
 
     @staticmethod
     def _safe_emoji_html(text: str) -> str:
-        return re.sub(r"</?tg-emoji[^>]*>", "", str(text or ""))
+        safe = str(text or "")
+        safe = re.sub(
+            r"<blockquote\b[^>]*\bexpandable\s*=\s*['\"]?(?:true|1)['\"]?[^>]*>",
+            "<blockquote>",
+            safe,
+            flags=re.IGNORECASE,
+        )
+        safe = re.sub(r"<code\b[^>]*>", "<code>", safe, flags=re.IGNORECASE)
+        return safe
 
     def _format_qwen_status(self, state: dict) -> str:
         elapsed = max(0, int(asyncio.get_running_loop().time() - state["started_at"]))
