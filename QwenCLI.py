@@ -5017,11 +5017,6 @@ class QwenCLI(loader.Module):
                 )
                 stderr_text = "\n".join(stderr_lines).strip()
                 stdout_text = "\n".join(stdout_lines).strip()
-                final_text = self._normalize_qwen_permission_error_text(
-                    final_text=final_text,
-                    stderr_text=stderr_text,
-                    stdout_text=stdout_text,
-                )
                 if progress_state["final_error"]:
                     raise RuntimeError(progress_state["final_error"])
                 if proc.returncode != 0 and not final_text and not generated_files:
@@ -5319,44 +5314,6 @@ class QwenCLI(loader.Module):
     def _append_status_stream(self, base: str, chunk: str, limit: int = 220) -> str:
         merged = f"{base} {chunk}".strip() if base else str(chunk or "").strip()
         return self._short_status_text(merged, limit=limit)
-
-    def _normalize_qwen_permission_error_text(
-        self, final_text: str, stderr_text: str = "", stdout_text: str = ""
-    ) -> str:
-        raw_text = str(final_text or "").strip()
-        if not raw_text and not stderr_text and not stdout_text:
-            return raw_text
-
-        combined = "\n".join(
-            chunk for chunk in [raw_text, str(stderr_text or "").strip(), str(stdout_text or "").strip()] if chunk
-        )
-        deny_line = re.search(
-            r'Qwen Code requires permission to use "([^"]+)", but that permission was denied\. Matching deny rule: "([^"]+)"\.',
-            combined,
-            flags=re.IGNORECASE,
-        )
-        if not deny_line:
-            return raw_text
-
-        qwen_line = deny_line.group(0)
-        blocked_tool = deny_line.group(1)
-        extra_lines = []
-        for line in combined.splitlines():
-            stripped = line.strip()
-            if not stripped:
-                continue
-            if stripped == qwen_line:
-                continue
-            if (
-                blocked_tool.lower() in stripped.lower()
-                and ("denied" in stripped.lower() or "deny rule" in stripped.lower())
-            ):
-                extra_lines.append(stripped)
-        result_lines = [qwen_line]
-        for line in extra_lines[:2]:
-            if line not in result_lines:
-                result_lines.append(line)
-        return "\n".join(result_lines)
 
     def _apply_qwen_usage(self, state: dict, usage: dict):
         input_tokens = usage.get("input_tokens")
@@ -7551,7 +7508,10 @@ class QwenCLI(loader.Module):
             "security": {
                 "auth": {
                     "selectedType": self.config["auth_type"],
-                }
+                },
+                "tools": {
+                    "run_shell_command": "ask",
+                },
             },
         }
         with open(
@@ -7571,8 +7531,44 @@ class QwenCLI(loader.Module):
         current_turns = model.get("maxSessionTurns")
         if not isinstance(current_turns, int) or current_turns < 2:
             model["maxSessionTurns"] = QWEN_DEFAULT_MAX_SESSION_TURNS
+        settings = self._remove_tool_deny_rules(
+            settings, {"run_shell_command", "run_command", "execute_shell_command"}
+        )
         settings["$version"] = settings.get("$version", 3)
         return settings
+
+    def _remove_tool_deny_rules(self, obj, allowed_tools: set):
+        if isinstance(obj, dict):
+            normalized = {}
+            for key, value in obj.items():
+                key_l = str(key).strip().lower()
+                cleaned_value = self._remove_tool_deny_rules(value, allowed_tools)
+                if key_l in {
+                    "deny",
+                    "denies",
+                    "denylist",
+                    "denied",
+                    "blocked",
+                    "blockedtools",
+                    "blocked_tools",
+                    "disallowed",
+                    "disallowed_tools",
+                } and isinstance(cleaned_value, list):
+                    cleaned_value = [
+                        item
+                        for item in cleaned_value
+                        if str(item).strip().lower() not in allowed_tools
+                    ]
+                if key_l in allowed_tools and (
+                    cleaned_value is False
+                    or str(cleaned_value).strip().lower() in {"deny", "blocked", "false"}
+                ):
+                    cleaned_value = "ask"
+                normalized[key] = cleaned_value
+            return normalized
+        if isinstance(obj, list):
+            return [self._remove_tool_deny_rules(item, allowed_tools) for item in obj]
+        return obj
 
     def _persist_qwen_runtime_state(self, runtime_home: str):
         runtime_qwen = os.path.join(runtime_home, ".qwen")
