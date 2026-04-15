@@ -1,7 +1,7 @@
 # requires: yt-dlp imageio-ffmpeg
 # meta developer: @samsepi0l_ovf
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/banner.png
-__version__ = (1, 2)
+__version__ = (1, 3)
 import asyncio
 import contextlib
 import json
@@ -28,8 +28,8 @@ class OmniLoad(loader.Module):
         "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Target:</b> <i>{title}</i>\nChoose format & quality:",
         "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Downloading & rendering...</b>",
         "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Uploading to Telegram...</b>",
-        "error": "💀 <b>Error:</b> <code>{error}</code>",
-        "expired": "💀 <b>Cache expired.</b> Please search again.",
+        "error": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Error:</b> <code>{error}</code>",
+        "expired": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Cache expired.</b> Please search again.",
         "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Source</a>"
     }
     
@@ -39,8 +39,8 @@ class OmniLoad(loader.Module):
         "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Таргет:</b> <i>{title}</i>\nВыбирай качество:",
         "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Дамплю сурс & рендерю...</b>",
         "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Аплоад в Telegram...</b>",
-        "error": "💀 <b>Ошибка:</b> <code>{error}</code>",
-        "expired": "💀 <b>Кэш устарел.</b> Сделай запрос заново.",
+        "error": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Ошибка:</b> <code>{error}</code>",
+        "expired": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Кэш устарел.</b> Сделай запрос заново.",
         "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Сурс</a>"
     }
 
@@ -50,8 +50,8 @@ class OmniLoad(loader.Module):
         "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Ziel:</b> <i>{title}</i>\nWählen Sie die Qualität:",
         "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Herunterladen & Verarbeiten...</b>",
         "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Hochladen zu Telegram...</b>",
-        "error": "💀 <b>Fehler:</b> <code>{error}</code>",
-        "expired": "💀 <b>Cache abgelaufen.</b> Bitte erneut versuchen.",
+        "error": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Fehler:</b> <code>{error}</code>",
+        "expired": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Cache abgelaufen.</b> Bitte erneut versuchen.",
         "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Quelle</a>"
     }
 
@@ -61,8 +61,8 @@ class OmniLoad(loader.Module):
         "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>ターゲット:</b> <i>{title}</i>\n品質を選択してください:",
         "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>ダウンロードとレンダリング中...</b>",
         "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Telegramにアップロード中...</b>",
-        "error": "💀 <b>エラー:</b> <code>{error}</code>",
-        "expired": "💀 <b>キャッシュの期限切れ。</b> 再試行してください。",
+        "error": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>エラー:</b> <code>{error}</code>",
+        "expired": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>キャッシュの期限切れ。</b> 再試行してください。",
         "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>ソース</a>"
     }
 
@@ -143,7 +143,7 @@ class OmniLoad(loader.Module):
 
     async def _dl_callback(self, call, call_id: str, format_spec: str, media_type: str, target_chat_id: int, reply_id: int):
         with contextlib.suppress(Exception):
-            await call.answer("🚀 Processing...")
+            await call.answer("<tg-emoji emoji-id=5253613479754999811>➡️</tg-emoji> Processing...")
 
         if call_id not in self._cache:
             with contextlib.suppress(Exception):

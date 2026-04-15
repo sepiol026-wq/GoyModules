@@ -62,7 +62,7 @@ class Doom(loader.Module):
             [{"text": "🟡 Продолжить", "callback": self.action_cont}]
         ]
         await self.inline.form(
-            text="💀 <b>DOOM</b>\n\nВыбери действие:",
+            text="<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>DOOM</b>\n\nВыбери действие:",
             message=message,
             reply_markup=buttons
         )
@@ -156,7 +156,7 @@ class Doom(loader.Module):
     async def do_render(self, call, st):
         if st["hp"] <= 0:
             st["running"] = False
-            dead_text = f"💀 <b>ВЫ ПОГИБЛИ</b>\n\nСчет: {st['score']}\nНажмите Новая игра, чтобы воскреснуть."
+            dead_text = f"<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>ВЫ ПОГИБЛИ</b>\n\nСчет: {st['score']}\nНажмите Новая игра, чтобы воскреснуть."
             btn = [[{"text": "🔄 Новая игра", "callback": self.action_new}]]
             await call.edit(dead_text, reply_markup=btn)
             return
@@ -169,7 +169,7 @@ class Doom(loader.Module):
             f"<pre>{mmap}</pre>\n"
             f"📺 <b>Action</b>:\n"
             f"<pre>{frame}</pre>\n"
-            f"❤️ HP: <b>{st['hp']}</b> | 🔫 Ammo: <b>{st['ammo']}</b> | 💀 Kills: <b>{st['score']}</b>\n"
+            f"❤️ HP: <b>{st['hp']}</b> | 🔫 Ammo: <b>{st['ammo']}</b> | <tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> Kills: <b>{st['score']}</b>\n"
             f"<tg-emoji emoji-id=5253590213917158323>💬</tg-emoji> <i>{st['log']}</i>"
         )
         

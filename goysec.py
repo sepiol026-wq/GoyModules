@@ -981,7 +981,7 @@ class GoySecurity(loader.Module):
         "name": "GoySecurity",
         "loading": "<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity</b>",
         "stage_fetch": "📥 <code>Сбор входных данных</code>",
-        "stage_extract": "📦 <code>Извлечение содержимого</code>",
+        "stage_extract": "<tg-emoji emoji-id=5256094480498436162>📦</tg-emoji> <code>Извлечение содержимого</code>",
         "stage_decode": "🧬 <code>Декодирование слоёв</code>",
         "stage_parse": "🧠 <code>Статический разбор</code>",
         "stage_rules": "🧪 <code>Сигнатуры и эвристики</code>",
@@ -1210,7 +1210,7 @@ class GoySecurity(loader.Module):
             meta = AI_MODEL_CATALOG[provider]
             suggested = ", ".join(f"<code>{html.escape(m)}</code>" for m in meta["models"])
             return (
-                f"✨ <b>{html.escape(meta['title'])}</b>\n"
+                f"<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>{html.escape(meta['title'])}</b>\n"
                 f"📅 <b>Актуальность каталога:</b> <code>{html.escape(meta['updated'])}</code>\n"
                 f"🔐 <b>Токен:</b> <code>{html.escape(token_state)}</code>\n"
                 f"🧠 <b>Текущая модель:</b> <code>{html.escape(current_model)}</code>\n"
@@ -1291,7 +1291,7 @@ class GoySecurity(loader.Module):
         ])
         rows.append([
             {"text": "🧠 Модели", "callback": self._inline_models, "args": (target, "models")},
-            {"text": "✅ Сделать активным", "callback": self._inline_activate_provider, "args": (target, page)},
+            {"text": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Сделать активным", "callback": self._inline_activate_provider, "args": (target, page)},
         ])
         if target in AI_MODEL_CATALOG:
             current_model = self._provider_model(target)
@@ -1348,7 +1348,7 @@ class GoySecurity(loader.Module):
         lines.append(f"<b>📶 Статус:</b> <code>{html.escape(self._progress_bar(attempt, total))} попытка {attempt}/{total}</code>")
         lines.append(f"<b>🧠 Модель:</b> <code>{html.escape(model)}</code>")
         if res:
-            lines.append(f"<b>📦 Контекст:</b> <code>файлы={res.get('parts', 0)} • находки={res.get('total', 0)} • score={res.get('score', 0)}</code>")
+            lines.append(f"<b><tg-emoji emoji-id=5256094480498436162>📦</tg-emoji> Контекст:</b> <code>файлы={res.get('parts', 0)} • находки={res.get('total', 0)} • score={res.get('score', 0)}</code>")
         if retry_reason:
             cut_reason = retry_reason[:240] + ("..." if len(retry_reason) > 240 else "")
             lines.append(f"<b>↻ Повторный запрос:</b> <i>{html.escape(cut_reason)}</i>")
@@ -1905,7 +1905,7 @@ class GoySecurity(loader.Module):
             out = ["<b>кастомные ai-провайдеры</b>\n"]
             for name, meta in sorted(self._custom_ai.items()):
                 token_state = "настроен" if self._custom_ai_tokens.get(name) else "пусто"
-                out.append(f"<blockquote>✨ <b>{html.escape(name)}</b><br>🌐 <i>базовый URL</i>: <code>{html.escape(str(meta.get('base_url', '')))}</code><br>🧱 <i>совместимость</i>: <code>{html.escape(str(meta.get('style', 'openai')))}</code><br>🧠 <i>модель</i>: <code>{html.escape(str(meta.get('model', '')))}</code><br>🔐 <i>токен</i>: <code>{html.escape(token_state)}</code></blockquote>")
+                out.append(f"<blockquote><tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>{html.escape(name)}</b><br>🌐 <i>базовый URL</i>: <code>{html.escape(str(meta.get('base_url', '')))}</code><br>🧱 <i>совместимость</i>: <code>{html.escape(str(meta.get('style', 'openai')))}</code><br>🧠 <i>модель</i>: <code>{html.escape(str(meta.get('model', '')))}</code><br>🔐 <i>токен</i>: <code>{html.escape(token_state)}</code></blockquote>")
             await self._send_text_chunked(message, "".join(out))
             return
         if action == "del" and len(parts) >= 2:
@@ -2323,7 +2323,7 @@ class GoySecurity(loader.Module):
         out = [self.strings("header")]
         
         if api_err:
-            out.append(f"⚠️ <b>Нейро-анализ недоступен:</b> <i>{html.escape(self._human_api_error(api_err))}</i>\n")
+            out.append(f"<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нейро-анализ недоступен:</b> <i>{html.escape(self._human_api_error(api_err))}</i>\n")
             
         r_risk = str(res.get("risk", ""))
         verdict = self._get_verdict(r_risk)
@@ -2369,7 +2369,7 @@ class GoySecurity(loader.Module):
         out = [self.strings("details_head")]
         
         if api_err:
-            out.append(f"⚠️ <b>Нейро-анализ недоступен:</b> <i>{html.escape(self._human_api_error(api_err))}</i>\n")
+            out.append(f"<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нейро-анализ недоступен:</b> <i>{html.escape(self._human_api_error(api_err))}</i>\n")
             
         r_risk = str(res.get("risk", ""))
         verdict = self._get_verdict(r_risk)
