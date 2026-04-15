@@ -168,8 +168,8 @@ class QwenCLI(loader.Module):
         "btn_retry_request": "🔃 Повторить запрос",
         "btn_cancel_request": "📛 Отменить запрос",
         "btn_stop_request": "📛 Стоп",
-        "btn_approve_action": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Принять",
-        "btn_reject_action": "<tg-emoji emoji-id=5258277659306932115>❌</tg-emoji> Отклонить",
+        "btn_approve_action": "✅ Принять",
+        "btn_reject_action": "❌ Отклонить",
         "btn_stop_action": "📛 Стоп",
         "no_last_request": "Последний запрос не найден для повторной генерации.",
         "request_cancelled": "<tg-emoji emoji-id=5350470691701407492>⛔</tg-emoji>️ <b>Запрос отменен.</b>",
@@ -5860,13 +5860,18 @@ class QwenCLI(loader.Module):
     async def _write_proc_approval_response(self, proc, approval_id, approved: bool):
         if not proc or not getattr(proc, "stdin", None):
             return
+        decision = "approved" if approved else "rejected"
         payloads = []
         if approval_id:
             payloads.append({"type": "approval_response", "approval_id": approval_id, "approve": approved})
             payloads.append({"event": "approval_response", "id": approval_id, "approve": approved})
+            payloads.append({"type": "approval_response", "approval_id": approval_id, "decision": decision})
+            payloads.append({"approval_request_id": approval_id, "decision": decision})
         payloads.append({"approve": approved})
         payloads.append({"accepted": approved})
+        payloads.append({"decision": decision})
         payloads.append("y" if approved else "n")
+        payloads.append("approve" if approved else "reject")
         for item in payloads:
             try:
                 raw = (json.dumps(item, ensure_ascii=False) if isinstance(item, dict) else str(item)) + "\n"
@@ -5880,10 +5885,13 @@ class QwenCLI(loader.Module):
             return await self._write_proc_approval_response(proc, None, approved)
         if not proc or not getattr(proc, "stdin", None):
             return
+        decision = "approved" if approved else "rejected"
         variants = [
             {"type": "tool_approval", "tool_use_id": tool_use_id, "approve": approved},
             {"type": "approval_response", "tool_use_id": tool_use_id, "approve": approved},
             {"tool_use_id": tool_use_id, "approve": approved},
+            {"type": "tool_approval", "tool_use_id": tool_use_id, "decision": decision},
+            {"tool_use_id": tool_use_id, "decision": decision},
         ]
         for item in variants:
             try:
