@@ -4889,6 +4889,12 @@ class QwenCLI(loader.Module):
             with tempfile.TemporaryDirectory(prefix="qwencli_") as tempdir:
                 runtime_home = self._prepare_qwen_runtime_home(tempdir)
                 env["HOME"] = runtime_home
+                env["QWEN_CODE_SYSTEM_SETTINGS_PATH"] = os.path.join(
+                    runtime_home, ".qwen", "system-settings.json"
+                )
+                env["QWEN_CODE_SYSTEM_DEFAULTS_PATH"] = os.path.join(
+                    runtime_home, ".qwen", "system-defaults.json"
+                )
                 args = self._build_qwen_args(
                     qwen_path=qwen_path,
                     prompt=prompt,
@@ -5058,6 +5064,10 @@ class QwenCLI(loader.Module):
         lean_mode: bool = False,
         auto: bool = False,
     ) -> list:
+        approval_mode = str("default" if auto else self.config["approval_mode"]).strip().lower()
+        approval_mode = {
+            "auto-edit": "auto_edit",
+        }.get(approval_mode, approval_mode)
         args = [
             qwen_path,
             "--prompt",
@@ -5065,7 +5075,7 @@ class QwenCLI(loader.Module):
             "--output-format",
             "stream-json",
             "--approval-mode",
-            "default" if auto else self.config["approval_mode"],
+            approval_mode,
             "--auth-type",
             self.config["auth_type"],
             "--chat-recording",
@@ -7465,6 +7475,11 @@ class QwenCLI(loader.Module):
             if os.path.exists(src):
                 with open(src, "rb") as src_f, open(dst, "wb") as dst_f:
                     dst_f.write(src_f.read())
+        for system_name in ("system-settings.json", "system-defaults.json"):
+            system_path = os.path.join(runtime_qwen, system_name)
+            if not os.path.exists(system_path):
+                with open(system_path, "w", encoding="utf-8") as file_obj:
+                    json.dump({"permissions": {"deny": []}}, file_obj, ensure_ascii=False)
         resource_profile = self._get_resource_profile()
         if not resource_profile.get("minimal_runtime_settings"):
             settings = {}
@@ -7534,10 +7549,38 @@ class QwenCLI(loader.Module):
         settings = self._remove_tool_deny_rules(
             settings, {"run_shell_command", "run_command", "execute_shell_command"}
         )
+        permissions = settings.setdefault("permissions", {})
+        if isinstance(permissions, dict):
+            ask = permissions.get("ask")
+            if isinstance(ask, list):
+                if "Bash" not in ask:
+                    ask.append("Bash")
+            else:
+                permissions["ask"] = ["Bash"]
         settings["$version"] = settings.get("$version", 3)
         return settings
 
     def _remove_tool_deny_rules(self, obj, allowed_tools: set):
+        shell_aliases = {
+            "run_shell_command",
+            "run_command",
+            "execute_shell_command",
+            "bash",
+            "shell",
+        }
+
+        def _is_shell_rule(item) -> bool:
+            rule = str(item or "").strip().lower()
+            if not rule:
+                return False
+            if rule in shell_aliases:
+                return True
+            if rule.startswith("bash(") or rule.startswith("shell("):
+                return True
+            if "run_shell_command" in rule or "execute_shell_command" in rule:
+                return True
+            return False
+
         if isinstance(obj, dict):
             normalized = {}
             for key, value in obj.items():
@@ -7558,12 +7601,25 @@ class QwenCLI(loader.Module):
                         item
                         for item in cleaned_value
                         if str(item).strip().lower() not in allowed_tools
+                        and not _is_shell_rule(item)
                     ]
                 if key_l in allowed_tools and (
                     cleaned_value is False
                     or str(cleaned_value).strip().lower() in {"deny", "blocked", "false"}
                 ):
                     cleaned_value = "ask"
+                if key_l == "permissions" and isinstance(cleaned_value, dict):
+                    deny_list = cleaned_value.get("deny")
+                    if isinstance(deny_list, list):
+                        cleaned_value["deny"] = [
+                            item for item in deny_list if not _is_shell_rule(item)
+                        ]
+                    ask_list = cleaned_value.get("ask")
+                    if isinstance(ask_list, list):
+                        if not any(_is_shell_rule(item) for item in ask_list):
+                            ask_list.append("Bash")
+                    elif ask_list is None:
+                        cleaned_value["ask"] = ["Bash"]
                 normalized[key] = cleaned_value
             return normalized
         if isinstance(obj, list):
