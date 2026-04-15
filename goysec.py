@@ -1398,12 +1398,32 @@ class GoySecurity(loader.Module):
             rows.append(row)
         target = selected or self._active_provider()
         rows.append([
-            {"text": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> Каталог", "callback": self._inline_models, "args": (target, "catalog")},
-            {"text": "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Подключение", "callback": self._inline_models, "args": (target, "setup")},
+            {
+                "text": "Каталог",
+                "icon_custom_emoji_id": "5256230583717079814",
+                "callback": self._inline_models,
+                "args": (target, "catalog"),
+            },
+            {
+                "text": "Подключение",
+                "icon_custom_emoji_id": "5253952855185829086",
+                "callback": self._inline_models,
+                "args": (target, "setup"),
+            },
         ])
         rows.append([
-            {"text": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> Модели", "callback": self._inline_models, "args": (target, "models")},
-            {"text": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Сделать активным", "callback": self._inline_activate_provider, "args": (target, page)},
+            {
+                "text": "Модели",
+                "icon_custom_emoji_id": "5256230583717079814",
+                "callback": self._inline_models,
+                "args": (target, "models"),
+            },
+            {
+                "text": "Сделать активным",
+                "icon_custom_emoji_id": "5255813619702049821",
+                "callback": self._inline_activate_provider,
+                "args": (target, page),
+            },
         ])
         if target in AI_MODEL_CATALOG:
             current_model = self._provider_model(target)
@@ -1420,7 +1440,13 @@ class GoySecurity(loader.Module):
                     model_row = []
             if model_row:
                 rows.append(model_row)
-        rows.append([{"text": "<tg-emoji emoji-id=5255831443816327915>🗑</tg-emoji> Закрыть", "action": "close"}])
+        rows.append([
+            {
+                "text": "Закрыть",
+                "icon_custom_emoji_id": "5255831443816327915",
+                "action": "close",
+            }
+        ])
         return rows
 
     async def _inline_models(self, call: InlineCall, provider: str, page: str = "catalog"):
