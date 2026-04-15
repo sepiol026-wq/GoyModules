@@ -36,6 +36,7 @@ from markdown_it import MarkdownIt
 import psutil
 
 from telethon import types as tg_types
+from telethon.extensions import html as tg_html
 from telethon.errors.rpcerrorlist import (
     ChannelPrivateError,
     ChatAdminRequiredError,
@@ -63,6 +64,10 @@ from ..inline.types import InlineCall
 logger = logging.getLogger(__name__)
 
 TELEGRAM_TOOL_TAG_PATTERN = r"(?:telegram_tool|trlegram_tool|telegarm_tool|telegramtool)"
+TG_EMOJI_HTML_RE = re.compile(
+    r"<tg-emoji\s+emoji-id=['\"](\d+)['\"]\s*>(.*?)</tg-emoji>",
+    re.IGNORECASE | re.DOTALL,
+)
 
 DB_HISTORY_KEY = "qwencli_conversations_v1\u200b"
 DB_GAUTO_HISTORY_KEY = "qwencli_auto_conversations_v1\u200b"
@@ -5389,6 +5394,7 @@ class QwenCLI(loader.Module):
         strip_custom_emoji: bool = True,
     ):
         safe_text = self._safe_emoji_html(text) if strip_custom_emoji else text
+        html_with_custom_emoji = not strip_custom_emoji and "<tg-emoji" in str(text or "")
         if isinstance(entity, InlineCall):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
@@ -5399,6 +5405,16 @@ class QwenCLI(loader.Module):
                     safe_text, reply_markup=reply_markup, parse_mode="html"
                 )
             return await entity.edit(text, reply_markup=reply_markup)
+        if html_with_custom_emoji and isinstance(entity, Message):
+            parsed_text, entities = self._parse_html_with_custom_emoji_entities(text)
+            with contextlib.suppress(Exception):
+                return await self.client.send_message(
+                    entity.chat_id,
+                    parsed_text,
+                    formatting_entities=entities,
+                    link_preview=link_preview,
+                    reply_to=getattr(entity, "id", None),
+                )
         try:
             return await utils.answer(
                 entity,
@@ -5445,6 +5461,7 @@ class QwenCLI(loader.Module):
         strip_custom_emoji: bool = True,
     ):
         safe_text = self._safe_emoji_html(text) if strip_custom_emoji else text
+        html_with_custom_emoji = not strip_custom_emoji and "<tg-emoji" in str(text or "")
         if isinstance(entity, InlineCall):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
@@ -5455,6 +5472,15 @@ class QwenCLI(loader.Module):
                     text=safe_text, reply_markup=reply_markup, parse_mode="html"
                 )
             return await entity.edit(text=text, reply_markup=reply_markup)
+        if html_with_custom_emoji and hasattr(entity, "id"):
+            parsed_text, entities = self._parse_html_with_custom_emoji_entities(text)
+            with contextlib.suppress(Exception):
+                return await self.client.edit_message(
+                    entity,
+                    parsed_text,
+                    formatting_entities=entities,
+                    link_preview=link_preview,
+                )
         if hasattr(entity, "edit"):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
@@ -5483,6 +5509,32 @@ class QwenCLI(loader.Module):
     @staticmethod
     def _safe_emoji_html(text: str) -> str:
         return re.sub(r"</?tg-emoji[^>]*>", "", str(text or ""))
+
+    def _parse_html_with_custom_emoji_entities(self, text: str):
+        def _replace(match: re.Match) -> str:
+            doc_id = match.group(1)
+            inner = (match.group(2) or "").strip() or "🙂"
+            return f'<a href="emoji://{doc_id}">{inner}</a>'
+
+        transformed = TG_EMOJI_HTML_RE.sub(_replace, str(text or ""))
+        parsed_text, entities = tg_html.parse(transformed)
+        out_entities = []
+        for entity in entities or []:
+            if isinstance(entity, tg_types.MessageEntityTextUrl):
+                url = str(getattr(entity, "url", "") or "")
+                if url.startswith("emoji://"):
+                    raw = url.split("emoji://", 1)[1].strip()
+                    if raw.isdigit():
+                        out_entities.append(
+                            tg_types.MessageEntityCustomEmoji(
+                                offset=entity.offset,
+                                length=entity.length,
+                                document_id=int(raw),
+                            )
+                        )
+                        continue
+            out_entities.append(entity)
+        return parsed_text, out_entities
 
     def _format_qwen_status(self, state: dict) -> str:
         elapsed = max(0, int(asyncio.get_running_loop().time() - state["started_at"]))
