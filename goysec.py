@@ -1121,11 +1121,6 @@ class GoySecurity(loader.Module):
 
         return module_name, source
 
-    def _should_block_preinstall(self, risk: str, score: int) -> bool:
-        if not self.config["guard_preinstall_enabled"]:
-            return False
-        return int(score) >= int(self.config["guard_preinstall_threshold"]) and risk in {"medium", "high", "critical"}
-
     def _ai_verdict_to_risk(self, verdict: str) -> str:
         v = (verdict or "").strip().lower()
         if v == "critical":
@@ -1155,25 +1150,6 @@ class GoySecurity(loader.Module):
         result = await self._ask_ai(provider, token, probe, model, static_res, "normal")
         return bool(result) and not bool(result.get("error"))
 
-    async def _notify_guard_result(self, module_name: str, static_res: Dict[str, Any], ai_result: Optional[Dict[str, Any]], blocked: bool) -> None:
-        client = getattr(self, "client", None)
-        if client is None:
-            return
-        static_risk = str(static_res.get("risk", "clean"))
-        static_score = int(static_res.get("score", 0) or 0)
-        ai_verdict = str((ai_result or {}).get("verdict", "Unknown"))
-        ai_conf = int((ai_result or {}).get("confidence", 0) or 0)
-        status = "🔴 НЕБЕЗОПАСНО" if blocked else "🟢 БЕЗОПАСНО"
-        text = (
-            f"<b>GoySecurity автоскан:</b> <code>{html.escape(module_name)}</code>\n"
-            f"<b>Статус:</b> <code>{status}</code>\n"
-            f"<b>Static:</b> risk=<code>{html.escape(static_risk)}</code> score=<code>{static_score}</code>\n"
-            f"<b>AI:</b> verdict=<code>{html.escape(ai_verdict)}</code> conf=<code>{ai_conf}%</code>\n"
-            f"<b>Кнопки:</b> <code>🟢 SAFE</code> <code>🔴 UNSAFE</code>"
-        )
-        with contextlib.suppress(Exception):
-            await client.send_message("me", text, parse_mode="html", link_preview=False)
-
     def _ensure_preinstall_guard(self) -> None:
         if self._register_guard_patched:
             return
@@ -1193,8 +1169,6 @@ class GoySecurity(loader.Module):
                         scan_res = self.av.scan([(module_name, source)])
                     finally:
                         self.av.mode = prev_mode
-                    risk = str(scan_res.get("risk", "clean"))
-                    score = int(scan_res.get("score", 0) or 0)
                     provider = self._active_provider()
                     token = self._provider_token(provider)
                     model = self._provider_model(provider)
@@ -1207,14 +1181,10 @@ class GoySecurity(loader.Module):
                             log.warning("%s: %s", msg, (ai_result or {}).get("reason", "no-response"))
                         raise RuntimeError(msg)
                     ai_risk = self._ai_verdict_to_risk(str((ai_result or {}).get("verdict", "")))
-                    block_by_static = self._should_block_preinstall(risk, score)
-                    block_by_ai = ai_risk in {"medium", "high", "critical"}
-                    should_block = block_by_static or block_by_ai
-                    await self._notify_guard_result(module_name, scan_res, ai_result, should_block)
-                    if should_block:
+                    if ai_risk in {"medium", "high", "critical"}:
                         msg = (
                             "GoySecurity preinstall guard blocked module "
-                            f"{module_name} (risk={risk}, score={score}, ai={str((ai_result or {}).get('verdict', 'n/a'))}, threshold={self.config['guard_preinstall_threshold']})"
+                            f"{module_name} (ai={str((ai_result or {}).get('verdict', 'n/a'))}, confidence={int((ai_result or {}).get('confidence', 0) or 0)})"
                         )
                         if self.config["guard_preinstall_notify"]:
                             log.warning(msg)
@@ -2023,7 +1993,11 @@ class GoySecurity(loader.Module):
         self.config["guard_preinstall_enabled"] = enabled
         if enabled:
             self._ensure_preinstall_guard()
-        state = "🟢 on" if enabled else "🔴 off"
+        state = (
+            "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> on"
+            if enabled else
+            "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> off"
+        )
         await utils.answer(message, self.strings("autoscan_set").format(state=state))
 
     @loader.unrestricted
