@@ -5381,9 +5381,14 @@ class QwenCLI(loader.Module):
         os.replace(temp_path, path)
 
     async def _answer_html(
-        self, entity, text: str, reply_markup=None, link_preview: bool = False
+        self,
+        entity,
+        text: str,
+        reply_markup=None,
+        link_preview: bool = False,
+        strip_custom_emoji: bool = True,
     ):
-        safe_text = self._safe_emoji_html(text)
+        safe_text = self._safe_emoji_html(text) if strip_custom_emoji else text
         if isinstance(entity, InlineCall):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
@@ -5432,9 +5437,14 @@ class QwenCLI(loader.Module):
         return await utils.answer(entity, safe_text, reply_markup=reply_markup)
 
     async def _edit_html(
-        self, entity, text: str, reply_markup=None, link_preview: bool = False
+        self,
+        entity,
+        text: str,
+        reply_markup=None,
+        link_preview: bool = False,
+        strip_custom_emoji: bool = True,
     ):
-        safe_text = self._safe_emoji_html(text)
+        safe_text = self._safe_emoji_html(text) if strip_custom_emoji else text
         if isinstance(entity, InlineCall):
             with contextlib.suppress(TypeError):
                 return await entity.edit(
@@ -5463,7 +5473,11 @@ class QwenCLI(loader.Module):
                     )
                 return await entity.edit(text=text, reply_markup=reply_markup)
         return await self._answer_html(
-            entity, text, reply_markup=reply_markup, link_preview=link_preview
+            entity,
+            text,
+            reply_markup=reply_markup,
+            link_preview=link_preview,
+            strip_custom_emoji=strip_custom_emoji,
         )
 
     @staticmethod
@@ -5559,6 +5573,7 @@ class QwenCLI(loader.Module):
                 text,
                 reply_markup=state.get("reply_markup"),
                 link_preview=False,
+                strip_custom_emoji=False,
             )
         except Exception:
             pass
