@@ -5400,27 +5400,22 @@ class QwenCLI(loader.Module):
                 )
             return await entity.edit(text, reply_markup=reply_markup)
         if hasattr(entity, "edit"):
-            with contextlib.suppress(TypeError):
-                return await entity.edit(
-                    text,
-                    parse_mode="html",
-                    link_preview=link_preview,
-                    reply_markup=reply_markup,
-                )
-            with contextlib.suppress(Exception):
-                return await entity.edit(
-                    safe_text,
-                    parse_mode="html",
-                    link_preview=link_preview,
-                    reply_markup=reply_markup,
-                )
-            with contextlib.suppress(Exception):
-                return await entity.edit(
-                    plain_text,
-                    parse_mode="html",
-                    link_preview=link_preview,
-                    reply_markup=reply_markup,
-                )
+            for candidate in (text, safe_text, plain_text):
+                with contextlib.suppress(Exception):
+                    return await entity.edit(
+                        candidate,
+                        parse_mode="html",
+                        link_preview=link_preview,
+                        reply_markup=reply_markup,
+                    )
+                with contextlib.suppress(Exception):
+                    return await entity.edit(
+                        candidate,
+                        parse_mode="html",
+                        reply_markup=reply_markup,
+                    )
+                with contextlib.suppress(Exception):
+                    return await entity.edit(candidate, reply_markup=reply_markup)
         try:
             return await utils.answer(
                 entity,
@@ -5490,28 +5485,23 @@ class QwenCLI(loader.Module):
                 )
             return await entity.edit(text=text, reply_markup=reply_markup)
         if hasattr(entity, "edit"):
-            with contextlib.suppress(TypeError):
-                return await entity.edit(
-                    text,
-                    parse_mode="html",
-                    link_preview=link_preview,
-                    reply_markup=reply_markup,
-                )
+            for candidate in (text, safe_text, plain_text):
+                with contextlib.suppress(Exception):
+                    return await entity.edit(
+                        candidate,
+                        parse_mode="html",
+                        link_preview=link_preview,
+                        reply_markup=reply_markup,
+                    )
+                with contextlib.suppress(Exception):
+                    return await entity.edit(
+                        candidate,
+                        parse_mode="html",
+                        reply_markup=reply_markup,
+                    )
+                with contextlib.suppress(Exception):
+                    return await entity.edit(candidate, reply_markup=reply_markup)
             with contextlib.suppress(Exception):
-                with contextlib.suppress(Exception):
-                    return await entity.edit(
-                        safe_text,
-                        parse_mode="html",
-                        link_preview=link_preview,
-                        reply_markup=reply_markup,
-                    )
-                with contextlib.suppress(Exception):
-                    return await entity.edit(
-                        plain_text,
-                        parse_mode="html",
-                        link_preview=link_preview,
-                        reply_markup=reply_markup,
-                    )
                 return await entity.edit(text=text, reply_markup=reply_markup)
         return await self._answer_html(
             entity, text, reply_markup=reply_markup, link_preview=link_preview
