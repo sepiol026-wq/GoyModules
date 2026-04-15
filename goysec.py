@@ -1159,6 +1159,8 @@ class GoySecurity(loader.Module):
         )
 
     async def _guard_prompt_ai_unavailable(self, message, module_name: str, res: Dict[str, Any], ai_reason: str) -> bool:
+        if not message or not getattr(self, "inline", None):
+            return True
         token = f"{module_name}:{time.time_ns()}"
         fut = asyncio.get_running_loop().create_future()
         self._guard_pending_decisions[token] = fut
@@ -1903,7 +1905,7 @@ class GoySecurity(loader.Module):
                         if resp.status != 200:
                             text = (await resp.text())[:300]
                             last_error = f"API Error {resp.status}: {text}"
-                            if attempt < attempts - 1:
+                            if resp.status == 429 and attempt < attempts - 1:
                                 if status_cb:
                                     with contextlib.suppress(Exception):
                                         await status_cb(attempt + 1, last_error)
@@ -1915,22 +1917,11 @@ class GoySecurity(loader.Module):
                         parsed = self._parse_ai_json(text)
                         if parsed.get("error"):
                             last_error = parsed.get("reason", "JSON Parse Error")
-                            if attempt < attempts - 1:
-                                if status_cb:
-                                    with contextlib.suppress(Exception):
-                                        await status_cb(attempt + 1, last_error)
-                                await asyncio.sleep(min(60, 2 ** attempt + 3 * (attempt + 1)))
-                                continue
                             return parsed
                         return parsed
             except Exception as e:
                 last_error = str(e)
-                if attempt == attempts - 1:
-                    return {"error": True, "reason": last_error}
-                if status_cb:
-                    with contextlib.suppress(Exception):
-                        await status_cb(attempt + 1, last_error)
-                await asyncio.sleep(min(60, 2 ** attempt + 3 * (attempt + 1)))
+                return {"error": True, "reason": last_error}
         return {"error": True, "reason": last_error}
 
     async def _ask_ai_autoscan(
