@@ -1769,6 +1769,7 @@ class QwenCLI(loader.Module):
             "tool_actions_count": 0,
             "pending_approvals": {},
             "pending_approval_uid": None,
+            "approved_tool_use_ids": set(),
         }
 
         try:
@@ -5732,6 +5733,43 @@ class QwenCLI(loader.Module):
             ),
         }
 
+    def _extract_tool_use_from_payload(self, payload: dict) -> dict:
+        event = payload.get("event") or {}
+        block = {}
+        if payload.get("type") == "stream_event":
+            event_type = (event.get("type") or "").strip()
+            if event_type == "content_block_start":
+                block = event.get("content_block") or {}
+            elif event_type == "tool_progress":
+                block = event.get("tool") or event.get("content_block") or {}
+        elif payload.get("type") == "assistant":
+            contents = ((payload.get("message") or {}).get("content") or [])
+            if isinstance(contents, list):
+                for one in contents:
+                    if isinstance(one, dict) and one.get("type") == "tool_use":
+                        block = one
+                        break
+        if not isinstance(block, dict) or block.get("type") != "tool_use":
+            return {}
+        tool_name = str(block.get("name") or block.get("tool_name") or "").strip()
+        tool_use_id = (
+            block.get("id")
+            or block.get("tool_use_id")
+            or event.get("tool_use_id")
+            or event.get("id")
+        )
+        tool_input = block.get("input") or block.get("arguments") or {}
+        summary = ""
+        with contextlib.suppress(Exception):
+            summary = json.dumps(tool_input, ensure_ascii=False)[:400]
+        return {
+            "source": "qwen",
+            "action": tool_name or "tool_use",
+            "summary": summary,
+            "approval_id": tool_use_id,
+            "tool_use_id": tool_use_id,
+        }
+
     def _build_approval_buttons(self, uid: str):
         return [[
             {
@@ -5837,16 +5875,45 @@ class QwenCLI(loader.Module):
             except Exception:
                 break
 
+    async def _write_proc_tool_use_response(self, proc, tool_use_id, approved: bool):
+        if not tool_use_id:
+            return await self._write_proc_approval_response(proc, None, approved)
+        if not proc or not getattr(proc, "stdin", None):
+            return
+        variants = [
+            {"type": "tool_approval", "tool_use_id": tool_use_id, "approve": approved},
+            {"type": "approval_response", "tool_use_id": tool_use_id, "approve": approved},
+            {"tool_use_id": tool_use_id, "approve": approved},
+        ]
+        for item in variants:
+            try:
+                raw = json.dumps(item, ensure_ascii=False) + "\n"
+                proc.stdin.write(raw.encode("utf-8"))
+                await proc.stdin.drain()
+            except Exception:
+                break
+        await self._write_proc_approval_response(proc, tool_use_id, approved)
+
     async def _handle_qwen_approval_payload(self, chat_id: int, payload: dict, proc, status_entity, state: dict):
         msg_type = payload.get("type")
         event_type = ((payload.get("event") or {}).get("type") or "").strip()
-        if msg_type != "stream_event" or event_type not in {
-            "approval_request",
-            "permission_request",
-            "tool_approval_required",
-        }:
-            return
-        details = self._extract_approval_details(payload)
+        details = {}
+        explicit_approval = (
+            msg_type == "stream_event"
+            and event_type in {"approval_request", "permission_request", "tool_approval_required"}
+        )
+        if explicit_approval:
+            details = self._extract_approval_details(payload)
+        else:
+            tool_use = self._extract_tool_use_from_payload(payload)
+            if not tool_use:
+                return
+            session = self._request_sessions.get(chat_id) or {}
+            seen = session.setdefault("approved_tool_use_ids", set())
+            tool_key = str(tool_use.get("tool_use_id") or tool_use.get("action") or "")
+            if tool_key and tool_key in seen:
+                return
+            details = tool_use
         approved = await self._request_action_approval(
             chat_id=chat_id,
             action_name=details.get("action"),
@@ -5861,9 +5928,21 @@ class QwenCLI(loader.Module):
         state["action_stream"] = self._short_status_text(
             f"{details.get('action')}: {'approved' if approved else 'rejected'}"
         )
-        await self._write_proc_approval_response(
+        if explicit_approval:
+            await self._write_proc_approval_response(
+                proc=proc,
+                approval_id=details.get("approval_id"),
+                approved=approved,
+            )
+            return
+        session = self._request_sessions.get(chat_id) or {}
+        seen = session.setdefault("approved_tool_use_ids", set())
+        tool_key = str(details.get("tool_use_id") or details.get("action") or "")
+        if tool_key:
+            seen.add(tool_key)
+        await self._write_proc_tool_use_response(
             proc=proc,
-            approval_id=details.get("approval_id"),
+            tool_use_id=details.get("tool_use_id"),
             approved=approved,
         )
 
@@ -6009,6 +6088,7 @@ class QwenCLI(loader.Module):
                 fut.set_result("reject")
         session["pending_approvals"] = {}
         session["pending_approval_uid"] = None
+        session["approved_tool_use_ids"] = set()
         proc = session.get("proc")
         if proc and getattr(proc, "returncode", None) is None:
             with contextlib.suppress(Exception):
