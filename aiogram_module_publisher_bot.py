@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Monolithic GitHub module publisher bot (aiogram 3)."""
+"""Monolithic GitHub module publisher bot (aiogram 3, no GitHub API key required)."""
 
 from __future__ import annotations
 
 import asyncio
-import base64
 import fnmatch
 import json
 import logging
 import re
+import subprocess
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import aiohttp
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -28,20 +27,17 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 BOT_TOKEN = "PUT_YOUR_BOT_TOKEN_HERE"
 OWNER_ID = 8304142242
 GITHUB_REPO = "sepiol026-wq/goypulse"
-GITHUB_TOKEN = ""
+GIT_BRANCH = "main"
 POLL_INTERVAL_SEC = 180
 TRACK_INCLUDE_PATTERNS = ["*.py"]
 TRACK_EXCLUDE_PATTERNS = ["*__init__.py", "venv/*", ".*", "assets/*"]
 STATE_PATH = Path("module_publisher_state.json")
+MIRROR_DIR = Path(".module_repo_mirror")
 
-# Lists are persisted in state json and can be managed via inline UI.
 DEFAULT_CHANNELS: list[int] = []
 DEFAULT_BOT_ADMINS: list[int] = []
 DEFAULT_ALLOWED_PM_USERS: list[int] = []
 
-# =========================
-# PARSERS
-# =========================
 META_DESCRIPTION = re.compile(r"^\s*#\s*Description\s*:\s*(.+)$", re.I | re.M)
 META_BANNER = re.compile(r"^\s*#\s*meta banner\s*:\s*(\S+)\s*$", re.I | re.M)
 DEV_RE = re.compile(r"^\s*#\s*meta developer\s*:\s*(.+)$", re.I | re.M)
@@ -92,36 +88,49 @@ class Storage:
         STATE_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
 
 
-class GitHubClient:
-    def __init__(self):
-        self.base = f"https://api.github.com/repos/{GITHUB_REPO}"
+class GitMirror:
+    """Works with public GitHub repo through git clone/fetch (no API key)."""
 
-    async def _request(self, session: aiohttp.ClientSession, path: str) -> Any:
-        headers = {"Accept": "application/vnd.github+json"}
-        if GITHUB_TOKEN:
-            headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
-        async with session.get(f"{self.base}{path}", headers=headers) as resp:
-            raw = await resp.text()
-            if resp.status >= 400:
-                raise RuntimeError(f"GitHub API {resp.status}: {raw[:300]}")
-            return json.loads(raw)
+    def __init__(self, repo: str, branch: str, mirror_dir: Path):
+        self.repo = repo
+        self.branch = branch
+        self.mirror_dir = mirror_dir
+        self.remote_url = f"https://github.com/{repo}.git"
 
-    async def get_tree(self, session: aiohttp.ClientSession) -> list[dict[str, Any]]:
-        head = await self._request(session, "/commits?per_page=1")
-        sha = head[0]["sha"]
-        tree = await self._request(session, f"/git/trees/{sha}?recursive=1")
-        return tree.get("tree", [])
+    def _run(self, args: list[str], cwd: Path | None = None) -> str:
+        p = subprocess.run(args, cwd=cwd, capture_output=True, text=True)
+        if p.returncode != 0:
+            raise RuntimeError(f"Command failed: {' '.join(args)}\n{p.stderr.strip()[:400]}")
+        return p.stdout.strip()
 
-    async def get_file(self, session: aiohttp.ClientSession, path: str) -> dict[str, Any]:
-        return await self._request(session, f"/contents/{path}")
+    def sync(self) -> None:
+        if not self.mirror_dir.exists():
+            self._run(["git", "clone", "--depth", "1", "--branch", self.branch, self.remote_url, str(self.mirror_dir)])
+            return
+        self._run(["git", "fetch", "origin", self.branch, "--depth", "1"], cwd=self.mirror_dir)
+        self._run(["git", "checkout", "-f", self.branch], cwd=self.mirror_dir)
+        self._run(["git", "reset", "--hard", f"origin/{self.branch}"], cwd=self.mirror_dir)
 
-    async def latest_commit_for_file(self, session: aiohttp.ClientSession, path: str) -> dict[str, Any] | None:
-        commits = await self._request(session, f"/commits?path={path}&per_page=1")
-        return commits[0] if commits else None
+    def iter_files(self) -> list[str]:
+        out: list[str] = []
+        for p in self.mirror_dir.rglob("*.py"):
+            rel = p.relative_to(self.mirror_dir).as_posix()
+            out.append(rel)
+        return out
+
+    def read_file(self, rel_path: str) -> str:
+        return (self.mirror_dir / rel_path).read_text("utf-8", errors="ignore")
+
+    def latest_commit_for_file(self, rel_path: str) -> str:
+        return self._run(["git", "log", "-1", "--format=%H", "--", rel_path], cwd=self.mirror_dir)
 
     @staticmethod
-    def raw_url(path: str) -> str:
-        return f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/{path}"
+    def raw_url(rel_path: str) -> str:
+        return f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GIT_BRANCH}/{rel_path}"
+
+    @staticmethod
+    def commit_url(commit_hash: str) -> str:
+        return f"https://github.com/{GITHUB_REPO}/commit/{commit_hash}"
 
 
 class App:
@@ -133,13 +142,12 @@ class App:
 
         self.storage = Storage()
         self.state = self.storage.load()
-        self.gh = GitHubClient()
+        self.mirror = GitMirror(GITHUB_REPO, GIT_BRANCH, MIRROR_DIR)
 
         self.pending_updates: dict[str, dict[str, Any]] = {}
         self.await_input: dict[int, str] = {}
         self.register_handlers()
 
-    # ---------- Permissions ----------
     def is_owner(self, user_id: int) -> bool:
         return user_id == OWNER_ID
 
@@ -149,7 +157,6 @@ class App:
     def pm_allowed(self, user_id: int) -> bool:
         return self.is_owner(user_id) or user_id in self.state.allowed_pm_users
 
-    # ---------- UI ----------
     def kb_main(self) -> InlineKeyboardBuilder:
         kb = InlineKeyboardBuilder()
         kb.button(text="🔎 Scan now", callback_data="ui:scan")
@@ -190,20 +197,17 @@ class App:
         else:
             await target.answer(text, reply_markup=markup)
 
-    # ---------- Handlers ----------
     def register_handlers(self) -> None:
         @self.router.message(Command("start"))
         async def start_cmd(message: Message) -> None:
-            uid = message.from_user.id
-            if not self.pm_allowed(uid):
+            if not self.pm_allowed(message.from_user.id):
                 await message.answer("⛔️ access denied")
                 return
             await self.render_main(message)
 
         @self.router.message(Command("panel"))
         async def panel_cmd(message: Message) -> None:
-            uid = message.from_user.id
-            if not self.pm_allowed(uid):
+            if not self.pm_allowed(message.from_user.id):
                 return
             await self.render_main(message)
 
@@ -222,7 +226,8 @@ class App:
             txt = (
                 "<b>Status</b>\n"
                 f"Tracked modules: <code>{len(self.state.modules)}</code>\n"
-                f"Poll interval: <code>{POLL_INTERVAL_SEC}s</code>"
+                f"Poll interval: <code>{POLL_INTERVAL_SEC}s</code>\n"
+                f"Mirror dir: <code>{MIRROR_DIR}</code>"
             )
             kb = InlineKeyboardBuilder()
             kb.button(text="⬅️ Back", callback_data="ui:main")
@@ -234,8 +239,7 @@ class App:
             if not self.is_admin(call.from_user.id):
                 await call.answer("Admin only", show_alert=True)
                 return
-            txt = "<b>Channels</b>\n" + self._list_to_text(self.state.publish_channels)
-            await call.message.edit_text(txt, reply_markup=self.kb_entity("channels").as_markup())
+            await call.message.edit_text("<b>Channels</b>\n" + self._list_to_text(self.state.publish_channels), reply_markup=self.kb_entity("channels").as_markup())
             await call.answer("Channels")
 
         @self.router.callback_query(F.data == "ui:admins")
@@ -243,8 +247,7 @@ class App:
             if not self.is_owner(call.from_user.id):
                 await call.answer("Owner only", show_alert=True)
                 return
-            txt = "<b>Bot admins</b>\n" + self._list_to_text(self.state.bot_admins)
-            await call.message.edit_text(txt, reply_markup=self.kb_entity("admins").as_markup())
+            await call.message.edit_text("<b>Bot admins</b>\n" + self._list_to_text(self.state.bot_admins), reply_markup=self.kb_entity("admins").as_markup())
             await call.answer("Admins")
 
         @self.router.callback_query(F.data == "ui:pm")
@@ -252,8 +255,7 @@ class App:
             if not self.is_owner(call.from_user.id):
                 await call.answer("Owner only", show_alert=True)
                 return
-            txt = "<b>PM allowed users</b>\n" + self._list_to_text(self.state.allowed_pm_users)
-            await call.message.edit_text(txt, reply_markup=self.kb_entity("pm").as_markup())
+            await call.message.edit_text("<b>PM allowed users</b>\n" + self._list_to_text(self.state.allowed_pm_users), reply_markup=self.kb_entity("pm").as_markup())
             await call.answer("PM access")
 
         @self.router.callback_query(F.data.startswith("ui:add:"))
@@ -266,7 +268,6 @@ class App:
             if kind in {"admins", "pm"} and not self.is_owner(uid):
                 await call.answer("Owner only", show_alert=True)
                 return
-
             self.await_input[uid] = f"add:{kind}"
             await call.answer("Жду ID")
             await call.message.answer(f"Введите ID для <b>add {kind}</b> одним числом.")
@@ -281,7 +282,6 @@ class App:
             if kind in {"admins", "pm"} and not self.is_owner(uid):
                 await call.answer("Owner only", show_alert=True)
                 return
-
             self.await_input[uid] = f"rm:{kind}"
             await call.answer("Жду ID")
             await call.message.answer(f"Введите ID для <b>remove {kind}</b> одним числом.")
@@ -291,7 +291,7 @@ class App:
             if not self.is_admin(call.from_user.id):
                 await call.answer("Admin only", show_alert=True)
                 return
-            await call.answer("Scanning...", show_alert=False)
+            await call.answer("Scanning...")
             await self.scan_and_notify(force=True)
             await call.message.answer("✅ Scan done")
 
@@ -309,7 +309,6 @@ class App:
 
             action, kind = op.split(":", 1)
             arr = self.state.publish_channels if kind == "channels" else self.state.bot_admins if kind == "admins" else self.state.allowed_pm_users
-
             if action == "add":
                 if target_id not in arr:
                     arr.append(target_id)
@@ -341,16 +340,11 @@ class App:
             await call.message.edit_reply_markup(reply_markup=None)
             await call.answer("Skipped")
 
-    # ---------- Scanner ----------
     @staticmethod
     def should_track(path: str) -> bool:
         inc = any(fnmatch.fnmatch(path, p) for p in TRACK_INCLUDE_PATTERNS)
         exc = any(fnmatch.fnmatch(path, p) for p in TRACK_EXCLUDE_PATTERNS)
         return inc and not exc
-
-    @staticmethod
-    def decode_b64(payload: str) -> str:
-        return base64.b64decode(payload).decode("utf-8", errors="ignore") if payload else ""
 
     @staticmethod
     def extract_version(source: str) -> str:
@@ -369,9 +363,9 @@ class App:
         name = name_m.group(1).strip() if name_m else Path(path).stem
 
         desc = ""
-        meta_desc = META_DESCRIPTION.search(source)
-        if meta_desc:
-            desc = meta_desc.group(1).strip()
+        m = META_DESCRIPTION.search(source)
+        if m:
+            desc = m.group(1).strip()
         if not desc:
             desc = self.extract_docstring(source)
         if not desc:
@@ -379,15 +373,14 @@ class App:
 
         banner = META_BANNER.search(source).group(1).strip() if META_BANNER.search(source) else ""
         developer = DEV_RE.search(source).group(1).strip() if DEV_RE.search(source) else "unknown"
-        cmds = sorted({f".{m.group(1)}" for m in CMD_RE.finditer(source)})
-
+        commands = sorted({f".{x.group(1)}" for x in CMD_RE.finditer(source)})
         return {
             "name": name,
             "description": desc,
             "banner": banner,
             "developer": developer,
             "version": self.extract_version(source),
-            "commands": cmds,
+            "commands": commands,
         }
 
     @staticmethod
@@ -397,11 +390,11 @@ class App:
             "updated": f"🆙 Module {meta['name']} (v{old_v} -> v{new_v}) Updated!",
             "deleted": f"🗑️ Module {meta['name']} (v{old_v}) Deleted!",
         }[kind]
-        commands = "\n".join(f"• <code>{c}</code>" for c in meta.get("commands", [])) or "• <i>No commands</i>"
+        cmds = "\n".join(f"• <code>{c}</code>" for c in meta.get("commands", [])) or "• <i>No commands</i>"
         return (
             f"<blockquote expandable><b>{title}</b></blockquote>\n\n"
             f"📝 <b>Description:</b>\n{meta.get('description', '—')}\n\n"
-            f"⚙️ <b>Commands:</b>\n{commands}\n\n"
+            f"⚙️ <b>Commands:</b>\n{cmds}\n\n"
             f"🔗 <a href=\"{commit_url}\">Open commit on GitHub</a>\n"
             f"👨‍💻 <b>Developer:</b> {meta.get('developer', 'unknown')}"
         )
@@ -409,78 +402,66 @@ class App:
     async def bootstrap(self) -> None:
         if self.state.modules:
             return
-        async with aiohttp.ClientSession() as session:
-            tree = await self.gh.get_tree(session)
-            for item in tree:
-                if item.get("type") != "blob":
-                    continue
-                path = item.get("path", "")
-                if not self.should_track(path):
-                    continue
-                info = await self.gh.get_file(session, path)
-                src = self.decode_b64(info.get("content", ""))
-                self.state.modules[path] = TrackedModule(path=path, sha=item["sha"], version=self.extract_version(src))
-            self.storage.save(self.state)
-            logger.info("bootstrap tracked=%s", len(self.state.modules))
+        self.mirror.sync()
+        for rel_path in self.mirror.iter_files():
+            if not self.should_track(rel_path):
+                continue
+            src = self.mirror.read_file(rel_path)
+            last_commit = self.mirror.latest_commit_for_file(rel_path)
+            self.state.modules[rel_path] = TrackedModule(path=rel_path, sha=last_commit, version=self.extract_version(src))
+        self.storage.save(self.state)
+        logger.info("bootstrap tracked=%s", len(self.state.modules))
 
     async def scan_and_notify(self, force: bool = False) -> None:
-        async with aiohttp.ClientSession() as session:
-            tree = await self.gh.get_tree(session)
-            current = {i["path"]: i for i in tree if i.get("type") == "blob" and self.should_track(i.get("path", ""))}
+        self.mirror.sync()
+        file_paths = [p for p in self.mirror.iter_files() if self.should_track(p)]
+        current: dict[str, str] = {p: self.mirror.latest_commit_for_file(p) for p in file_paths}
 
-            old_set, new_set = set(self.state.modules.keys()), set(current.keys())
-            added, deleted, common = sorted(new_set - old_set), sorted(old_set - new_set), sorted(old_set & new_set)
+        old_set, new_set = set(self.state.modules), set(current)
+        added, deleted, common = sorted(new_set - old_set), sorted(old_set - new_set), sorted(old_set & new_set)
+        updates: list[dict[str, Any]] = []
 
-            updates: list[dict[str, Any]] = []
+        for path in added:
+            src = self.mirror.read_file(path)
+            meta = self.parse_module_meta(src, path)
+            commit_hash = current[path]
+            updates.append({
+                "kind": "added", "path": path, "old_v": "-", "new_v": meta["version"], "sha": commit_hash,
+                "meta": meta, "commit_url": self.mirror.commit_url(commit_hash),
+            })
 
-            for path in added:
-                info = await self.gh.get_file(session, path)
-                src = self.decode_b64(info.get("content", ""))
-                meta = self.parse_module_meta(src, path)
-                commit = await self.gh.latest_commit_for_file(session, path)
-                updates.append({
-                    "kind": "added", "path": path, "old_v": "-", "new_v": meta["version"],
-                    "sha": current[path]["sha"], "meta": meta,
-                    "commit_url": commit.get("html_url") if commit else self.gh.raw_url(path),
-                })
+        for path in common:
+            old = self.state.modules[path]
+            new_sha = current[path]
+            if old.sha == new_sha and not force:
+                continue
+            src = self.mirror.read_file(path)
+            meta = self.parse_module_meta(src, path)
+            updates.append({
+                "kind": "updated", "path": path, "old_v": old.version, "new_v": meta["version"], "sha": new_sha,
+                "meta": meta, "commit_url": self.mirror.commit_url(new_sha),
+            })
 
-            for path in common:
-                old = self.state.modules[path]
-                new_sha = current[path]["sha"]
-                if old.sha == new_sha and not force:
-                    continue
-                info = await self.gh.get_file(session, path)
-                src = self.decode_b64(info.get("content", ""))
-                meta = self.parse_module_meta(src, path)
-                commit = await self.gh.latest_commit_for_file(session, path)
-                updates.append({
-                    "kind": "updated", "path": path, "old_v": old.version, "new_v": meta["version"],
-                    "sha": new_sha, "meta": meta,
-                    "commit_url": commit.get("html_url") if commit else self.gh.raw_url(path),
-                })
+        for path in deleted:
+            old = self.state.modules[path]
+            updates.append({
+                "kind": "deleted", "path": path, "old_v": old.version, "new_v": "-", "sha": "",
+                "meta": {"name": Path(path).stem, "description": "Module removed", "commands": []},
+                "commit_url": f"https://github.com/{GITHUB_REPO}",
+            })
 
-            for path in deleted:
-                old = self.state.modules[path]
-                commit = await self.gh.latest_commit_for_file(session, path)
-                updates.append({
-                    "kind": "deleted", "path": path, "old_v": old.version, "new_v": "-", "sha": "",
-                    "meta": {"name": Path(path).stem, "description": "Module removed", "commands": []},
-                    "commit_url": commit.get("html_url") if commit else f"https://github.com/{GITHUB_REPO}",
-                })
+        for upd in updates:
+            await self.notify_owner(upd)
+            self.apply_state(upd)
 
-            for upd in sorted(updates, key=lambda x: x["path"]):
-                await self.notify_owner(upd)
-                self.apply_state(upd)
-
-            if updates:
-                self.storage.save(self.state)
+        if updates:
+            self.storage.save(self.state)
 
     async def notify_owner(self, upd: dict[str, Any]) -> None:
-        stamp = int(datetime.now(tz=timezone.utc).timestamp())
-        key = f"{upd['path']}:{upd.get('sha', 'x')}:{stamp}"
+        key = f"{upd['path']}:{upd.get('sha','x')}:{int(datetime.now(tz=timezone.utc).timestamp())}"
         self.pending_updates[key] = upd
-
         text = self.build_text(upd["kind"], upd["old_v"], upd["new_v"], upd["meta"], upd["commit_url"])
+
         kb = InlineKeyboardBuilder()
         kb.button(text="✅ Залить", callback_data=f"publish:{key}")
         kb.button(text="⏭ Пропустить", callback_data=f"skip:{key}")
@@ -490,7 +471,7 @@ class App:
     async def publish_update(self, upd: dict[str, Any]) -> None:
         text = self.build_text(upd["kind"], upd["old_v"], upd["new_v"], upd["meta"], upd["commit_url"])
         kb = InlineKeyboardBuilder()
-        kb.button(text="📦 Install Module", url=self.gh.raw_url(upd["path"]))
+        kb.button(text="📦 Install Module", url=self.mirror.raw_url(upd["path"]))
         kb.button(text="ℹ️ Manual install", url="https://github.com/hikariatama/Hikka/wiki")
         kb.adjust(1)
 

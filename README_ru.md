@@ -34,13 +34,14 @@ GoyPulse — это продвинутый модуль для Telegram-юзер
 
 
 ## Bot-паблишер модулей (aiogram, монолит)
-Добавлен единый файл `aiogram_module_publisher_bot.py` без внешних конфигов/env: все настройки внутри файла в блоке `MONOLITHIC CONFIG`.
+Добавлен единый файл `aiogram_module_publisher_bot.py` без внешних конфигов/env и без GitHub API key: репозиторий парсится через обычный `git clone/fetch` публичного репо.
 
 ### Что сделано
 - Полностью inline-управление в ЛС: панель кнопок для scan/channels/admins/pm-access.
 - Моментальные callback-ответы для кнопок (быстрый отклик интерфейса).
 - Парсинг карточки модуля: `Description` + fallback на class docstring, имя модуля из `strings["name"]`.
 - Публикация в канал с кнопкой `Install Module` и ссылкой на commit.
+- Полностью работает без GitHub API token (нужен только доступ к github.com и установленный `git`).
 
 ### Запуск
 1. Открой `aiogram_module_publisher_bot.py`
