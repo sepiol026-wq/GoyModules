@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/keyscanner.png
 # meta developer: @GoyModules
 # requires: aiohttp
-__version__ = (1, 7)
+__version__ = (1, 8)
 import re
 import aiohttp
 import asyncio
@@ -187,13 +187,16 @@ class KeyScanner(loader.Module):
         headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
         try:
             if key.startswith("sk-or-v1-"):
-                async with session.get("https://openrouter.ai/api/v1/auth/key", headers=headers, timeout=5) as r:
+                payload = {"model": "openrouter/auto", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 1}
+                async with session.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload, timeout=5) as r:
                     return "OpenRouter", r.status == 200
             elif key.startswith("gsk_"):
-                async with session.get("https://api.groq.com/openai/v1/models", headers=headers, timeout=5) as r:
+                payload = {"model": "llama3-8b-8192", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 1}
+                async with session.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=5) as r:
                     return "Groq", r.status == 200
             elif key.startswith("AIza"):
-                async with session.get(f"https://generativelanguage.googleapis.com/v1beta/models?key={key}", timeout=5) as r:
+                payload = {"contents": [{"parts": [{"text": "hi"}]}]}
+                async with session.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}", json=payload, timeout=5) as r:
                     return "Gemini", r.status == 200
             elif key.startswith("sk-ant-"):
                 ant_headers = {"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
@@ -210,17 +213,17 @@ class KeyScanner(loader.Module):
                 async with session.get("https://api.github.com/user", headers=headers, timeout=5) as r:
                     return "GitHub", r.status == 200
             elif key.startswith("sk_live_"):
-                async with session.get("https://api.stripe.com/v1/charges", headers=headers, timeout=5) as r:
+                async with session.get("https://api.stripe.com/v1/balance", headers=headers, timeout=5) as r:
                     return "Stripe", r.status == 200
             elif key.startswith("xox"):
                 async with session.post("https://slack.com/api/auth.test", headers=headers, timeout=5) as r:
                     data = await r.json()
-                    return "Slack", data.get("ok", False)
+                    return "Slack", data.get("ok", False) is True
             elif key.startswith("SG."):
                 async with session.get("https://api.sendgrid.com/v3/scopes", headers=headers, timeout=5) as r:
                     return "SendGrid", r.status == 200
             elif key.startswith("secret_"):
-                async with session.get("https://api.notion.com/v1/users", headers={"Authorization": f"Bearer {key}", "Notion-Version": "2022-06-28"}, timeout=5) as r:
+                async with session.get("https://api.notion.com/v1/users/me", headers={"Authorization": f"Bearer {key}", "Notion-Version": "2022-06-28"}, timeout=5) as r:
                     return "Notion", r.status == 200
             elif key.startswith("figd_"):
                 async with session.get("https://api.figma.com/v1/me", headers={"X-Figma-Token": key}, timeout=5) as r:
@@ -228,25 +231,52 @@ class KeyScanner(loader.Module):
 
             if key.startswith("sk-"):
                 priority_providers = [
-                    ("OpenAI", "https://api.openai.com/v1/models"),
-                    ("DeepSeek", "https://api.deepseek.com/v1/models"),
-                    ("Perplexity", "https://api.perplexity.ai/models"),
-                    ("Mistral", "https://api.mistral.ai/v1/models"),
-                    ("Together", "https://api.together.xyz/v1/models"),
-                    ("XAI", "https://api.x.ai/v1/models"),
-                    ("Fireworks", "https://api.fireworks.ai/inference/v1/models"),
-                    ("Novita", "https://api.novita.ai/v3/models"),
-                    ("SiliconFlow", "https://api.siliconflow.cn/v1/models"),
-                    ("DeepInfra", "https://api.deepinfra.com/v1/models"),
-                    ("ZhipuAI", "https://open.bigmodel.cn/api/paas/v4/models")
+                    ("OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"),
+                    ("DeepSeek", "https://api.deepseek.com", "deepseek-chat"),
+                    ("Perplexity", "https://api.perplexity.ai", "sonar-small-chat"),
+                    ("Mistral", "https://api.mistral.ai/v1", "mistral-small-latest"),
+                    ("Together", "https://api.together.xyz/v1", "meta-llama/Llama-3-8b-chat-hf"),
+                    ("XAI", "https://api.x.ai/v1", "grok-beta"),
+                    ("Fireworks", "https://api.fireworks.ai/inference/v1", "accounts/fireworks/models/llama-v3-8b-instruct"),
+                    ("Novita", "https://api.novita.ai/v3", "meta-llama/llama-3-8b-instruct"),
+                    ("SiliconFlow", "https://api.siliconflow.cn/v1", "Qwen/Qwen2.5-7B-Instruct"),
+                    ("DeepInfra", "https://api.deepinfra.com/v1/openai", "meta-llama/Meta-Llama-3-8B-Instruct"),
+                    ("ZhipuAI", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash")
                 ]
-                for name, url in priority_providers:
+                
+                async def test_generation(name, base_url, fallback_model):
                     try:
-                        async with session.get(url, headers=headers, timeout=4) as req:
-                            if req.status == 200:
-                                return name, True
+                        model_id = fallback_model
+                        try:
+                            async with session.get(f"{base_url}/models", headers=headers, timeout=3) as rm:
+                                if rm.status == 200:
+                                    md = await rm.json()
+                                    if "data" in md and len(md["data"]) > 0:
+                                        model_id = md["data"][0]["id"]
+                        except Exception:
+                            pass
+                        payload = {"model": model_id, "messages": [{"role": "user", "content": "hi"}], "max_tokens": 1}
+                        async with session.post(f"{base_url}/chat/completions", headers=headers, json=payload, timeout=6) as rc:
+                            if rc.status == 200:
+                                cd = await rc.json()
+                                if "choices" in cd:
+                                    return name
                     except Exception:
-                        continue
+                        pass
+                    return None
+
+                pending = [asyncio.create_task(test_generation(n, u, m)) for n, u, m in priority_providers]
+                while pending:
+                    done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+                    for task in done:
+                        try:
+                            res = task.result()
+                            if res:
+                                for p in pending:
+                                    p.cancel()
+                                return res, True
+                        except Exception:
+                            pass
                 return "Unknown", False
 
         except Exception:
