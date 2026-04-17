@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/keyscanner.png
 # meta developer: @GoyModules
 # requires: aiohttp
-__version__ = (1, 4)
+__version__ = (1, 6)
 import re
 import aiohttp
 import asyncio
@@ -64,10 +64,10 @@ class KeyScanner(loader.Module):
         "imported": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Successfully imported {count} unique keys.</b>",
         "import_err": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Reply to a TXT/JSON file or provide a raw URL.",
         "btn_settings": "⚙️ Settings",
-        "settings_title": "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Settings:</b>\n\nAuto-log to Saved Messages: <b>{log_status}</b>",
-        "btn_log_toggle": "Toggle Saved Logging",
+        "settings_title": "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Settings:</b>\n\nLogging Mode: <b>{log_mode}</b>",
+        "btn_log_cycle": "Cycle Logging Mode",
         "global_scanning": "<tg-emoji emoji-id=5256025060942031560>🐢</tg-emoji> <b>Global scan initiated...</b>\nSearching all chats up to {limit} per prefix.",
-        "new_key_saved": "<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> <b>New Key Caught!</b>\n<b>Provider:</b> {provider}\n<b>Key:</b> <code>{key}</code>\n<b>Source:</b> {chat_id}",
+        "new_key_notif": "<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> <b>New Key Caught!</b>\n<b>Provider:</b> {provider}\n<b>Key:</b> <code>{key}</code>\n<b>Source:</b> {chat_id}",
         "btn_show_key": "👁 Show",
         "btn_hide_key": "🙈 Hide"
     }
@@ -106,10 +106,10 @@ class KeyScanner(loader.Module):
         "imported": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Успешно импортировано {count} новых ключей.</b>",
         "import_err": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Сделайте реплай на файл или укажите ссылку на raw.",
         "btn_settings": "⚙️ Настройки",
-        "settings_title": "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Настройки:</b>\n\nЛогирование в Избранное: <b>{log_status}</b>",
-        "btn_log_toggle": "Переключить логирование",
+        "settings_title": "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Настройки:</b>\n\nРежим уведомлений: <b>{log_mode}</b>",
+        "btn_log_cycle": "Сменить режим логов",
         "global_scanning": "<tg-emoji emoji-id=5256025060942031560>🐢</tg-emoji> <b>Глобальный поиск...</b>\nИщу во всех чатах до {limit} сообщений на префикс.",
-        "new_key_saved": "<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> <b>Пойман новый ключ!</b>\n<b>Провайдер:</b> {provider}\n<b>Ключ:</b> <code>{key}</code>\n<b>Источник:</b> {chat_id}",
+        "new_key_notif": "<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> <b>Пойман новый ключ!</b>\n<b>Провайдер:</b> {provider}\n<b>Ключ:</b> <code>{key}</code>\n<b>Источник:</b> {chat_id}",
         "btn_show_key": "👁 Показать",
         "btn_hide_key": "🙈 Скрыть"
     }
@@ -141,7 +141,7 @@ class KeyScanner(loader.Module):
         self.client = client
         self._keys = self.get("keys_v2", {})
         self._auto_chats = self.get("auto_v2", [])
-        self._settings = self.get("ks_settings", {"log_saved": False})
+        self._settings = self.get("ks_settings", {"log_mode": "saved"})
 
     def _save(self):
         self.set("keys_v2", self._keys)
@@ -164,12 +164,22 @@ class KeyScanner(loader.Module):
             ]
         ]
 
-    async def _log_to_saved(self, key, provider, source="Manual/Scan"):
-        if self._settings.get("log_saved", False):
-            try:
-                await self.client.send_message("me", self.strings["new_key_saved"].format(provider=provider, key=key, chat_id=source))
-            except Exception:
-                pass
+    async def _handle_new_key(self, key, provider, source_chat_id):
+        mode = self._settings.get("log_mode", "saved")
+        if mode == "none":
+            return
+        
+        text = self.strings["new_key_notif"].format(
+            provider=provider, 
+            key=key, 
+            chat_id=source_chat_id
+        )
+        
+        target = "me" if mode == "saved" else source_chat_id
+        try:
+            await self.client.send_message(target, text)
+        except Exception:
+            pass
 
     async def _gather_chunked(self, tasks, chunk_size=30):
         res = []
@@ -226,6 +236,7 @@ class KeyScanner(loader.Module):
                 priority_providers = [
                     ("OpenAI", "https://api.openai.com/v1/models"),
                     ("DeepSeek", "https://api.deepseek.com/v1/models"),
+                    ("Perplexity", "https://api.perplexity.ai/models"),
                     ("Mistral", "https://api.mistral.ai/v1/models"),
                     ("Together", "https://api.together.xyz/v1/models"),
                     ("XAI", "https://api.x.ai/v1/models"),
@@ -233,8 +244,7 @@ class KeyScanner(loader.Module):
                     ("Novita", "https://api.novita.ai/v3/models"),
                     ("SiliconFlow", "https://api.siliconflow.cn/v1/models"),
                     ("DeepInfra", "https://api.deepinfra.com/v1/models"),
-                    ("ZhipuAI", "https://open.bigmodel.cn/api/paas/v4/models"),
-                    ("Nvidia", "https://integrate.api.nvidia.com/v1/models")
+                    ("ZhipuAI", "https://open.bigmodel.cn/api/paas/v4/models")
                 ]
                 
                 for name, url in priority_providers:
@@ -276,7 +286,7 @@ class KeyScanner(loader.Module):
                     if is_valid and key not in self._keys:
                         self._keys[key] = provider
                         valid_count += 1
-                        await self._log_to_saved(key, provider, getattr(message.to_id, "chat_id", "ScanLLM"))
+                        await self._handle_new_key(key, provider, message.chat_id)
             self._save()
         await utils.answer(msg, self.strings["found"].format(valid_count=valid_count))
 
@@ -305,7 +315,7 @@ class KeyScanner(loader.Module):
                     if is_valid and key not in self._keys:
                         self._keys[key] = provider
                         valid_count += 1
-                        await self._log_to_saved(key, provider, "Global Scan")
+                        await self._handle_new_key(key, provider, "Global Scan")
             self._save()
         await utils.answer(msg, self.strings["found"].format(valid_count=valid_count))
 
@@ -319,13 +329,6 @@ class KeyScanner(loader.Module):
             self._auto_chats.append(chat_id)
             await utils.answer(message, self.strings["auto_on"])
         self._save()
-
-    @loader.command(ru_doc="Вкл/выкл логирование в избранное", en_doc="Toggle saved messages logging")
-    async def kslog(self, message: Message):
-        self._settings["log_saved"] = not self._settings.get("log_saved", False)
-        self._save()
-        status = "ВКЛЮЧЕНО" if self._settings["log_saved"] else "ВЫКЛЮЧЕНО"
-        await utils.answer(message, f"<b>Логирование валидных ключей в Избранное:</b> {status}")
 
     @loader.command(ru_doc="Удалить все невалидные ключи", en_doc="Remove all invalid keys")
     async def ksclean(self, message: Message):
@@ -383,7 +386,7 @@ class KeyScanner(loader.Module):
                     if is_valid and key not in self._keys:
                         self._keys[key] = provider
                         count += 1
-                        await self._log_to_saved(key, provider, "Import")
+                        await self._handle_new_key(key, provider, "Import")
             self._save()
         await utils.answer(msg, self.strings["imported"].format(count=count))
 
@@ -412,8 +415,7 @@ class KeyScanner(loader.Module):
                 if is_valid:
                     self._keys[key] = provider
                     self._save()
-                    await self.client.send_message(message.chat_id, self.strings["new_key_auto"].format(provider=provider))
-                    await self._log_to_saved(key, provider, message.chat_id)
+                    await self._handle_new_key(key, provider, message.chat_id)
 
     async def ks_list(self, call, page):
         keys_list = sorted(list(self._keys.keys()))
@@ -541,12 +543,15 @@ class KeyScanner(loader.Module):
         await call.edit(text=self.strings["exported"], reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]])
 
     async def ks_settings_menu(self, call):
-        log_status = "ON" if self._settings.get("log_saved") else "OFF"
-        markup = [[{"text": self.strings["btn_log_toggle"], "callback": self.ks_toggle_log}], [{"text": self.strings["btn_back"], "callback": self.ks_back}]]
-        await call.edit(text=self.strings["settings_title"].format(log_status=log_status), reply_markup=markup)
+        mode = self._settings.get("log_mode", "saved")
+        markup = [[{"text": self.strings["btn_log_cycle"], "callback": self.ks_cycle_log}], [{"text": self.strings["btn_back"], "callback": self.ks_back}]]
+        await call.edit(text=self.strings["settings_title"].format(log_mode=mode.upper()), reply_markup=markup)
 
-    async def ks_toggle_log(self, call):
-        self._settings["log_saved"] = not self._settings.get("log_saved", False)
+    async def ks_cycle_log(self, call):
+        modes = ["saved", "chat", "none"]
+        current = self._settings.get("log_mode", "saved")
+        next_mode = modes[(modes.index(current) + 1) % len(modes)]
+        self._settings["log_mode"] = next_mode
         self._save()
         await self.ks_settings_menu(call)
 
