@@ -151,6 +151,7 @@ class ComfyUIModule(loader.Module):
             loader.ConfigValue("trigger_only_whitelist_chats", "", "Только эти chat_id (CSV), пусто=все", validator=loader.validators.String()),
             loader.ConfigValue("trigger_only_whitelist_users", "", "Только эти user_id (CSV), пусто=все", validator=loader.validators.String()),
             loader.ConfigValue("strict_family_check", False, "Жестко падать при несоответствии SD1.5/SDXL", validator=loader.validators.Boolean()),
+            loader.ConfigValue("smart_profile_suggest", True, "Предлагать смарт-профиль после установки модели", validator=loader.validators.Boolean()),
         )
         self._server_process = None
         self._current_model = None
@@ -161,6 +162,7 @@ class ComfyUIModule(loader.Module):
         self._trigger_busy = asyncio.Semaphore(1)
         self._last_trigger_by_chat: Dict[int, float] = {}
         self._downloads: Dict[str, Dict[str, Any]] = {}
+        self._smart_profiles: Dict[str, Dict[str, Any]] = {}
 
     async def client_ready(self, client, db):
         self.client = client
@@ -310,6 +312,128 @@ class ComfyUIModule(loader.Module):
             pass
         return pids
 
+    def _detect_gpu(self) -> bool:
+        try:
+            import subprocess
+
+            p = subprocess.run(["nvidia-smi"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+            return p.returncode == 0
+        except Exception:
+            return False
+
+    def _build_runtime_factors(self, model_name: str) -> Dict[str, Any]:
+        model_low = (model_name or "").lower()
+        has_gpu = self._detect_gpu()
+        ram_mb = 0
+        cpu_count = os.cpu_count() or 1
+        load_1m = 0.0
+        disk_free_gb = 0.0
+        if psutil is not None:
+            vm = psutil.virtual_memory()
+            ram_mb = int(vm.available / 1024 / 1024)
+            disk_free_gb = round(psutil.disk_usage(".").free / 1024 / 1024 / 1024, 2)
+            try:
+                load_1m = float(os.getloadavg()[0])
+            except Exception:
+                load_1m = float(psutil.getloadavg()[0]) if hasattr(psutil, "getloadavg") else 0.0
+        factors = {
+            "has_gpu": has_gpu,
+            "ram_mb": ram_mb,
+            "cpu_count": cpu_count,
+            "load_1m": load_1m,
+            "disk_free_gb": disk_free_gb,
+            "queue_size": int(self._trigger_queue.qsize()),
+            "is_xl_model": any(x in model_low for x in ("xl", "pony", "animagine", "kohaku")),
+            "is_lcm_model": "lcm" in model_low,
+            "is_anime_model": any(x in model_low for x in ("anime", "meina", "anything", "counterfeit", "pony")),
+            "is_real_model": any(x in model_low for x in ("real", "vision", "photon", "epic", "absolute")),
+            "model_name_len": len(model_name or ""),
+        }
+        # 40+ derived factors для scoring.
+        for lvl in range(1, 33):
+            factors[f"ram_ge_{lvl}gb"] = ram_mb >= lvl * 1024
+        for lvl in (1, 2, 4, 6, 8, 12, 16, 24):
+            factors[f"cpu_ge_{lvl}"] = cpu_count >= lvl
+        for lvl in (2, 4, 8, 16, 32, 64, 120):
+            factors[f"disk_ge_{lvl}gb"] = disk_free_gb >= lvl
+        factors["low_load"] = load_1m <= max(1.5, cpu_count * 0.7)
+        factors["high_load"] = load_1m > max(2.5, cpu_count * 1.2)
+        factors["queue_is_empty"] = factors["queue_size"] == 0
+        factors["queue_over_2"] = factors["queue_size"] >= 2
+        return factors
+
+    def _select_smart_profile(self, model_name: str) -> Dict[str, Any]:
+        f = self._build_runtime_factors(model_name)
+        family = "sdxl" if f["is_xl_model"] else "sd15"
+        profile = {
+            "workflow": "LCM Fast (SD1.5)" if family == "sd15" else "SDXL Lightning (CPU-friendly)",
+            "width": 512,
+            "height": 512,
+            "steps": 8,
+            "cfg": 6.0,
+            "sampler": "lcm",
+            "scheduler": "karras",
+            "reason": [],
+            "factors_count": len(f),
+        }
+
+        if f["has_gpu"] and (f["ram_mb"] >= 8192):
+            profile.update({"steps": 20, "cfg": 7.0, "sampler": "dpmpp_2m", "workflow": "Pony / Аниме XL" if family == "sdxl" else "Базовый (SD 1.5)"})
+            profile["reason"].append("GPU+RAM позволяет более качественный preset")
+        elif f["ram_mb"] >= 12288 and f["cpu_ge_8"] and not f["high_load"]:
+            profile.update({"steps": 14, "cfg": 6.5, "sampler": "dpmpp_2m"})
+            profile["reason"].append("Много RAM на CPU, поднял quality")
+        elif f["ram_mb"] <= 4096 or f["high_load"] or f["queue_over_2"]:
+            profile.update({"width": 448, "height": 448, "steps": 6, "cfg": 5.5, "sampler": "lcm"})
+            profile["reason"].append("Низкий запас ресурсов, включен safe preset")
+        else:
+            profile["reason"].append("Сбалансированный preset")
+        return profile
+
+    async def _offer_smart_profile(self, target_message, model_name: str):
+        if not self.config["smart_profile_suggest"]:
+            return
+        p = self._select_smart_profile(model_name)
+        token = str(uuid.uuid4())
+        self._smart_profiles[token] = {"model": model_name, "profile": p}
+        text = (
+            f"{E_GEAR} <b>Смарт-профиль готов</b>\n"
+            f"Модель: <code>{model_name}</code>\n"
+            f"Workflow: <code>{p['workflow']}</code>\n"
+            f"Canvas: <code>{p['width']}x{p['height']}</code>\n"
+            f"Steps/CFG: <code>{p['steps']} / {p['cfg']}</code>\n"
+            f"Sampler/Scheduler: <code>{p['sampler']} / {p['scheduler']}</code>\n"
+            f"Факторов учтено: <code>{p['factors_count']}</code>\n"
+            f"Причина: <i>{'; '.join(p['reason'])}</i>\n\n"
+            f"Применить профиль?"
+        )
+        buttons = [
+            [{"text": "✅ Принять", "callback": self._accept_smart_profile, "args": (token,), "style": "primary"}],
+            [{"text": "❌ Отказаться", "callback": self._reject_smart_profile, "args": (token,), "style": "danger"}],
+        ]
+        await self._edit_or_form(target_message, text, buttons)
+
+    async def _accept_smart_profile(self, call, token: str):
+        rec = self._smart_profiles.pop(token, None)
+        if not rec:
+            return await self._update_text(call, f"{E_ERROR} <b>Профиль не найден.</b>")
+        p = rec["profile"]
+        self._current_model = rec["model"]
+        self.db.set("ComfyUI", "model", rec["model"])
+        self._current_workflow = p["workflow"]
+        self.db.set("ComfyUI", "workflow", p["workflow"])
+        self.config["default_width"] = int(p["width"])
+        self.config["default_height"] = int(p["height"])
+        self.config["default_steps"] = int(p["steps"])
+        self.config["default_cfg"] = float(p["cfg"])
+        self.config["default_sampler"] = str(p["sampler"])
+        self.config["default_scheduler"] = str(p["scheduler"])
+        await self._update_text(call, f"{E_SUCCESS} <b>Смарт-профиль применён.</b>\nТеперь можно сразу генерировать.")
+
+    async def _reject_smart_profile(self, call, token: str):
+        self._smart_profiles.pop(token, None)
+        await self._update_text(call, f"{E_ERROR} <b>Ок, профиль отклонён.</b>")
+
     @loader.command(ru_doc="Установить ComfyUI")
     async def comfyinstall(self, message: Message):
         msg = await utils.answer(message, f"{E_SHIELD} <b>Проверка ресурсов...</b>")
@@ -432,6 +556,7 @@ class ComfyUIModule(loader.Module):
             ],
             [{"text": "⚙️ Параметры холста", "callback": self._render_settings_gen, "args": (), "style": "secondary"}],
             [{"text": "🧪 Семплирование", "callback": self._render_settings_samplers, "args": (), "style": "secondary"}],
+            [{"text": f"{'🟢' if self.config['smart_profile_suggest'] else '⚫️'} Смарт-профиль после скачивания", "callback": self._toggle_smart_profile, "args": (), "style": "secondary"}],
             [{"text": "📌 Привязать архив", "callback": self._bind_archive, "args": (), "style": "secondary"}],
             [{"text": "❌ Закрыть меню", "action": "close", "style": "danger"}],
         ]
@@ -439,6 +564,10 @@ class ComfyUIModule(loader.Module):
 
     async def _bind_archive(self, call):
         await self._ensure_archive_chat()
+        await self._render_settings_main(call)
+
+    async def _toggle_smart_profile(self, call):
+        self.config["smart_profile_suggest"] = not bool(self.config["smart_profile_suggest"])
         await self._render_settings_main(call)
 
     async def _render_settings_gen(self, call):
@@ -589,6 +718,7 @@ class ComfyUIModule(loader.Module):
             await self._update_text(msg, f"{E_SUCCESS} <b>{filename} скачан!</b>")
             self._downloads.setdefault(filename, {})["status"] = "done"
             self._downloads.setdefault(filename, {})["percent"] = 100
+            await self._offer_smart_profile(msg, filename)
         except Exception as e:
             await self._update_text(msg, f"{E_ERROR} <b>Ошибка:</b> {str(e)}")
             self._downloads.setdefault(filename, {})["status"] = "error"
