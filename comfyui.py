@@ -105,6 +105,18 @@ for i in range(1, 21):
         }
     )
 
+# Нормализация каталога: используем repo/file вместо жестко захардкоженных прямых URL.
+for item in MODEL_CATALOG:
+    u = item.get("url", "")
+    if u.startswith("https://huggingface.co/"):
+        try:
+            path = u.split("https://huggingface.co/", 1)[1]
+            parts = path.split("/")
+            if len(parts) >= 2:
+                item["repo"] = f"{parts[0]}/{parts[1]}"
+        except Exception:
+            pass
+
 WORKFLOWS = [
     {"name": "Базовый (SD 1.5)", "family": "sd15", "steps": 20, "width": 512, "height": 512},
     {"name": "Pony / Аниме XL", "family": "sdxl", "steps": 24, "width": 768, "height": 768},
@@ -698,7 +710,7 @@ class ComfyUIModule(loader.Module):
             f"Файл: <code>{model['file']}</code>\n"
             f"Категория: <code>{model['category']}</code>\n"
             f"Семейство: <code>{model['family']}</code>\n"
-            f"URL: <code>{model['url'][:90]}...</code>\n"
+            f"Repo: <code>{model.get('repo', 'unknown')}</code>\n"
             f"Статус: <b>{status}</b> <code>{p}%</code>"
         )
         buttons = []
@@ -707,7 +719,7 @@ class ComfyUIModule(loader.Module):
         else:
             buttons.append(
                 [
-                    {"text": "⬇️ Скачать", "callback": self._dl_model, "args": (model["url"], model["file"]), "style": "primary"},
+                    {"text": "⬇️ Скачать", "callback": self._dl_model, "args": (model.get("repo", ""), model["file"]), "style": "primary"},
                     {"text": "📊 Активные", "callback": self._downloads_dashboard, "args": (), "style": "secondary"},
                 ]
             )
@@ -752,28 +764,33 @@ class ComfyUIModule(loader.Module):
         ]
         await self._edit_or_form(call, text, buttons)
 
-    async def _resolve_model_url(self, url: str, filename: str) -> str:
+    async def _resolve_model_url(self, repo_or_url: str, filename: str) -> str:
         """
         Если ссылка на HF устарела/невалидна, пытаемся подобрать актуальный файл через HF API.
         """
-        if "huggingface.co" not in url:
-            return url
+        if not repo_or_url:
+            return ""
         try:
-            parts = urllib.parse.urlparse(url)
-            seg = [x for x in parts.path.split("/") if x]
-            # /{owner}/{repo}/resolve/main/{file...}
-            if len(seg) < 4:
-                return url
-            owner, repo = seg[0], seg[1]
+            owner = repo = ""
+            if repo_or_url.startswith("https://huggingface.co/"):
+                parts = urllib.parse.urlparse(repo_or_url)
+                seg = [x for x in parts.path.split("/") if x]
+                if len(seg) >= 2:
+                    owner, repo = seg[0], seg[1]
+            elif "/" in repo_or_url:
+                owner, repo = repo_or_url.split("/", 1)
+            if not owner or not repo:
+                return repo_or_url
+
             api_url = f"https://huggingface.co/api/models/{owner}/{repo}"
             async with aiohttp.ClientSession() as s:
                 async with s.get(api_url, timeout=20, headers={"User-Agent": "Mozilla/5.0"}) as r:
                     if r.status != 200:
-                        return url
+                        return repo_or_url
                     data = await r.json()
             siblings = [x.get("rfilename", "") for x in data.get("siblings", []) if x.get("rfilename", "").endswith(".safetensors")]
             if not siblings:
-                return url
+                return repo_or_url
             # приоритет: точное имя -> похожее имя -> root safetensors
             fn_low = filename.lower().replace("%20", " ")
             exact = [f for f in siblings if f.lower() == fn_low]
@@ -787,7 +804,7 @@ class ComfyUIModule(loader.Module):
             resolved = f"https://huggingface.co/{owner}/{repo}/resolve/main/{urllib.parse.quote(chosen)}"
             return resolved
         except Exception:
-            return url
+            return repo_or_url
 
     async def _check_download_url(self, url: str) -> (bool, str):
         try:
@@ -800,12 +817,15 @@ class ComfyUIModule(loader.Module):
         except Exception as e:
             return False, str(e)
 
-    async def _dl_model(self, call, url, filename):
+    async def _dl_model(self, call, source, filename):
         d = self._downloads.get(filename)
         if d and d.get("status") == "downloading":
             return await call.answer("Уже скачивается")
 
-        fixed_url = await self._resolve_model_url(url, filename)
+        if not source:
+            return await self._update_text(call, f"{E_ERROR} <b>Для модели не задан источник (repo).</b>")
+
+        fixed_url = await self._resolve_model_url(source, filename)
         ok, reason = await self._check_download_url(fixed_url)
         if not ok:
             msg = (
