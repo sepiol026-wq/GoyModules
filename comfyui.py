@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import time
+import urllib.parse
 import uuid
 from typing import Any, Dict, List, Optional
 
@@ -648,8 +649,6 @@ class ComfyUIModule(loader.Module):
         for cat in categories:
             count = len([m for m in MODEL_CATALOG if m["category"] == cat])
             buttons.append([{"text": f"📂 {cat} ({count})", "callback": self._model_catalog, "args": (cat, 0), "style": "primary"}])
-        if self._downloads:
-            buttons.append([{"text": "⏬ Активные загрузки", "callback": self._downloads_dashboard, "args": (), "style": "secondary"}])
         buttons.append([{"text": "⬅️ Назад", "callback": self._open_models_menu, "args": (), "style": "danger"}])
         await self._edit_or_form(call, text, buttons)
 
@@ -683,7 +682,6 @@ class ComfyUIModule(loader.Module):
             nav.append({"text": "Next ➡️", "callback": self._model_catalog, "args": (category, page + 1), "style": "secondary"})
         if nav:
             buttons.append(nav)
-        buttons.append([{"text": "⏬ Активные загрузки", "callback": self._downloads_dashboard, "args": (), "style": "secondary"}])
         buttons.append([{"text": "⬅️ Назад", "callback": self._open_download_root, "args": (), "style": "danger"}])
         await self._edit_or_form(call, text, buttons)
 
@@ -707,7 +705,14 @@ class ComfyUIModule(loader.Module):
         if status == "downloading":
             buttons.append([{"text": f"⏬ Открыть прогресс [{p}%]", "callback": self._show_download_status, "args": (filename,), "style": "secondary"}])
         else:
-            buttons.append([{"text": "⬇️ Скачать", "callback": self._dl_model, "args": (model["url"], model["file"]), "style": "primary"}])
+            buttons.append(
+                [
+                    {"text": "⬇️ Скачать", "callback": self._dl_model, "args": (model["url"], model["file"]), "style": "primary"},
+                    {"text": "📊 Активные", "callback": self._downloads_dashboard, "args": (), "style": "secondary"},
+                ]
+            )
+        if status == "downloading":
+            buttons.append([{"text": "📊 Активные", "callback": self._downloads_dashboard, "args": (), "style": "secondary"}])
         buttons.append([{"text": "⬅️ Назад в каталог", "callback": self._open_download_root, "args": (), "style": "danger"}])
         await self._edit_or_form(call, text, buttons)
 
@@ -747,10 +752,69 @@ class ComfyUIModule(loader.Module):
         ]
         await self._edit_or_form(call, text, buttons)
 
+    async def _resolve_model_url(self, url: str, filename: str) -> str:
+        """
+        Если ссылка на HF устарела/невалидна, пытаемся подобрать актуальный файл через HF API.
+        """
+        if "huggingface.co" not in url:
+            return url
+        try:
+            parts = urllib.parse.urlparse(url)
+            seg = [x for x in parts.path.split("/") if x]
+            # /{owner}/{repo}/resolve/main/{file...}
+            if len(seg) < 4:
+                return url
+            owner, repo = seg[0], seg[1]
+            api_url = f"https://huggingface.co/api/models/{owner}/{repo}"
+            async with aiohttp.ClientSession() as s:
+                async with s.get(api_url, timeout=20, headers={"User-Agent": "Mozilla/5.0"}) as r:
+                    if r.status != 200:
+                        return url
+                    data = await r.json()
+            siblings = [x.get("rfilename", "") for x in data.get("siblings", []) if x.get("rfilename", "").endswith(".safetensors")]
+            if not siblings:
+                return url
+            # приоритет: точное имя -> похожее имя -> root safetensors
+            fn_low = filename.lower().replace("%20", " ")
+            exact = [f for f in siblings if f.lower() == fn_low]
+            if exact:
+                chosen = exact[0]
+            else:
+                stem = os.path.splitext(fn_low)[0]
+                similar = [f for f in siblings if stem and stem[:8] in f.lower()]
+                root_files = [f for f in siblings if "/" not in f]
+                chosen = (similar[0] if similar else (root_files[0] if root_files else siblings[0]))
+            resolved = f"https://huggingface.co/{owner}/{repo}/resolve/main/{urllib.parse.quote(chosen)}"
+            return resolved
+        except Exception:
+            return url
+
+    async def _check_download_url(self, url: str) -> (bool, str):
+        try:
+            headers = {"User-Agent": "Mozilla/5.0", "Range": "bytes=0-0"}
+            async with aiohttp.ClientSession() as s:
+                async with s.get(url, timeout=25, allow_redirects=True, headers=headers) as r:
+                    if r.status in (200, 206):
+                        return True, "ok"
+                    return False, f"HTTP {r.status}"
+        except Exception as e:
+            return False, str(e)
+
     async def _dl_model(self, call, url, filename):
         d = self._downloads.get(filename)
         if d and d.get("status") == "downloading":
             return await call.answer("Уже скачивается")
+
+        fixed_url = await self._resolve_model_url(url, filename)
+        ok, reason = await self._check_download_url(fixed_url)
+        if not ok:
+            msg = (
+                f"{E_ERROR} <b>Ссылка на модель недоступна.</b>\n"
+                f"Файл: <code>{filename}</code>\n"
+                f"Причина: <code>{reason}</code>\n"
+                f"URL: <code>{fixed_url[:1500]}</code>"
+            )
+            return await self._update_text(call, msg)
 
         await call.answer(f"Загрузка {filename} начата")
         msg = await self.client.send_message(call.chat_id, f"{E_RELOAD} <b>Начинаю загрузку...</b>\n<code>{filename}</code>")
@@ -762,8 +826,9 @@ class ComfyUIModule(loader.Module):
             "message_id": getattr(msg, "id", 0),
             "chat_id": call.chat_id,
             "filename": filename,
+            "url": fixed_url,
         }
-        asyncio.create_task(self._bg_dl(msg, url, filename))
+        asyncio.create_task(self._bg_dl(msg, fixed_url, filename))
         await self._show_download_status(call, filename)
 
     async def _bg_dl(self, msg, url, filename):
