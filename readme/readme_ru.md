@@ -10,6 +10,7 @@
 - [GoyPulse](./readme_goypulse_ru.md) — умный автоответчик на цепях Маркова: обучение на сообщениях, память по чатам, бэкапы и тонкая настройка поведения.
 - [GoySecurity](./readme_goysec_ru.md) — защитный слой перед установкой модулей: анализ рисков, история сканов, whitelist и AI-пояснения.
 - [OmniLoad](./readme_omniload_ru.md) — универсальная загрузка медиа по ссылке, когда нужен быстрый «скачал и отправил» прямо из чата.
+- [OmniCLI](./readme_omnicli_ru.md) — all-in-one AI CLI-хаб с командной группой `.om*` и установкой/авторизацией Qwen/Codex/Gemini/Claude.
 - [QwenCLI](./readme_qwencli_ru.md) — AI-модуль для чата и DevOps-задач, включая установку зависимостей через `.qwinstall`.
 - [Doom](./readme_doom_ru.md) — мини-игра DOOM прямо в Telegram-интерфейсе.
 - [Recon](./readme_recon_ru.md) — набор recon/OSINT-команд для сбора технической информации по доменам, IP и инфраструктуре.

@@ -10,6 +10,7 @@
 - [GoyPulse](./readme_goypulse_en.md) — Markov-based smart autoreply with per-chat memory, training controls, and backup tooling.
 - [GoySecurity](./readme_goysec_en.md) — pre-install security scanner with risk explanations, history, whitelist, and AI-based insights.
 - [OmniLoad](./readme_omniload_en.md) — one-command media downloader for links and direct repost workflows.
+- [OmniCLI](./readme_omnicli_en.md) — all-in-one AI CLI hub with `.om*` commands plus provider bootstrap/auth for Qwen/Codex/Gemini/Claude.
 - [QwenCLI](./readme_qwencli_en.md) — AI command center for chat and automation tasks, including dependency bootstrap via `.qwinstall`.
 - [Doom](./readme_doom_en.md) — inline DOOM mini-game directly inside Telegram.
 - [Recon](./readme_recon_en.md) — recon/OSINT toolkit for collecting technical metadata about targets and infrastructure.
