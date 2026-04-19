@@ -840,17 +840,33 @@ class OmniCLI(loader.Module):
     async def ominstall(self, message: Message):
         """— установить локальные Node.js и Omni CLI в user-space."""
         args = (utils.get_args_raw(message) or "").strip().lower()
-        target = args or self._get_selected_backend()
-        targets = SUPPORTED_OMNI_BACKENDS if target == "all" else (target,)
+        target = args or "all"
+        targets = SUPPORTED_OMNI_BACKENDS if target == "all" else tuple(
+            item.strip() for item in target.split() if item.strip()
+        )
+        if not targets:
+            targets = SUPPORTED_OMNI_BACKENDS
         status_msg = await self._answer_html(message, self.strings["bootstrap_wait"])
-        try:
-            report = []
-            for backend in targets:
+        report = []
+        success = 0
+        for backend in targets:
+            if backend not in SUPPORTED_OMNI_BACKENDS:
+                report.append(f"• <code>{utils.escape_html(backend)}</code>: ❌ unsupported")
+                continue
+            try:
                 await self._ensure_omni_cli_available(force=True, backend=backend)
                 report.append(f"• <code>{backend}</code>: ✅")
-            await self._answer_html(status_msg, self.strings["bootstrap_done"] + "\n" + "\n".join(report))
-        except Exception as e:
-            await self._answer_html(status_msg, self._handle_error(e))
+                success += 1
+            except Exception as e:
+                report.append(
+                    f"• <code>{backend}</code>: ❌ {utils.escape_html(str(e)[:220])}"
+                )
+        header = (
+            self.strings["bootstrap_done"]
+            if success == len(targets)
+            else "<tg-emoji emoji-id=5409235172979672859>⚠️</tg-emoji> <b>Установка backend завершена с частичными ошибками.</b>"
+        )
+        await self._answer_html(status_msg, header + "\n" + "\n".join(report))
 
     @loader.command()
     async def omch(self, message: Message):
@@ -7127,8 +7143,6 @@ class OmniCLI(loader.Module):
             ).strip()
             if proc.returncode != 0:
                 return False, text or f"exit={proc.returncode}"
-            if argv[-1] == "--help" and "Qwen Code" not in text:
-                return False, text[:400]
         return True, omni_bin
 
     def _pin_detected_omni_path(self, backend: str = None):
