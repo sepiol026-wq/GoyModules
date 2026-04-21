@@ -22,7 +22,7 @@
 
 """запускает doom."""
 
-__version__ = (1, 1, 1)
+__version__ = (1, 1, 2)
 
 import math
 import time
@@ -37,7 +37,7 @@ class Doom(loader.Module):
 
     def __init__(self):
         self.sessions = {}
-        self.config = {
+        self.game_config = {
             "scr_w": 24,
             "scr_h": 12,
             "fov": math.pi / 3,
@@ -92,11 +92,11 @@ class Doom(loader.Module):
         )
 
     def render_3d_frame(self, state):
-        w = self.config["scr_w"]
-        h = self.config["scr_h"]
-        fov = self.config["fov"]
-        depth = self.config["depth"]
-        shades = self.config["shades"]
+        w = self.game_config["scr_w"]
+        h = self.game_config["scr_h"]
+        fov = self.game_config["fov"]
+        depth = self.game_config["depth"]
+        shades = self.game_config["shades"]
 
         px, py, pa = state["x"], state["y"], state["a"]
         screen = []
@@ -293,7 +293,7 @@ class Doom(loader.Module):
         hit = False
         rx, ry = math.sin(st["a"]), math.cos(st["a"])
 
-        for d in range(1, int(self.config["depth"])):
+        for d in range(1, int(self.game_config["depth"])):
             tx, ty = int(st["x"] + rx * d), int(st["y"] + ry * d)
             if 0 <= tx < self.map_w and 0 <= ty < self.map_h:
                 if st["map"][ty][tx] == "E":
