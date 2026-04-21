@@ -60,15 +60,15 @@ class TaskRecord:
 
 
 @loader.tds
-class SessionCenterMod(loader.Module):
-    """Session Control Center for Heroku UserBot + heroku-tl-new."""
+class SessionManagerMod(loader.Module):
+    """Session Manager for Heroku UserBot + heroku-tl-new."""
 
     strings = {
-        "name": "SessionCenter",
-        "need_api": "❌ Укажи <code>api_id</code> и <code>api_hash</code> через <code>.cfg SessionCenter</code>.",
+        "name": "SessionManager",
+        "need_api": "❌ Укажи <code>api_id</code> и <code>api_hash</code> через <code>.cfg SessionManager</code>.",
         "import_on": "📥 Импорт включён на 10 минут. Отправляй string-сессии текстом/файлами. Потом жми <b>Finish Import</b> в панели.",
         "import_off": "✅ Импорт завершён. Принято: <code>{}</code>, добавлено: <code>{}</code>, дубликатов: <code>{}</code>, ошибок: <code>{}</code>",
-        "panel_title": "🧩 <b>Session Center</b>\n\nВсего: <code>{total}</code>\nValid: <code>{valid}</code> | Invalid: <code>{invalid}</code>\nTemp SB: <code>{temp}</code> | Perm SB: <code>{perm}</code> | Frozen: <code>{frozen}</code>",
+        "panel_title": "🧩 <b>SessionManager</b>\n\nВсего: <code>{total}</code>\nValid: <code>{valid}</code> | Invalid: <code>{invalid}</code>\nTemp SB: <code>{temp}</code> | Perm SB: <code>{perm}</code> | Frozen: <code>{frozen}</code>",
         "validation_done": "✅ Валидация завершена. Проверено: <code>{}</code>",
         "no_sessions": "⚠️ Сессий пока нет.",
         "broadcast_started": "🚀 Задача рассылки запущена: <code>{}</code>",
@@ -96,7 +96,10 @@ class SessionCenterMod(loader.Module):
         self._load_state()
 
     def _load_state(self):
-        raw = self._db.get(self.strings("name"), "sessions", [])
+        raw = self._db.get(self.strings("name"), "sessions", None)
+        if raw is None:
+            # backward compatibility with old module key
+            raw = self._db.get("SessionCenter", "sessions", [])
         self._sessions = []
         for item in raw:
             try:
@@ -144,10 +147,13 @@ class SessionCenterMod(loader.Module):
             [{"text": "📣 Broadcast", "callback": self._cb_broadcast_help}, {"text": "🧰 Active Tasks", "callback": self._cb_tasks}],
             [{"text": "♻️ Refresh", "callback": self._cb_refresh}],
         ]
-        if hasattr(message_or_call, "edit"):
-            await message_or_call.edit(text, reply_markup=markup)
-        else:
+        if isinstance(message_or_call, Message):
             await self.inline.form(text, message=message_or_call, reply_markup=markup)
+            return
+        try:
+            await message_or_call.edit(text, reply_markup=markup)
+        except TypeError:
+            await self.inline.form(text, reply_markup=markup)
 
     async def _create_client(self, session_string: str):
         return TelegramClient(StringSession(session_string), int(self.config["api_id"]), self.config["api_hash"])
@@ -406,7 +412,7 @@ class SessionCenterMod(loader.Module):
             return
         await utils.answer(message, f"✅ Detected string session:\n<code>{utils.escape_html(rec.session_string)}</code>")
 
-    @loader.command(ru_doc="Открыть панель Session Center")
+    @loader.command(ru_doc="Открыть панель SessionManager")
     async def scpanel(self, message: Message):
         await self._render_panel(message)
 
