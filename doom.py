@@ -22,7 +22,7 @@
 
 """запускает doom."""
 
-__version__ = (1, 1, 3)
+__version__ = (1, 1, 4)
 
 import math
 import time
@@ -185,6 +185,12 @@ class Doom(loader.Module):
         for y in range(h):
             row = "".join([screen[x][y] for x in range(w)])
             out.append(row)
+        cx = w // 2
+        cy = h // 2
+        if 0 <= cy < len(out) and 0 <= cx < len(out[cy]):
+            r = list(out[cy])
+            r[cx] = "✚"
+            out[cy] = "".join(r)
         return "\n".join(out)
 
     def get_mini_map(self, state):
@@ -234,7 +240,7 @@ class Doom(loader.Module):
             st = self.sessions[user_id]
             now = time.time()
 
-            if now - st.get("last_ai", 0) > 0.45:
+            if now - st.get("last_ai", 0) > 0.7:
                 moved = False
                 enemies = []
                 for y in range(self.map_h):
@@ -273,7 +279,7 @@ class Doom(loader.Module):
                     st["log"] = "Автосохранение выполнено."
                     st["dirty"] = True
 
-            if st.get("dirty") and now - st.get("last_render", 0) >= 0.35:
+            if st.get("dirty") and now - st.get("last_render", 0) >= 0.6:
                 try:
                     await self.do_render(call, st)
                     st["last_render"] = time.time()
@@ -281,21 +287,32 @@ class Doom(loader.Module):
                 except Exception:
                     pass
 
-            await asyncio.sleep(0.08)
+            await asyncio.sleep(0.12)
 
     def update_player(self, dx, dy, dr):
         if "doom_user" not in self.sessions: return
         st = self.sessions["doom_user"]
         if st["hp"] <= 0: return
 
+        def is_walkable(x, y):
+            r = 0.17
+            points = [(x-r, y-r), (x+r, y-r), (x-r, y+r), (x+r, y+r)]
+            for px, py in points:
+                tx, ty = int(px), int(py)
+                if tx < 0 or tx >= self.map_w or ty < 0 or ty >= self.map_h:
+                    return False
+                if st["map"][ty][tx] in ["#", "E"]:
+                    return False
+            return True
+
         st["a"] += dr
         if dx or dy:
             old_x, old_y = st["x"], st["y"]
             nx = st["x"] + dx
-            if 0 <= int(nx) < self.map_w and st["map"][int(st["y"])][int(nx)] not in ["#", "E"]:
+            if is_walkable(nx, st["y"]):
                 st["x"] = nx
             ny = st["y"] + dy
-            if 0 <= int(ny) < self.map_h and st["map"][int(ny)][int(st["x"])] not in ["#", "E"]:
+            if is_walkable(st["x"], ny):
                 st["y"] = ny
 
             cell_x, cell_y = int(st["x"]), int(st["y"])
@@ -325,18 +342,24 @@ class Doom(loader.Module):
         st["ammo"] -= 1
         hit = False
         rx, ry = math.sin(st["a"]), math.cos(st["a"])
+        d = 0.0
 
-        for d in range(1, int(self.game_config["depth"])):
-            tx, ty = int(st["x"] + rx * d), int(st["y"] + ry * d)
+        while d < self.game_config["depth"]:
+            d += 0.1
+            fx, fy = st["x"] + rx * d, st["y"] + ry * d
+            tx, ty = int(fx), int(fy)
             if 0 <= tx < self.map_w and 0 <= ty < self.map_h:
-                if st["map"][ty][tx] == "E":
+                cell = st["map"][ty][tx]
+                if cell == "E":
                     st["map"][ty][tx] = " "
                     st["score"] += 1
                     st["log"] = "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Монстр разорван!"
                     hit = True
                     break
-                elif st["map"][ty][tx] == "#":
+                if cell == "#":
                     break
+            else:
+                break
 
         if not hit: st["log"] = "Выстрел в стену."
         st["dirty"] = True
