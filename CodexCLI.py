@@ -2131,20 +2131,21 @@ class CodexCLI(loader.Module):
                                 chat_id,
                                 json.dumps(forced_tool, ensure_ascii=False),
                             )
-                            with contextlib.suppress(Exception):
-                                forced_json = json.loads(tool_result)
-                                if forced_json.get("status") == "success":
-                                    det = forced_json.get("details") or {}
-                                    result_text = (
-                                        f"Готово: выполнено действие {det.get('action') or forced_tool.get('action')}."
-                                    )
-                                    if det.get("target_chat") is not None:
-                                        result_text += f" chat={det.get('target_chat')}"
-                                    if det.get("sent") is not None:
-                                        result_text += f" sent={det.get('sent')}"
-                                    if det.get("replied") is not None:
-                                        result_text += f" replied={det.get('replied')}"
-                                    break
+                    with contextlib.suppress(Exception):
+                        forced_json = json.loads(tool_result)
+                        if forced_json.get("status") == "success":
+                            det = forced_json.get("details") or {}
+                            result_text = self._format_tool_success_details(det) or (
+                                f"Готово: выполнено действие {det.get('action') or forced_tool.get('action')}."
+                            )
+                            if result_text.startswith("Готово: выполнено действие"):
+                                if det.get("target_chat") is not None:
+                                    result_text += f" chat={det.get('target_chat')}"
+                                if det.get("sent") is not None:
+                                    result_text += f" sent={det.get('sent')}"
+                                if det.get("replied") is not None:
+                                    result_text += f" replied={det.get('replied')}"
+                            break
                     result_text = candidate_text
                     break
                 tool_json_str = json.dumps(tool_json_call, ensure_ascii=False) if tool_json_call else (tool_match.group(1) or "").strip()
@@ -2256,13 +2257,14 @@ class CodexCLI(loader.Module):
                     if forced_json.get("status") == "success":
                         det = forced_json.get("details") or {}
                         action_done = det.get("action") or forced_tool.get("action")
-                        result_text = f"Готово: выполнено действие {action_done}."
-                        if det.get("target_chat") is not None:
-                            result_text += f" chat={det.get('target_chat')}"
-                        if det.get("message_id") is not None:
-                            result_text += f" message_id={det.get('message_id')}"
-                        if det.get("replied") is not None:
-                            result_text += f" replied={det.get('replied')}"
+                        result_text = self._format_tool_success_details(det) or f"Готово: выполнено действие {action_done}."
+                        if result_text.startswith("Готово: выполнено действие"):
+                            if det.get("target_chat") is not None:
+                                result_text += f" chat={det.get('target_chat')}"
+                            if det.get("message_id") is not None:
+                                result_text += f" message_id={det.get('message_id')}"
+                            if det.get("replied") is not None:
+                                result_text += f" replied={det.get('replied')}"
                     else:
                         action_done = forced_tool.get("action") or "unknown_action"
                         result_text = (
@@ -2493,7 +2495,10 @@ class CodexCLI(loader.Module):
             if not (result_text or "").strip() and isinstance(last_tool_success_details, dict):
                 det = last_tool_success_details
                 action_done = str(det.get("action") or "").strip().lower()
-                if action_done in {"get_contacts", "get_contacts_count"}:
+                formatted_success = self._format_tool_success_details(det)
+                if formatted_success:
+                    result_text = formatted_success
+                elif action_done in {"get_contacts", "get_contacts_count"}:
                     total_contacts = int(det.get("total_contacts") or det.get("count") or 0)
                     deleted_count = int(det.get("deleted_count") or 0)
                     bots_count = int(det.get("bots_count") or 0)
@@ -2656,6 +2661,34 @@ class CodexCLI(loader.Module):
             if session and session.get("base_message_id") == base_message_id:
                 self._request_sessions.pop(chat_id, None)
         return None if impersonation_mode else ""
+
+    def _format_tool_success_details(self, details: dict) -> str:
+        if not isinstance(details, dict):
+            return ""
+        action_done = str(details.get("action") or "").strip().lower()
+        if action_done != "get_chat_admins":
+            return ""
+
+        admins = details.get("admins")
+        if not isinstance(admins, list):
+            admins = []
+        if not admins:
+            return "Не удалось найти админов в этом чате."
+
+        total = int(details.get("count") or len(admins))
+        lines = [f"Админы чата ({total}):"]
+        for idx, admin in enumerate(admins[:30], start=1):
+            if not isinstance(admin, dict):
+                continue
+            name = str(admin.get("name") or "Без имени")
+            username = str(admin.get("username") or "").strip()
+            admin_id = admin.get("id")
+            bot_mark = " [бот]" if admin.get("bot") else ""
+            uname_part = f"@{username}" if username else "без username"
+            lines.append(f"{idx}. {name} ({uname_part}) — ID: {admin_id}{bot_mark}")
+        if len(admins) > 30:
+            lines.append(f"… и ещё {len(admins) - 30}.")
+        return "\n".join(lines)
 
     async def _execute_telegram_tool(self, chat_id: int, tool_json_str: str) -> str:
         if not self.config["allow_tg_tools"]:
