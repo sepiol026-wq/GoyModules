@@ -22,7 +22,7 @@
 
 from __future__ import annotations
 
-__version__ = (1, 1, 3)
+__version__ = (1, 1, 4)
 
 import ast
 import asyncio
@@ -201,6 +201,18 @@ HEROKU_DANGEROUS_REGEX = [
     re.compile(r"(?i)\b(?:_client\._call|forbid_constructors|sys\.addaudithook|inspect\.stack|_old_call_rewritten)\b"),
 ]
 
+GOYSEC_TAMPER_RE = [
+    (re.compile(r"(?i)_goysec_guarded"), "Попытка обхода GoySecurity guard", 95),
+    (re.compile(r"(?i)_goysec_original"), "Обращение к оригиналу GoySecurity guard", 90),
+    (re.compile(r"(?i)_register_guard"), "Вмешательство в guard-механизм GoySecurity", 90),
+    (re.compile(r"(?i)_integrity_task"), "Попытка остановить монитор целостности GoySecurity", 90),
+    (re.compile(r'(?i)lookup\s*\(\s*["\']GoySecurity["\']'), "Поиск GoySecurity через lookup", 80),
+    (re.compile(r'(?i)getattr\s*\(.*GoySecurity'), "getattr на GoySecurity", 75),
+    (re.compile(r"(?i)allmodules\s*\.\s*register_module\s*=(?!=)"), "Подмена allmodules.register_module", 85),
+    (re.compile(r"(?i)register_module\s*=\s*(?!guarded|original)"), "Перезапись register_module", 70),
+    (re.compile(r"(?i)GoySecurity\s*\.\s*_"), "Прямой доступ к приватным атрибутам GoySecurity", 80),
+]
+
 URL_RE = re.compile(r"https?://[^\s\'\"<>()]+", re.I)
 IP_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
@@ -334,7 +346,7 @@ OBF_PAT = [
     (re.compile(r"(?i)\b(?:rot13|lambda\s+._:|\.decode\(['\"]rot13['\"]\)|\bchr\b|\bord\b)\b"), 15),
 ]
 
-RISK_STRONG = {"session", "exfil", "stealer", "spy", "clipper", "ransom", "loader", "trojan", "browser", "secret", "persistence", "crypto"}
+RISK_STRONG = {"session", "exfil", "stealer", "spy", "clipper", "ransom", "loader", "trojan", "browser", "secret", "persistence", "crypto", "tamper"}
 RISK_WEAK = {"process", "net", "storage", "runtime", "crypto", "decode", "import", "sandbox", "framework", "updater"}
 
 @dataclass
@@ -594,6 +606,11 @@ class Analyzer:
                 if self._is_rule_context(text, m.start(), m.end()):
                     continue
                 self._add("warning", "Контроль внешнего модуля/сессии", self._excerpt(text, m.start(), m.end()), source, self._pos(text, m.start()), 26, "session")
+        for rx, title, score in GOYSEC_TAMPER_RE:
+            for m in rx.finditer(text):
+                if self._is_rule_context(text, m.start(), m.end()):
+                    continue
+                self._add("critical", f"[AntiTamper] {title}", self._excerpt(text, m.start(), m.end()), source, self._pos(text, m.start()), score, "tamper")
         for m in PROMPT_INJECTION_RE.finditer(text):
             if self._is_rule_context(text, m.start(), m.end()):
                 continue
@@ -657,6 +674,7 @@ class Analyzer:
             "AI_MODEL_CATALOG =",
             "HEROKU_SAFE_REGEX =",
             "HEROKU_DANGEROUS_REGEX =",
+            "GOYSEC_TAMPER_RE =",
         )
         return any(marker in ctx for marker in markers)
 
@@ -693,6 +711,8 @@ class Analyzer:
             self._add("critical", "Synergy: watcher-перехват", "Watcher сочетается со сбором или выводом данных", "bundle", (1, 1), 72, "spy")
         if self.stats.get("commands", 0) >= 5 and ("exec" in fams or "sandbox" in fams):
             self._add("warning", "Synergy: Агрессивный command-surface", "Модуль открывает чрезмерное количество команд и опасных примитивов", "bundle", (1, 1), 24, "trojan")
+        if "tamper" in fams:
+            self._add("critical", "Synergy: AntiTamper — попытка обхода GoySecurity", "Код содержит признаки целенаправленного вмешательства в механизм защиты GoySecurity", "bundle", (1, 1), 200, "tamper")
 
     def _risk(self, s: int) -> str:
         if s >= 150: return "critical"
@@ -1027,6 +1047,12 @@ class GoySecurity(loader.Module):
         "details_head": "<b><tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> Детальный отчёт</b>\n",
         "ai_set": "<b>AI-провайдер</b>: <code>{provider}</code>\n<b>Модель</b>: <code>{model}</code>",
         "custom_ai_ok": "<b>Кастомный провайдер</b>: <code>{provider}</code>\n<b>Базовый URL</b>: <code>{base}</code>\n<b>Модель</b>: <code>{model}</code>\n<b>Совместимость</b>: <code>{style}</code>",
+        "scanall_no_modules": "<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity</b>\n<i>Нет загруженных сторонних модулей для сканирования.</i>",
+        "scanall_done": (
+            "<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity — аудит завершён</b>\n"
+            "Проверено: <code>{total}</code> | Опасных: <code>{dangerous}</code>\n"
+            "<i>Используй кнопки выше для удаления подозрительных модулей.</i>"
+        ),
     }
 
     def __init__(self) -> None:
@@ -1069,6 +1095,9 @@ class GoySecurity(loader.Module):
         self._register_guard_patched = False
         self._register_guard_original = None
         self._guard_pending_decisions: Dict[str, asyncio.Future] = {}
+        self._integrity_task: Optional[asyncio.Task] = None
+        self._self_updating: bool = False
+        self._patch_early()
 
     def config_complete(self):
         self.av.depth = self.config["decode_depth"]
@@ -1102,6 +1131,7 @@ class GoySecurity(loader.Module):
                 self.config["guard_preinstall_enabled"] = False
                 log.warning("GoySecurity: preinstall autoscan disabled because AI check failed")
         self._ensure_preinstall_guard()
+        self._start_integrity_monitor()
 
     def _extract_register_module_payload(self, args: Tuple[Any, ...], kwargs: Dict[str, Any]) -> Tuple[str, str]:
         spec = args[0] if args else kwargs.get("spec")
@@ -1153,14 +1183,14 @@ class GoySecurity(loader.Module):
                 await message.delete()
             if markup and getattr(self, "inline", None):
                 with contextlib.suppress(Exception):
-                    await self.inline.form(message=message, text=text, reply_markup=markup, disable_web_page_preview=True)
+                    await self.inline.form(message=message, text=text, reply_markup=markup)
                     return
             with contextlib.suppress(Exception):
                 await utils.answer(message, text)
             return
         if markup and getattr(self, "inline", None):
             with contextlib.suppress(Exception):
-                await self.inline.form(message=message, text=text, reply_markup=markup, disable_web_page_preview=True)
+                await self.inline.form(message=message, text=text, reply_markup=markup)
                 return
         with contextlib.suppress(Exception):
             await utils.answer(message, text)
@@ -1189,8 +1219,40 @@ class GoySecurity(loader.Module):
         )
         markup = [
             [
-                {"text": "Отклонить установку", "callback": self._guard_decide_reject, "args": (token,)},
-                {"text": "Установить модуль", "callback": self._guard_decide_allow, "args": (token,)},
+                {"text": "⛔ Отклонить", "callback": self._guard_decide_reject, "args": (token,)},
+                {"text": "✅ Установить", "callback": self._guard_decide_allow, "args": (token,)},
+            ]
+        ]
+        await self._guard_update_or_send(message, text, markup=markup, delete_first=True)
+        try:
+            decision = await asyncio.wait_for(fut, timeout=90)
+            return bool(decision)
+        except Exception:
+            return False
+        finally:
+            self._guard_pending_decisions.pop(token, None)
+
+    async def _guard_prompt_suspicious(self, message, module_name: str, res: Dict[str, Any], ai_reason: str) -> bool:
+        """
+        Показывает inline-клавиатуру когда AI вернул SUSPICIOUS (не явно UNSAFE).
+        Пользователь сам решает — установить или нет.
+        """
+        if not message or not getattr(self, "inline", None):
+            return False
+        token = f"{module_name}:sus:{time.time_ns()}"
+        fut = asyncio.get_running_loop().create_future()
+        self._guard_pending_decisions[token] = fut
+        text = (
+            "<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity • Preinstall Guard</b>\n"
+            f"<b><tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Подозрительный модуль:</b> <code>{html.escape(module_name)}</code>\n"
+            f"{self._guard_brief_static(res)}\n"
+            f"<b><tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> AI:</b> <i>{html.escape(self._human_api_error(ai_reason) if ai_reason else 'модуль кажется подозрительным, но не явно вредоносным')}</i>\n\n"
+            "<b>AI не уверен в вердикте. Решение за вами.</b>"
+        )
+        markup = [
+            [
+                {"text": "⛔ Отклонить", "callback": self._guard_decide_reject, "args": (token,)},
+                {"text": "⚠️ Всё равно установить", "callback": self._guard_decide_allow, "args": (token,)},
             ]
         ]
         await self._guard_update_or_send(message, text, markup=markup, delete_first=True)
@@ -1229,77 +1291,158 @@ class GoySecurity(loader.Module):
         return tail[:64] if tail else "module"
 
     async def _guard_ai_ready(self) -> bool:
+        """
+        Проверяет готовность AI для preinstall guard.
+        Приоритет: токен пользователя → free AI (NVIDIA public keys).
+        Если хотя бы один вариант работает — guard включается.
+        """
         provider = self._active_provider()
         token = self._provider_token(provider)
         model = self._provider_model(provider)
-        if not token or not model:
-            return False
-        result = await self._ask_ai_autoscan(provider, token, "print('healthcheck')", model)
-        if not result or result.get("error"):
-            return False
-        verdict = str(result.get("verdict", "")).strip().upper()
-        return verdict in {"SAFE", "UNSAFE"}
+        if token and model:
+            result = await self._ask_ai_autoscan(provider, token, "print('healthcheck')", model)
+            if result and not result.get("error"):
+                verdict = str(result.get("verdict", "")).strip().upper()
+                if verdict in {"SAFE", "UNSAFE"}:
+                    return True
+        free_result = await self._ask_ai_autoscan_free("print('healthcheck')")
+        if free_result and not free_result.get("error"):
+            verdict = str(free_result.get("verdict", "")).strip().upper()
+            if verdict in {"SAFE", "UNSAFE"}:
+                log.debug("GoySecurity: guard will use free AI (no user token)")
+                return True
+        return False
+
+
+    def _patch_early(self) -> None:
+        """
+        Пытается пробросить guard как можно раньше — ещё из __init__.
+        На этом этапе loader/allmodules может быть ещё недоступен через self.lookup,
+        поэтому используем прямой обход стека фреймов, чтобы найти allmodules.
+        Если не находим — ничего страшного, client_ready вызовет _ensure_preinstall_guard.
+        """
+        import sys
+        frame = sys._getframe()
+        allmodules = None
+        while frame:
+            for val in frame.f_locals.values():
+                if hasattr(val, "register_module") and callable(getattr(val, "register_module", None)):
+                    allmodules = val
+                    break
+            if allmodules:
+                break
+            frame = frame.f_back
+
+        if allmodules and not getattr(allmodules.register_module, "_goysec_guarded", False):
+            self._apply_guard(allmodules)
 
     def _ensure_preinstall_guard(self) -> None:
+        """Вызывается из client_ready — повторный (идемпотентный) патч."""
         if self._register_guard_patched:
             return
         lm = self.lookup("loader") or self.lookup("Loader")
         allmodules = getattr(lm, "allmodules", None) if lm else None
-        original = getattr(allmodules, "register_module", None) if allmodules else None
+        if not allmodules:
+            return
+        if getattr(getattr(allmodules, "register_module", None), "_goysec_guarded", False):
+            self._register_guard_patched = True
+            return
+        self._apply_guard(allmodules)
+
+    def _apply_guard(self, allmodules) -> None:
+        """
+        Навешивает враппер на allmodules.register_module.
+        Идемпотентен: перед применением всегда проверяет fingerprint _goysec_guarded.
+        """
+        original = getattr(allmodules, "register_module", None)
         if not callable(original):
             return
+        if getattr(original, "_goysec_guarded", False):
+            self._register_guard_patched = True
+            self._register_guard_original = getattr(original, "_goysec_original", original)
+            return
+
+        gsec = self
 
         async def guarded_register_module(*args, **kwargs):
-            if not self.config["guard_preinstall_enabled"]:
+            if not gsec.config["guard_preinstall_enabled"]:
                 return await original(*args, **kwargs)
-            module_name, source = self._extract_register_module_payload(args, kwargs)
-            guard_message = self._extract_guard_message(args, kwargs)
+
+            module_name, source = gsec._extract_register_module_payload(args, kwargs)
+            guard_message = gsec._extract_guard_message(args, kwargs)
             if source:
                 try:
-                    prev_mode = self.av.mode
-                    self.av.mode = self._mode
+                    prev_mode = gsec.av.mode
+                    gsec.av.mode = gsec._mode
                     try:
-                        scan_res = self.av.scan([(module_name, source)])
+                        scan_res = gsec.av.scan([(module_name, source)])
                     finally:
-                        self.av.mode = prev_mode
+                        gsec.av.mode = prev_mode
                     scan_res["decoded"] = source
                     scan_res["origin"] = "autoscan"
                     scan_res["module_name"] = module_name
-                    self._cur = str(scan_res.get("fp", "") or self._cur)
-                    self._last_res = scan_res
-                    provider = self._active_provider()
-                    token = self._provider_token(provider)
-                    model = self._provider_model(provider)
+                    gsec._cur = str(scan_res.get("fp", "") or gsec._cur)
+                    gsec._last_res = scan_res
+
+                    tamper_hits = [
+                        h for h in scan_res.get("critical", [])
+                        if h.get("family") == "tamper"
+                    ]
+                    if tamper_hits:
+                        pretty_name = gsec._guard_pretty_module_name(module_name, source)
+                        tamper_detail = "; ".join(
+                            h.get("title", "").replace("[AntiTamper] ", "")
+                            for h in tamper_hits[:3]
+                        )
+                        block_text = (
+                            "<b><tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> GoySecurity — AntiTamper</b>\n"
+                            f"<b><tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Модуль:</b> <code>{html.escape(pretty_name)}</code>\n"
+                            "<b><tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> Статус:</b> <code>ЗАБЛОКИРОВАН</code>\n"
+                            f"<b><tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Причина:</b> <i>{html.escape(tamper_detail)}</i>\n"
+                            "<b>Модуль пытается взаимодействовать с механизмами защиты GoySecurity. Установка запрещена.</b>"
+                        )
+                        await gsec._guard_update_or_send(guard_message, block_text, delete_first=True)
+                        raise gsec._guard_block_error(
+                            f"GoySecurity AntiTamper: '{pretty_name}' заблокирован без AI"
+                        )
+                    provider = gsec._active_provider()
+                    token = gsec._provider_token(provider)
+                    model = gsec._provider_model(provider)
                     ai_result = None
+
                     if token and model:
-                        ai_result = await self._ask_ai_autoscan(
+                        ai_result = await gsec._ask_ai_autoscan(
                             provider,
                             token,
                             source,
                             model,
                             static_res=scan_res,
                         )
+
+                    if not ai_result or ai_result.get("error"):
+                        free_result = await gsec._ask_ai_autoscan_free(source, static_res=scan_res)
+                        if free_result and not free_result.get("error"):
+                            ai_result = free_result
+
                     if not ai_result or ai_result.get("error"):
                         ai_reason = (ai_result or {}).get("reason", "no-response")
-                        pretty_name = self._guard_pretty_module_name(module_name, source)
-                        allow_install = await self._guard_prompt_ai_unavailable(
+                        pretty_name = gsec._guard_pretty_module_name(module_name, source)
+                        allow_install = await gsec._guard_prompt_ai_unavailable(
                             guard_message,
                             pretty_name,
                             scan_res,
                             ai_reason,
                         )
                         if not allow_install:
-                            raise self._guard_block_error(
+                            raise gsec._guard_block_error(
                                 f"GoySecurity: модуль '{pretty_name}' не установлен (AI недоступен)"
                             )
                         return await original(*args, **kwargs)
+
                     ai_verdict = str((ai_result or {}).get("verdict", "")).strip().upper()
-                    if ai_verdict not in {"SAFE", "UNSAFE"}:
-                        raise RuntimeError(
-                            f"GoySecurity preinstall guard invalid AI verdict ({ai_verdict or 'empty'})"
-                        )
+
                     if ai_verdict == "UNSAFE":
-                        pretty_name = self._guard_pretty_module_name(module_name, source)
+                        pretty_name = gsec._guard_pretty_module_name(module_name, source)
                         block_text = (
                             "<b><tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> GoySecurity</b>\n"
                             f"<b><tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Модуль:</b> <code>{html.escape(pretty_name)}</code>\n"
@@ -1307,17 +1450,120 @@ class GoySecurity(loader.Module):
                             "<b><tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Установка автоматически отклонена GoySecurity</b>\n"
                             "<i>Для детального отчёта выполните <code>.gwhy</code>.</i>"
                         )
-                        await self._guard_update_or_send(guard_message, block_text, delete_first=True)
-                        raise self._guard_block_error(
+                        await gsec._guard_update_or_send(guard_message, block_text, delete_first=True)
+                        raise gsec._guard_block_error(
                             f"GoySecurity: модуль '{pretty_name}' заблокирован как небезопасный (AI={ai_verdict})"
                         )
+
+                    if ai_verdict == "SUSPICIOUS":
+                        pretty_name = gsec._guard_pretty_module_name(module_name, source)
+                        allow_install = await gsec._guard_prompt_suspicious(
+                            guard_message,
+                            pretty_name,
+                            scan_res,
+                            "",
+                        )
+                        if not allow_install:
+                            raise gsec._guard_block_error(
+                                f"GoySecurity: модуль '{pretty_name}' отклонён пользователем (suspicious)"
+                            )
+                        return await original(*args, **kwargs)
+
                 except Exception:
                     raise
             return await original(*args, **kwargs)
 
+        guarded_register_module._goysec_guarded = True
+        guarded_register_module._goysec_original = original
+
         allmodules.register_module = guarded_register_module
         self._register_guard_original = original
         self._register_guard_patched = True
+        log.debug("GoySecurity: preinstall guard applied to allmodules.register_module")
+
+    async def on_unload(self) -> None:
+        """
+        Чистый откат патча при выгрузке модуля.
+        Всегда восстанавливает оригинальный register_module без костылей.
+        """
+        self._self_updating = True
+        if self._integrity_task and not self._integrity_task.done():
+            self._integrity_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await self._integrity_task
+        self._integrity_task = None
+        try:
+            lm = self.lookup("loader") or self.lookup("Loader")
+            allmodules = getattr(lm, "allmodules", None) if lm else None
+            if allmodules and self._register_guard_original:
+                current = getattr(allmodules, "register_module", None)
+                if getattr(current, "_goysec_guarded", False):
+                    allmodules.register_module = self._register_guard_original
+                    log.debug("GoySecurity: preinstall guard removed cleanly")
+        except Exception as e:
+            log.warning(f"GoySecurity on_unload: guard rollback error: {e}")
+        finally:
+            self._register_guard_patched = False
+            self._register_guard_original = None
+        for fut in self._guard_pending_decisions.values():
+            if not fut.done():
+                fut.set_result(False)
+        self._guard_pending_decisions.clear()
+
+
+    def _start_integrity_monitor(self) -> None:
+        """Запускает фоновую задачу, которая каждые 3 секунды проверяет
+        что наш враппер на allmodules.register_module не был снят/заменён."""
+        if self._integrity_task and not self._integrity_task.done():
+            return
+        self._integrity_task = asyncio.get_event_loop().create_task(
+            self._integrity_loop()
+        )
+
+    async def _integrity_loop(self) -> None:
+        """
+        Каждые 3 секунды проверяет целостность guard'а.
+        Если кто-то подменил register_module — немедленно восстанавливаем
+        и логируем нарушение.
+        """
+        await asyncio.sleep(5)
+        while True:
+            try:
+                await asyncio.sleep(3)
+                lm = self.lookup("loader") or self.lookup("Loader")
+                allmodules = getattr(lm, "allmodules", None) if lm else None
+                if not allmodules:
+                    continue
+                current = getattr(allmodules, "register_module", None)
+                if current is None:
+                    continue
+                if not getattr(current, "_goysec_guarded", False):
+                    if self._self_updating:
+                        self._self_updating = False
+                        log.debug("GoySecurity: integrity check skipped — self-update in progress")
+                        continue
+                    log.warning(
+                        "GoySecurity: INTEGRITY VIOLATION — register_module was replaced! "
+                        f"Current func: {getattr(current, '__qualname__', repr(current))}. "
+                        "Restoring guard."
+                    )
+                    self._register_guard_patched = False
+                    self._register_guard_original = current
+                    self._apply_guard(allmodules)
+                    with contextlib.suppress(Exception):
+                        await self._client.send_message(
+                            "me",
+                            "<b><tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> GoySecurity — Нарушение целостности</b>\n"
+                            "<b>Кто-то снял или заменил preinstall guard.</b>\n"
+                            f"<i>Обнаружено: <code>{html.escape(getattr(current, '__qualname__', repr(current))[:120])}</code></i>\n"
+                            "Guard восстановлен автоматически.",
+                            parse_mode="html",
+                        )
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                log.debug(f"GoySecurity integrity loop error: {e}")
+
 
     def _persist(self) -> None:
         self.db.set("GoySecurity", "gsec_hist", self._hist)
@@ -1727,8 +1973,9 @@ class GoySecurity(loader.Module):
         return (
             f"{base_prompt}\n\n"
             "РЕЖИМ PREINSTALL AUTOSCAN (без объяснений):\n"
-            "Верни только JSON вида {\"verdict\":\"Clear\"|\"Suspicious\"|\"Malicious\"|\"Critical\"}.\n"
-            "Не добавляй reason, confidence, indicators, kill_chain и любые другие поля."
+            'Верни только JSON вида {"verdict":"SAFE"|"SUSPICIOUS"|"UNSAFE","confidence":0-100,"reason":"кратко"}.\n'
+            "SAFE — чисто или незначительные риски. SUSPICIOUS — есть подозрения, но нет явной вредоносной цепочки. UNSAFE — явная угроза.\n"
+            "Если confidence или reason не можешь заполнить, все равно верни verdict и не добавляй лишние поля."
         )
 
     def _extract_ai_text(self, provider: str, data: Dict[str, Any]) -> str:
@@ -1946,6 +2193,85 @@ class GoySecurity(loader.Module):
                 return {"error": True, "reason": last_error}
         return {"error": True, "reason": last_error}
 
+    async def _fetch_free_ai_keys(self) -> List[str]:
+        """
+        Получает публичные ключи NVIDIA API с GitHub (как FSecurity).
+        Используется как fallback когда у пользователя нет своего токена.
+        Ключи ротируются — берём все через запятую.
+        """
+        urls = [
+            "https://raw.githubusercontent.com/Fixyres/FModules/refs/heads/main/assets/FSecurity/api_keys.txt",
+        ]
+        async with aiohttp.ClientSession() as session:
+            for url in urls:
+                try:
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        if resp.status != 200:
+                            continue
+                        raw = (await resp.text()).strip()
+                        keys = [k.strip() for k in raw.split(",") if k.strip()]
+                        if keys:
+                            return keys
+                except Exception:
+                    continue
+        return []
+
+    async def _ask_ai_autoscan_free(
+        self,
+        code: str,
+        static_res: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Запускает autoscan через NVIDIA free API (без ключа пользователя).
+        Используется как fallback если у пользователя нет токена ни у одного провайдера.
+        """
+        keys = await self._fetch_free_ai_keys()
+        if not keys:
+            return {"error": True, "reason": "free-ai-keys-unavailable"}
+
+        prompt = self._ai_autoscan_prompt(code, static_res, self._mode)
+
+        async with aiohttp.ClientSession() as session:
+            for api_key in keys:
+                try:
+                    async with session.post(
+                        "https://integrate.api.nvidia.com/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {api_key}"},
+                        json={
+                            "model": "qwen/qwen3-coder-480b-a35b-instruct",
+                            "messages": [
+                                {"role": "system", "content": "Return strict JSON only. No markdown."},
+                                {"role": "user", "content": prompt},
+                            ],
+                            "temperature": 0.1,
+                            "max_tokens": 80,
+                        },
+                        timeout=aiohttp.ClientTimeout(total=25),
+                    ) as resp:
+                        if resp.status != 200:
+                            continue
+                        data = await resp.json()
+                        choices = data.get("choices") or []
+                        if not choices:
+                            continue
+                        raw_text = choices[0].get("message", {}).get("content", "").strip()
+                        parsed = self._parse_ai_json(raw_text)
+                        if not parsed:
+                            continue
+                        verdict_raw = str(parsed.get("verdict", "")).strip().upper()
+                        if verdict_raw in {"SAFE", "UNSAFE", "SUSPICIOUS"}:
+                            parsed["verdict"] = verdict_raw
+                            return parsed
+                        if verdict_raw in {"CLEAR", "BENIGN", "CLEAN"}:
+                            parsed["verdict"] = "SAFE"
+                            return parsed
+                        if verdict_raw in {"MALICIOUS", "CRITICAL"}:
+                            parsed["verdict"] = "UNSAFE"
+                            return parsed
+                except Exception:
+                    continue
+        return {"error": True, "reason": "free-ai-all-keys-failed"}
+
     async def _ask_ai_autoscan(
         self,
         provider: str,
@@ -1965,17 +2291,20 @@ class GoySecurity(loader.Module):
             prompt_override=self._ai_autoscan_prompt(code, static_res, self._mode),
             max_attempts=2,
             req_timeout=20,
-            max_output_tokens=40,
+            max_output_tokens=80,
         )
         if not ai_raw or ai_raw.get("error"):
             return ai_raw
         verdict_raw = str(ai_raw.get("verdict", "")).strip().upper()
-        if verdict_raw in {"SAFE", "UNSAFE"}:
-            return {"verdict": verdict_raw}
-        if verdict_raw in {"CLEAR", "BENIGN", "CLEAN", "SUSPICIOUS"}:
-            return {"verdict": "SAFE"}
+        if verdict_raw in {"SAFE", "SUSPICIOUS", "UNSAFE"}:
+            ai_raw["verdict"] = verdict_raw
+            return ai_raw
+        if verdict_raw in {"CLEAR", "BENIGN", "CLEAN"}:
+            ai_raw["verdict"] = "SAFE"
+            return ai_raw
         if verdict_raw in {"MALICIOUS", "CRITICAL"}:
-            return {"verdict": "UNSAFE"}
+            ai_raw["verdict"] = "UNSAFE"
+            return ai_raw
         return {"error": True, "reason": f"Unsupported autoscan verdict: {verdict_raw or 'empty'}"}
 
     def _get_verdict(self, risk: str) -> str:
@@ -2317,6 +2646,547 @@ class GoySecurity(loader.Module):
             why_str = self._why_static(self._last_res, api_error)
 
         await self._send_text_chunked(message, why_str)
+
+
+    def _get_all_module_sources(self) -> List[Tuple[str, str, Any]]:
+        import gc
+        import inspect as _inspect
+        import os
+        import pathlib
+        import sys
+
+        SKIP_FILES = {"goysec.py"}
+
+        # Core module class names — never scan these
+        SKIP_NAMES = {
+            "GoySecurity",
+            # APILimiter
+            "APILimiter",
+            # Evaluator
+            "Evaluator",
+            # Help
+            "Help",
+            # HerokuBackup
+            "HerokuBackup",
+            # HerokuConfig
+            "HerokuConfig",
+            # HerokuInfo
+            "HerokuInfo",
+            # HerokuPluginSecurity
+            "HerokuPluginSecurity",
+            # HerokuSecurity
+            "HerokuSecurity",
+            # HerokuSettings
+            "HerokuSettings",
+            # HerokuWeb
+            "HerokuWeb",
+            # InlineStuff
+            "InlineStuff",
+            # Loader
+            "Loader",
+            # Presets
+            "Presets",
+            # Settings
+            "Settings",
+            # Terminal
+            "Terminal",
+            # Tester
+            "Tester",
+            # Translations
+            "Translations",
+            # Translator
+            "Translator",
+            # Updater
+            "Updater",
+            # legacy internal names
+            "InlineManager",
+            "Security",
+        }
+
+        # Core module file names — never scan these
+        SKIP_FILES_CORE = {
+            "apilimiter.py",
+            "evaluator.py",
+            "help.py",
+            "herokubackup.py",
+            "herokuconfig.py",
+            "herokuinfo.py",
+            "herokupluginsecurity.py",
+            "herokusecurity.py",
+            "herokusettings.py",
+            "herokuweb.py",
+            "inlinestuff.py",
+            "loader.py",
+            "presets.py",
+            "settings.py",
+            "terminal.py",
+            "tester.py",
+            "translations.py",
+            "translator.py",
+            "updater.py",
+        }
+        SKIP_FILES = SKIP_FILES | SKIP_FILES_CORE
+
+        def _best_name(mod_obj: Any, fallback: str = "") -> str:
+            with contextlib.suppress(Exception):
+                name = getattr(mod_obj, "name", None)
+                if isinstance(name, str) and name.strip():
+                    return name.strip()
+            cls = type(mod_obj)
+            if getattr(cls, "__name__", ""):
+                return cls.__name__
+            return fallback
+
+        def _source_for(mod_obj: Any) -> str:
+            if mod_obj is None:
+                return ""
+            with contextlib.suppress(Exception):
+                source = str(getattr(mod_obj, "__source__", "") or "")
+                if source.strip():
+                    return source
+            with contextlib.suppress(Exception):
+                source = _inspect.getsource(type(mod_obj))
+                if source.strip():
+                    return source
+            with contextlib.suppress(Exception):
+                mod = sys.modules.get(getattr(type(mod_obj), "__module__", "") or "")
+                if mod and getattr(mod, "__file__", None):
+                    return pathlib.Path(mod.__file__).read_text(encoding="utf-8", errors="ignore")
+            return ""
+
+        loaded: Dict[str, Any] = {}
+        seen_ids: set[int] = set()
+
+        def _register(mod_obj: Any) -> None:
+            if mod_obj is None:
+                return
+            with contextlib.suppress(Exception):
+                cls_name = type(mod_obj).__name__
+                if cls_name in SKIP_NAMES:
+                    return
+                if id(mod_obj) in seen_ids:
+                    return
+                seen_ids.add(id(mod_obj))
+                loaded[_best_name(mod_obj, cls_name)] = mod_obj
+
+        with contextlib.suppress(Exception):
+            for obj in gc.get_objects():
+                if isinstance(obj, loader.Module):
+                    _register(obj)
+
+        with contextlib.suppress(Exception):
+            lm = self.lookup("loader") or self.lookup("Loader")
+            allmodules = getattr(lm, "allmodules", None) if lm else None
+            for mod in (getattr(allmodules, "modules", None) or []):
+                _register(mod)
+
+        with contextlib.suppress(Exception):
+            loader_mod = self.lookup("loader") or self.lookup("Loader")
+            loaded_map = loader_mod.get("loaded_modules", {}) if loader_mod else {}
+            if isinstance(loaded_map, dict):
+                for mod_name in loaded_map.keys():
+                    if not isinstance(mod_name, str):
+                        continue
+                    if mod_name in SKIP_NAMES:
+                        continue
+                    mod_obj = self.lookup(mod_name)
+                    if mod_obj is None:
+                        base = mod_name[:-3] if mod_name.lower().endswith("mod") else mod_name
+                        mod_obj = self.lookup(base)
+                    if mod_obj is not None:
+                        _register(mod_obj)
+
+        candidates: List[str] = []
+        with contextlib.suppress(Exception):
+            self_file = _inspect.getfile(type(self))
+            candidates.append(os.path.dirname(os.path.abspath(self_file)))
+        with contextlib.suppress(Exception):
+            candidates.append(os.path.dirname(os.path.abspath(__file__)))
+        with contextlib.suppress(Exception):
+            lm_file = getattr(self.lookup("loader") or self.lookup("Loader"), "__file__", None)
+            if lm_file:
+                candidates.append(os.path.dirname(os.path.abspath(lm_file)))
+
+        for start_dir in list(candidates):
+            p = pathlib.Path(start_dir)
+            for candidate_dir in (p, p.parent / "loaded_modules", p / "loaded_modules"):
+                if not candidate_dir.is_dir():
+                    continue
+                for f2 in sorted(candidate_dir.glob("*.py")):
+                    if f2.name in SKIP_FILES or f2.name.startswith("__"):
+                        continue
+                    candidate_dir_str = str(candidate_dir)
+                    if candidate_dir_str not in candidates:
+                        candidates.append(candidate_dir_str)
+                    break
+
+        results: List[Tuple[str, str, Any]] = []
+        seen_sources: set[Tuple[str, str]] = set()
+
+        for mod_name, mod_obj in loaded.items():
+            source = _source_for(mod_obj)
+            if not source:
+                continue
+            display_name = _best_name(mod_obj, mod_name)
+            key = (display_name, hashlib.sha256(source.encode("utf-8", "ignore")).hexdigest())
+            if key in seen_sources:
+                continue
+            seen_sources.add(key)
+            results.append((display_name, source, mod_obj))
+
+        for d_str in candidates:
+            d = pathlib.Path(d_str)
+            if not d.is_dir():
+                continue
+            for fpath in sorted(d.glob("*.py")):
+                if fpath.name in SKIP_FILES or fpath.name.startswith("__"):
+                    continue
+                with contextlib.suppress(Exception):
+                    src = fpath.read_text(encoding="utf-8", errors="ignore")
+                    if not src.strip():
+                        continue
+                    stem = fpath.stem
+                    mod_obj = loaded.get(stem) or loaded.get(stem.capitalize())
+                    if mod_obj is None:
+                        for mname, obj in loaded.items():
+                            if mname.lower() == stem.lower():
+                                mod_obj = obj
+                                break
+                    if mod_obj is None:
+                        with contextlib.suppress(Exception):
+                            mod_obj = self.lookup(stem) or self.lookup(stem[:-3] if stem.lower().endswith("mod") else stem)
+                    display_name = _best_name(mod_obj, stem) if mod_obj is not None else stem
+                    key = (display_name, hashlib.sha256(src.encode("utf-8", "ignore")).hexdigest())
+                    if key in seen_sources:
+                        continue
+                    seen_sources.add(key)
+                    results.append((display_name, src, mod_obj))
+
+        return results
+
+    def _scanall_ai_bonus(self, verdict: str, confidence: Any = None) -> int:
+        v = str(verdict or "").strip().upper()
+        try:
+            conf = max(0, min(100, int(confidence))) if confidence is not None else 0
+        except Exception:
+            conf = 0
+        if v == "UNSAFE":
+            return 50 + (conf // 2)
+        if v == "SUSPICIOUS":
+            return 20 + (conf // 4)
+        if v == "SAFE":
+            return -max(4, conf // 12)
+        return 0
+
+    def _scanall_final_score(self, scan_res: Dict[str, Any], ai_result: Optional[Dict[str, Any]]) -> int:
+        base = int(scan_res.get("score", 0) or 0)
+        verdict = str((ai_result or {}).get("verdict", "")).strip().upper()
+        conf = (ai_result or {}).get("confidence", 0)
+        score = base + self._scanall_ai_bonus(verdict, conf)
+        if verdict == "UNSAFE":
+            score = max(score, 75)
+        elif verdict == "SUSPICIOUS":
+            score = max(score, 35)
+        return max(0, score)
+
+    def _scanall_final_risk(self, score: int) -> str:
+        if score >= 150:
+            return "critical"
+        if score >= 70:
+            return "high"
+        if score >= 30:
+            return "medium"
+        if score > 0:
+            return "low"
+        return "clean"
+
+    def _scanall_visible_results(self, session: Dict[str, Any]) -> List[Dict[str, Any]]:
+        filt = str(session.get("filter", "all")).strip().lower()
+        results = list(session.get("results", []))
+        if filt == "unsafe":
+            return [r for r in results if str(r.get("ai", "")).upper() == "UNSAFE"]
+        if filt == "danger":
+            return [r for r in results if r.get("final_risk") in {"critical", "high", "medium"} or str(r.get("ai", "")).upper() == "UNSAFE"]
+        if filt == "clean":
+            return [r for r in results if r.get("final_risk") in {"clean", "low"} and str(r.get("ai", "")).upper() != "UNSAFE"]
+        return results
+
+    def _scanall_render_session(self, token: str) -> Tuple[str, List[List[Dict[str, Any]]]]:
+        session = self._scanall_sessions.get(token, {})
+        results = self._scanall_visible_results(session)
+        total = int(session.get("total", 0) or 0)
+        per_page = int(session.get("per_page", 7) or 7)
+        page_count = max(1, ((len(results) + per_page - 1) // per_page) or 1)
+        page = max(0, min(int(session.get("page", 0) or 0), page_count - 1))
+        session["page"] = page
+        self._scanall_sessions[token] = session
+
+        start_idx = page * per_page
+        chunk = results[start_idx:start_idx + per_page]
+
+        counts = session.get("counts", {}) or {}
+        provider = self._provider_label(str(session.get("provider", "gemini")))
+        model = str(session.get("model", ""))
+        filter_name = str(session.get("filter", "all")).lower()
+        filter_label = {
+            "all": "все",
+            "danger": "опасные",
+            "unsafe": "AI unsafe",
+            "clean": "чистые",
+        }.get(filter_name, filter_name)
+
+        parts = [
+            "<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity — аудит завершён</b>",
+            f"<b>Проверено:</b> <code>{total}</code> | <b>Показано:</b> <code>{len(results)}</code> | <b>Стр.</b> <code>{page + 1}/{page_count}</code>",
+            f"<b>Опасных:</b> <code>{counts.get('dangerous', 0)}</code> | <b>AI unsafe:</b> <code>{counts.get('ai_unsafe', 0)}</code> | <b>AI suspicious:</b> <code>{counts.get('ai_suspicious', 0)}</code>",
+            f"<b>AI:</b> <code>{html.escape(provider)}</code> / <code>{html.escape(model)}</code> | <b>Фильтр:</b> <code>{html.escape(filter_label)}</code>",
+            "",
+        ]
+
+        if not chunk:
+            parts.append("<i>Нет результатов для выбранного фильтра.</i>")
+        else:
+            for idx, item in enumerate(chunk, start=start_idx + 1):
+                name = html.escape(str(item.get("name", "module")))
+                final_risk = html.escape(str(item.get("final_risk", "clean")))
+                static_risk = html.escape(str(item.get("static_risk", "clean")))
+                final_score = int(item.get("final_score", 0) or 0)
+                static_score = int(item.get("static_score", 0) or 0)
+                ai_v = str(item.get("ai", "")).strip().upper() or "—"
+                ai_conf = item.get("ai_conf")
+                ai_line = ai_v if ai_conf in (None, "", 0) else f"{ai_v} {ai_conf}%"
+                parts.append(
+                    f"{idx}. <code>{name}</code>\n"
+                    f"   <b>финал:</b> <code>{final_risk}</code> | <b>score:</b> <code>{final_score}</code> | <b>static:</b> <code>{static_risk}/{static_score}</code> | <b>AI:</b> <code>{html.escape(str(ai_line))}</code>"
+                )
+                reason = str(item.get("ai_reason", "")).strip()
+                if reason and ai_v in {"UNSAFE", "SUSPICIOUS"}:
+                    reason = reason[:96] + ("..." if len(reason) > 96 else "")
+                    parts.append(f"   <i>{html.escape(reason)}</i>")
+
+        text = "\n".join(parts)
+        markup = [
+            [
+                {"text": "⬅️", "callback": self._scanall_page_nav, "args": (token, -1)},
+                {"text": f"{page + 1}/{page_count}", "callback": self._scanall_refresh, "args": (token,)},
+                {"text": "➡️", "callback": self._scanall_page_nav, "args": (token, 1)},
+            ],
+            [
+                {"text": "📋 Все", "callback": self._scanall_set_filter, "args": (token, "all")},
+                {"text": "⚠️ Риск", "callback": self._scanall_set_filter, "args": (token, "danger")},
+                {"text": "🔥 AI unsafe", "callback": self._scanall_set_filter, "args": (token, "unsafe")},
+                {"text": "✅ Чистые", "callback": self._scanall_set_filter, "args": (token, "clean")},
+            ],
+        ]
+        return text, markup
+
+    async def _scanall_page_nav(self, call: InlineCall, token: str, delta: int):
+        session = getattr(self, "_scanall_sessions", {}).get(token)
+        if not session:
+            await call.answer("Сессия истекла.", show_alert=True)
+            return
+        session["page"] = int(session.get("page", 0) or 0) + int(delta)
+        text, markup = self._scanall_render_session(token)
+        await call.edit(text, reply_markup=markup, disable_web_page_preview=True)
+
+    async def _scanall_set_filter(self, call: InlineCall, token: str, filt: str):
+        session = getattr(self, "_scanall_sessions", {}).get(token)
+        if not session:
+            await call.answer("Сессия истекла.", show_alert=True)
+            return
+        session["filter"] = str(filt).strip().lower() or "all"
+        session["page"] = 0
+        text, markup = self._scanall_render_session(token)
+        await call.edit(text, reply_markup=markup, disable_web_page_preview=True)
+
+    async def _scanall_refresh(self, call: InlineCall, token: str):
+        session = getattr(self, "_scanall_sessions", {}).get(token)
+        if not session:
+            await call.answer("Сессия истекла.", show_alert=True)
+            return
+        text, markup = self._scanall_render_session(token)
+        await call.edit(text, reply_markup=markup, disable_web_page_preview=True)
+
+    async def _scanall_unload_module(self, call: InlineCall, token: str, module_name: str):
+        session = getattr(self, "_scanall_sessions", {}).get(token)
+        if not session:
+            await call.answer("Сессия истекла.", show_alert=True)
+            return
+        target_item = None
+        for item in session.get("results", []):
+            if str(item.get("name", "")) == module_name:
+                target_item = item
+                break
+        if not target_item:
+            await call.answer(f"Модуль '{module_name}' не найден.", show_alert=True)
+            return
+        target = target_item.get("module")
+        file_deleted = False
+        try:
+            if target is None:
+                target = self.lookup(module_name)
+            if target is None:
+                await call.answer(f"Модуль '{module_name}' не найден.", show_alert=True)
+                return
+            with contextlib.suppress(Exception):
+                if hasattr(target, "on_unload") and asyncio.iscoroutinefunction(target.on_unload):
+                    await target.on_unload()
+            with contextlib.suppress(Exception):
+                lm = self.lookup("loader") or self.lookup("Loader")
+                allmodules = getattr(lm, "allmodules", None) if lm else None
+                if allmodules and target in (getattr(allmodules, "modules", None) or []):
+                    allmodules.modules.remove(target)
+            with contextlib.suppress(Exception):
+                import sys
+                mod_file = getattr(type(target), "__module__", None)
+                if mod_file:
+                    m = sys.modules.pop(mod_file, None)
+                    if m and hasattr(m, "__file__") and m.__file__:
+                        path = m.__file__
+                        if os.path.isfile(path):
+                            os.remove(path)
+                            file_deleted = True
+                        pyc = path + "c"
+                        if os.path.isfile(pyc):
+                            os.remove(pyc)
+            target_item["removed"] = True
+            text, markup = self._scanall_render_session(token)
+            await call.edit(
+                f"<b><tg-emoji emoji-id=5255831443816327915>🗑</tg-emoji> Модуль <code>{html.escape(module_name)}</code> выгружен</b>"
+                + (" и файл удалён с диска." if file_deleted else ""),
+                reply_markup=markup,)
+            with contextlib.suppress(Exception):
+                await call.edit(text, reply_markup=markup, disable_web_page_preview=True)
+        except Exception as e:
+            await call.answer(f"Ошибка: {e}", show_alert=True)
+
+    async def _scanall_skip(self, call: InlineCall, token: str):
+        session = getattr(self, "_scanall_sessions", {}).get(token)
+        if not session:
+            await call.answer("Сессия истекла.", show_alert=True)
+            return
+        await call.answer("Пропущено.", show_alert=False)
+
+    @loader.unrestricted
+    @loader.ratelimit
+    async def gscanallcmd(self, message):
+        """— Сканировать все загруженные модули на вирусы и стилеры"""
+        if not hasattr(self, "_scanall_pending"):
+            self._scanall_pending: Dict[str, Any] = {}
+        if not hasattr(self, "_scanall_sessions"):
+            self._scanall_sessions: Dict[str, Dict[str, Any]] = {}
+
+        status_msg = await utils.answer(
+            message,
+            "<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity — полный аудит модулей</b>\n"
+            "<i>Собираю список загруженных модулей...</i>"
+        )
+
+        sources = self._get_all_module_sources()
+        if not sources:
+            await utils.answer(
+                status_msg,
+                "<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity</b>\n"
+                "<i>Нет загруженных сторонних модулей для сканирования.</i>"
+            )
+            return
+
+        total = len(sources)
+        await utils.answer(
+            status_msg,
+            f"<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity — полный аудит</b>\n"
+            f"<i>Найдено модулей: <b>{total}</b>. Сканирую...</i>"
+        )
+
+        results: List[Dict[str, Any]] = []
+        provider = self._active_provider()
+        token_val = self._provider_token(provider)
+        model = self._provider_model(provider)
+        use_free_fallback = not token_val
+
+        for idx, (mod_name, src, mod_obj) in enumerate(sources, 1):
+            with contextlib.suppress(Exception):
+                if idx == 1 or idx == total or idx % 5 == 0:
+                    await utils.answer(
+                        status_msg,
+                        f"<b><tg-emoji emoji-id=5253780051471642059>🛡</tg-emoji> GoySecurity — аудит</b>\n"
+                        f"<b>{self._progress_bar(idx, total)}</b> {idx}/{total}: <code>{html.escape(mod_name)}</code>"
+                    )
+            self.av.mode = self._mode
+            scan_res = self.av.scan([(mod_name, src)])
+
+            ai_result = None
+            ai_verdict = ""
+            ai_conf = 0
+            ai_reason = ""
+
+            if token_val:
+                with contextlib.suppress(Exception):
+                    ai_result = await self._ask_ai_autoscan(provider, token_val, src, model, scan_res)
+                    if ai_result and ai_result.get("error"):
+                        ai_result = None
+            if not ai_result or ai_result.get("error"):
+                with contextlib.suppress(Exception):
+                    ai_result = await self._ask_ai_autoscan_free(src, scan_res)
+                    if ai_result and ai_result.get("error"):
+                        ai_result = None
+
+            if ai_result:
+                ai_verdict = str(ai_result.get("verdict", "")).strip().upper()
+                try:
+                    ai_conf = int(ai_result.get("confidence", 0) or 0)
+                except Exception:
+                    ai_conf = 0
+                ai_reason = str(ai_result.get("reason", "") or "").strip()
+
+            final_score = self._scanall_final_score(scan_res, ai_result)
+            final_risk = self._scanall_final_risk(final_score)
+            static_risk = str(scan_res.get("risk", "clean"))
+            static_score = int(scan_res.get("score", 0) or 0)
+            results.append({
+                "name": mod_name,
+                "module": mod_obj,
+                "static_risk": static_risk,
+                "static_score": static_score,
+                "ai": ai_verdict,
+                "ai_conf": ai_conf,
+                "ai_reason": ai_reason,
+                "final_risk": final_risk,
+                "final_score": final_score,
+                "res": scan_res,
+            })
+
+        results.sort(key=lambda r: (-int(r.get("final_score", 0) or 0), r.get("name", "").lower()))
+
+        danger_count = sum(1 for r in results if r["final_risk"] in {"critical", "high", "medium"} or r.get("ai") == "UNSAFE")
+        ai_unsafe = sum(1 for r in results if r.get("ai") == "UNSAFE")
+        ai_suspicious = sum(1 for r in results if r.get("ai") == "SUSPICIOUS")
+
+        self._scanall_sessions.clear()
+        token = f"scanall:{time.time_ns()}"
+        self._scanall_sessions[token] = {
+            "results": results,
+            "total": total,
+            "provider": provider,
+            "model": model,
+            "page": 0,
+            "per_page": 7,
+            "filter": "all",
+            "counts": {
+                "dangerous": danger_count,
+                "ai_unsafe": ai_unsafe,
+                "ai_suspicious": ai_suspicious,
+            },
+        }
+
+        text, markup = self._scanall_render_session(token)
+        if getattr(self, "inline", None):
+            await self.inline.form(
+                message=status_msg,
+                text=text,
+                reply_markup=markup,)
+        else:
+            await utils.answer(status_msg, text)
 
     def _push(self, fp: str, risk: str, score: int, mode: List[str]) -> None:
         mode_str = " -> ".join(mode)
