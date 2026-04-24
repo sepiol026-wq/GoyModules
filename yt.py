@@ -20,7 +20,7 @@
 # Description: YouTube Music media module.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/ytmusic.png
 
-__version__ = (4, 5)
+__version__ = (4, 6)
 
 import asyncio
 import contextlib
@@ -1060,3 +1060,40 @@ class YTMusic(loader.Module):
             await call.edit(self.strings("downloading"), reply_markup=None)
 
         await self._dl_and_send(call, track_info, target_chat_id)
+
+_cls_doc_YTMusic = (YTMusic.__doc__ or "").strip()
+if _cls_doc_YTMusic:
+    YTMusic.strings.setdefault("_cls_doc", _cls_doc_YTMusic)
+if not hasattr(YTMusic, "strings_uk") and hasattr(YTMusic, "strings_ua"):
+    YTMusic.strings_uk = dict(getattr(YTMusic, "strings_ua"))
+for _loc in ("ru", "uk", "de", "jp", "neofit", "tiktok", "leet", "uwu"):
+    _attr = f"strings_{_loc}"
+    if not hasattr(YTMusic, _attr):
+        setattr(YTMusic, _attr, dict(getattr(YTMusic, "strings", {})))
+    _d = getattr(YTMusic, _attr)
+    if isinstance(_d, dict) and _cls_doc_YTMusic:
+        _d.setdefault("_cls_doc", _cls_doc_YTMusic)
+for _name in dir(YTMusic):
+    _fn = getattr(YTMusic, _name, None)
+    if not callable(_fn) or not getattr(_fn, "is_command", False):
+        continue
+    _base = (
+        getattr(_fn, "en_doc", None)
+        or getattr(_fn, "ru_doc", None)
+        or getattr(_fn, "uk_doc", None)
+        or getattr(_fn, "de_doc", None)
+        or getattr(_fn, "jp_doc", None)
+        or getattr(_fn, "neofit_doc", None)
+        or getattr(_fn, "tiktok_doc", None)
+        or getattr(_fn, "leet_doc", None)
+        or getattr(_fn, "uwu_doc", None)
+        or getattr(_fn, "__doc__", None)
+        or ""
+    ).strip()
+    if not _base:
+        continue
+    for _doc in ("en_doc", "ru_doc", "uk_doc", "de_doc", "jp_doc", "neofit_doc", "tiktok_doc", "leet_doc", "uwu_doc"):
+        if not getattr(_fn, _doc, None):
+            setattr(_fn, _doc, _base)
+_i18n_boot_YTMusic = True
+
