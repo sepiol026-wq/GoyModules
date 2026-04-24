@@ -392,14 +392,11 @@ class Doom(loader.Module):
         ]
 
     async def _show_menu(self, call_or_msg):
-        text = self._tr("menu_title", t=self.strings["e_title"])
+        text = self._tr("menu_title", t="")
         if hasattr(call_or_msg, "edit"):
             await self.safe_edit(call_or_msg, text, self._menu_buttons())
         else:
-            try:
-                await self.inline.form(text=text, message=call_or_msg, reply_markup=self._menu_buttons())
-            except Exception:
-                await utils.answer(call_or_msg, text)
+            await self.inline.form(text=text, message=call_or_msg, reply_markup=self._menu_buttons())
 
     @loader.command(
         ru_doc="Справка по игре DOOM",
@@ -428,8 +425,16 @@ class Doom(loader.Module):
     async def doomcmd(self, message: Message):
         try:
             await self._show_menu(message)
-        except Exception:
-            await utils.answer(message, "<b>DOOM</b>\nНе получилось открыть inline-меню. Проверь, что inline включен у бота.")
+        except Exception as e:
+            err = utils.escape_html(str(e))[:220]
+            await utils.answer(
+                message,
+                "<b>DOOM</b>\n"
+                "Не удалось открыть inline-меню.\n"
+                f"Ошибка: <code>{err}</code>\n\n"
+                "Проверь: inline-бот включён и не заблокирован.\n"
+                "Для справки: <code>.hdoom</code>",
+            )
 
     def render_3d_frame(self, st):
         w = self.game_config["scr_w"]
