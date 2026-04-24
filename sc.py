@@ -245,6 +245,16 @@ class SoundCloudMusic(loader.Module):
         "pl_removed": "<tg-emoji emoji-id=5255831443816327915>🗑</tg-emoji> <b>Удалено из {pl}:</b> {track}",
         "pl_view": "<tg-emoji emoji-id=5253526631221307799>📂</tg-emoji> <b>База:</b> {pl}\nТреков: {count}",
     }
+    if "_cls_doc" not in strings and __doc__:
+        strings["_cls_doc"] = (__doc__ or "").strip()
+    strings_ru = {**strings, **locals().get("strings_ru", {})}
+    strings_uk = {**strings, **locals().get("strings_ua", {}), **locals().get("strings_uk", {})}
+    strings_de = {**strings, **locals().get("strings_de", {})}
+    strings_jp = {**strings, **locals().get("strings_jp", {})}
+    strings_neofit = {**strings, **locals().get("strings_neofit", {})}
+    strings_tiktok = {**strings, **locals().get("strings_tiktok", {})}
+    strings_leet = {**strings, **locals().get("strings_leet", {})}
+    strings_uwu = {**strings, **locals().get("strings_uwu", {})}
 
     def __init__(self):
         self.config = loader.ModuleConfig(
@@ -1167,39 +1177,4 @@ class SoundCloudMusic(loader.Module):
 
         await self._dl_and_send(call, track_info, target_chat_id)
 
-_cls_doc_SoundCloudMusic = (SoundCloudMusic.__doc__ or "").strip()
-if _cls_doc_SoundCloudMusic:
-    SoundCloudMusic.strings.setdefault("_cls_doc", _cls_doc_SoundCloudMusic)
-if not hasattr(SoundCloudMusic, "strings_uk") and hasattr(SoundCloudMusic, "strings_ua"):
-    SoundCloudMusic.strings_uk = dict(getattr(SoundCloudMusic, "strings_ua"))
-for _loc in ("ru", "uk", "de", "jp", "neofit", "tiktok", "leet", "uwu"):
-    _attr = f"strings_{_loc}"
-    if not hasattr(SoundCloudMusic, _attr):
-        setattr(SoundCloudMusic, _attr, dict(getattr(SoundCloudMusic, "strings", {})))
-    _d = getattr(SoundCloudMusic, _attr)
-    if isinstance(_d, dict) and _cls_doc_SoundCloudMusic:
-        _d.setdefault("_cls_doc", _cls_doc_SoundCloudMusic)
-for _name in dir(SoundCloudMusic):
-    _fn = getattr(SoundCloudMusic, _name, None)
-    if not callable(_fn) or not getattr(_fn, "is_command", False):
-        continue
-    _base = (
-        getattr(_fn, "en_doc", None)
-        or getattr(_fn, "ru_doc", None)
-        or getattr(_fn, "uk_doc", None)
-        or getattr(_fn, "de_doc", None)
-        or getattr(_fn, "jp_doc", None)
-        or getattr(_fn, "neofit_doc", None)
-        or getattr(_fn, "tiktok_doc", None)
-        or getattr(_fn, "leet_doc", None)
-        or getattr(_fn, "uwu_doc", None)
-        or getattr(_fn, "__doc__", None)
-        or ""
-    ).strip()
-    if not _base:
-        continue
-    for _doc in ("en_doc", "ru_doc", "uk_doc", "de_doc", "jp_doc", "neofit_doc", "tiktok_doc", "leet_doc", "uwu_doc"):
-        if not getattr(_fn, _doc, None):
-            setattr(_fn, _doc, _base)
-_i18n_boot_SoundCloudMusic = True
 
