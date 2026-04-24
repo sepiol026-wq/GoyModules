@@ -148,6 +148,16 @@ class GoyPulseMod(loader.Module):
         "h_gph": "<tg-emoji emoji-id=5256160369591723706>🗯</tg-emoji> <b>[Usage] .gph <цель> <команда></b>\n\nВыполнение команд GoyPulse в любом чате анонимно.\n\n<b>Параметры:</b>\n├ <code>цель</code> — ID чата, юзернейм или слово <code>here</code>\n└ <code>команда</code> — Любая команда без точки (напр. <code>gpstat</code>)\n\n<b>Примеры:</b>\n├ <code>.gph -100... gpstat</code> — Статус чужого чата.\n├ <code>.gph @username gpinfo</code> — Вайб в личке.\n└ <code>.gph here gpclear</code> — Скрытая очистка.\n\n<code>GoyPulse</code>",
 
     }
+    if "_cls_doc" not in strings and __doc__:
+        strings["_cls_doc"] = (__doc__ or "").strip()
+    strings_ru = {**strings, **locals().get("strings_ru", {})}
+    strings_uk = {**strings, **locals().get("strings_ua", {}), **locals().get("strings_uk", {})}
+    strings_de = {**strings, **locals().get("strings_de", {})}
+    strings_jp = {**strings, **locals().get("strings_jp", {})}
+    strings_neofit = {**strings, **locals().get("strings_neofit", {})}
+    strings_tiktok = {**strings, **locals().get("strings_tiktok", {})}
+    strings_leet = {**strings, **locals().get("strings_leet", {})}
+    strings_uwu = {**strings, **locals().get("strings_uwu", {})}
     def __init__(self):
         cv, vi, vb = loader.ConfigValue, loader.validators.Integer(), loader.validators.Boolean()
         self.config = loader.ModuleConfig(
@@ -2332,39 +2342,4 @@ class GoyPulseMod(loader.Module):
         except Exception:
             pass
 
-_cls_doc_GoyPulseMod = (GoyPulseMod.__doc__ or "").strip()
-if _cls_doc_GoyPulseMod:
-    GoyPulseMod.strings.setdefault("_cls_doc", _cls_doc_GoyPulseMod)
-if not hasattr(GoyPulseMod, "strings_uk") and hasattr(GoyPulseMod, "strings_ua"):
-    GoyPulseMod.strings_uk = dict(getattr(GoyPulseMod, "strings_ua"))
-for _loc in ("ru", "uk", "de", "jp", "neofit", "tiktok", "leet", "uwu"):
-    _attr = f"strings_{_loc}"
-    if not hasattr(GoyPulseMod, _attr):
-        setattr(GoyPulseMod, _attr, dict(getattr(GoyPulseMod, "strings", {})))
-    _d = getattr(GoyPulseMod, _attr)
-    if isinstance(_d, dict) and _cls_doc_GoyPulseMod:
-        _d.setdefault("_cls_doc", _cls_doc_GoyPulseMod)
-for _name in dir(GoyPulseMod):
-    _fn = getattr(GoyPulseMod, _name, None)
-    if not callable(_fn) or not getattr(_fn, "is_command", False):
-        continue
-    _base = (
-        getattr(_fn, "en_doc", None)
-        or getattr(_fn, "ru_doc", None)
-        or getattr(_fn, "uk_doc", None)
-        or getattr(_fn, "de_doc", None)
-        or getattr(_fn, "jp_doc", None)
-        or getattr(_fn, "neofit_doc", None)
-        or getattr(_fn, "tiktok_doc", None)
-        or getattr(_fn, "leet_doc", None)
-        or getattr(_fn, "uwu_doc", None)
-        or getattr(_fn, "__doc__", None)
-        or ""
-    ).strip()
-    if not _base:
-        continue
-    for _doc in ("en_doc", "ru_doc", "uk_doc", "de_doc", "jp_doc", "neofit_doc", "tiktok_doc", "leet_doc", "uwu_doc"):
-        if not getattr(_fn, _doc, None):
-            setattr(_fn, _doc, _base)
-_i18n_boot_GoyPulseMod = True
 
