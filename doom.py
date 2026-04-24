@@ -15,22 +15,24 @@
 # ====================================================================================================================
 
 # requires: herokutl
-# meta developer: @goymodules
+# meta developer: @GoyModules
 # authors: @goymodules
 # Description: Inline DOOM mini-game module.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/doom.png
 
-"""запускает doom."""
+"""Huge inline DOOM combine with settings, profiles, stats, difficulties and better menus."""
 
-__version__ = (1, 1, 6)
+__version__ = (1, 2, 0)
 
-import math
-import time
 import asyncio
+import math
+import random
 import re
+import time
 import traceback
 from herokutl.types import Message
 from .. import loader, utils
+
 
 @loader.tds
 class Doom(loader.Module):
@@ -39,12 +41,26 @@ class Doom(loader.Module):
     strings = {
         "name": "Doom",
         "_cls_doc": "Inline DOOM mini-game.",
+        "e_title": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji>",
+        "e_hp": "<tg-emoji emoji-id=5253549669425882943>🔋</tg-emoji>",
+        "e_ammo": "<tg-emoji emoji-id=5256094480498436162>📦</tg-emoji>",
+        "e_kills": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji>",
+        "e_map": "<tg-emoji emoji-id=5253713110111365241>📍</tg-emoji>",
+        "e_action": "<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji>",
+        "e_log": "<tg-emoji emoji-id=5253590213917158323>💬</tg-emoji>",
+        "e_fire": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji>",
+        "e_dead": "<tg-emoji emoji-id=5237682408163110073>💀</tg-emoji>",
     }
-    strings_ru = {"_cls_doc": "Мини-игра DOOM в инлайне."}
-    if "_cls_doc" not in strings and __doc__:
-        strings["_cls_doc"] = (__doc__ or "").strip()
+    strings_ru = {"_cls_doc": "Огромный инлайн DOOM-комбайн с меню, режимами и статой."}
+    strings_uk = {"_cls_doc": "Великий inline DOOM-комбайн з меню, режимами та статистикою."}
+    strings_de = {"_cls_doc": "Großer Inline-DOOM-Kombinator mit Menü, Modi und Statistik."}
+    strings_jp = {"_cls_doc": "メニュー・モード・統計付きの大型インラインDOOMモジュール。"}
+    strings_neofit = {"_cls_doc": "Большой дум-модуль: меню, стата, режимы, всё серьёзно."}
+    strings_tiktok = {"_cls_doc": "DOOM huge edition: меню, режимы, стата, полный вайб."}
+    strings_leet = {"_cls_doc": "Hug3 DOOM c0mb1n3: m3nu, m0d3z, st4tz."}
+    strings_uwu = {"_cls_doc": "Big DOOM combo wif menu, modes, and stats uwu."}
     strings_ru = {**strings, **locals().get("strings_ru", {})}
-    strings_uk = {**strings, **locals().get("strings_ua", {}), **locals().get("strings_uk", {})}
+    strings_uk = {**strings, **locals().get("strings_uk", {})}
     strings_de = {**strings, **locals().get("strings_de", {})}
     strings_jp = {**strings, **locals().get("strings_jp", {})}
     strings_neofit = {**strings, **locals().get("strings_neofit", {})}
@@ -55,33 +71,160 @@ class Doom(loader.Module):
     def __init__(self):
         self.sessions = {}
         self.game_config = {
-            "scr_w": 24,
-            "scr_h": 12,
+            "scr_w": 28,
+            "scr_h": 13,
             "fov": math.pi / 3,
-            "depth": 10.0,
-            "shades": [" ", "░", "▒", "▓", "█"]
+            "depth": 11.0,
+            "shades": [" ", "░", "▒", "▓", "█"],
         }
         self.base_map = [
-            "################",
-            "#....A.........#",
-            "#.####.E..####.#",
-            "#.#..#....#..#.#",
-            "#.#..######..#.#",
-            "#........E...H.#",
-            "######.........#",
-            "#...A..........#",
-            "#.######...#...#",
-            "#......#...#...#",
-            "#.####.#.E.#...#",
-            "#..H...........#",
-            "################"
+            "####################",
+            "#....A.............#",
+            "#.####.E..####..R..#",
+            "#.#..#....#..#.....#",
+            "#.#..######..#..A..#",
+            "#........E...H.....#",
+            "######.........###.#",
+            "#...A.....D........#",
+            "#.######...#...S...#",
+            "#......#...#...H...#",
+            "#.####.#.E.#...A...#",
+            "#..H.........R.....#",
+            "####################",
         ]
         self.map_h = len(self.base_map)
         self.map_w = len(self.base_map[0])
+        self.difficulty = {
+            "easy": {"hp": 120, "ammo": 20, "enemy_hp_mul": 0.85, "enemy_dmg_mul": 0.65, "enemy_ai": 0.95},
+            "normal": {"hp": 100, "ammo": 14, "enemy_hp_mul": 1.0, "enemy_dmg_mul": 1.0, "enemy_ai": 0.75},
+            "hard": {"hp": 90, "ammo": 12, "enemy_hp_mul": 1.35, "enemy_dmg_mul": 1.25, "enemy_ai": 0.60},
+            "nightmare": {"hp": 85, "ammo": 10, "enemy_hp_mul": 1.6, "enemy_dmg_mul": 1.55, "enemy_ai": 0.48},
+        }
+        self.locale = self._build_locale()
+
+    def _build_locale(self):
+        return {
+            "ru": {
+                "menu_title": "{t} <b>DOOM COMBINE</b>\n\nВыбери действие:",
+                "new_game": "🟢 Новая игра",
+                "continue": "🟡 Продолжить",
+                "records": "🏆 Профиль/Рекорды",
+                "settings": "⚙️ Настройки",
+                "help": "📖 Помощь",
+                "back": "↩️ Назад",
+                "exit": "🚪 Выход",
+                "difficulty": "Сложность",
+                "view": "Вид",
+                "lang": "Язык",
+                "autosave": "Автосейв",
+                "started": "Добро пожаловать в Ад.",
+                "loaded": "Сохранение загружено.",
+                "no_save": "Нет сохранений!",
+                "saved": "Сохранено.",
+                "autosaved": "Автосохранение выполнено.",
+                "wall": "Упёрлись в стену.",
+                "no_ammo": "Клик! Пусто.",
+                "shot_wall": "Выстрел в стену.",
+                "hit": "{f} Цель разорвана!",
+                "med_used": "Использовал аптечку.",
+                "med_none": "Аптечек нет.",
+                "reload_done": "Перезарядка: +{n}.",
+                "reload_none": "Нет патронов в запасе.",
+                "pickup_ammo": "Патроны +6.",
+                "pickup_hp": "Лечение +20 HP.",
+                "pickup_armor": "Броня +15.",
+                "pickup_secret": "Секретка! Лут поднят.",
+                "enemy_hit": "Мelee-удар прошёл.",
+                "enemy_miss": "Вблизи никого.",
+                "enemy_attack": "Монстр атакует! -{n} HP",
+                "dead": "{d} <b>ВЫ ПОГИБЛИ</b>\n\nСчёт: {s}\n\nНажми Новая игра.",
+                "hud_deadline": "Убито: <b>{k}</b> | Точность: <b>{a}%</b> | Броня: <b>{ar}</b>",
+                "help_text": "<b>DOOM COMBINE</b>\n\nP — ты\nM/👾 — монстры\nA — патроны\nH — хилка\nR — броня\nS — секретка\nD — жирный демон\n\nКоманда запуска: <code>{pref}doom</code>",
+                "profile": "<b>Профиль</b>\nИгр: <b>{gp}</b>\nКиллов: <b>{tk}</b>\nСмертей: <b>{td}</b>\nЛучший счёт: <b>{bs}</b>\nВыстрелов: <b>{sh}</b>\nПопаданий: <b>{hh}</b>\nТочность: <b>{acc}%</b>",
+                "in_game": "🕹️ В игру",
+                "difficulty_pick": "Выбери сложность:",
+                "set_ok": "Настройки обновлены.",
+                "game_closed": "Игра завершена.",
+            },
+            "en": {
+                "menu_title": "{t} <b>DOOM COMBINE</b>\n\nChoose action:",
+                "new_game": "🟢 New game",
+                "continue": "🟡 Continue",
+                "records": "🏆 Profile/Records",
+                "settings": "⚙️ Settings",
+                "help": "📖 Help",
+                "back": "↩️ Back",
+                "exit": "🚪 Exit",
+                "difficulty": "Difficulty",
+                "view": "View",
+                "lang": "Language",
+                "autosave": "Autosave",
+                "started": "Welcome to Hell.",
+                "loaded": "Save loaded.",
+                "no_save": "No save found!",
+                "saved": "Saved.",
+                "autosaved": "Autosave complete.",
+                "wall": "Bumped into a wall.",
+                "no_ammo": "Click! Empty.",
+                "shot_wall": "Shot into the wall.",
+                "hit": "{f} Target ripped apart!",
+                "med_used": "Used medkit.",
+                "med_none": "No medkits.",
+                "reload_done": "Reloaded +{n}.",
+                "reload_none": "No reserve ammo.",
+                "pickup_ammo": "Ammo +6.",
+                "pickup_hp": "Healed +20 HP.",
+                "pickup_armor": "Armor +15.",
+                "pickup_secret": "Secret found. Loot grabbed.",
+                "enemy_hit": "Melee landed.",
+                "enemy_miss": "No enemy in range.",
+                "enemy_attack": "Monster attacks! -{n} HP",
+                "dead": "{d} <b>YOU DIED</b>\n\nScore: {s}\n\nTap New game.",
+                "hud_deadline": "Kills: <b>{k}</b> | Accuracy: <b>{a}%</b> | Armor: <b>{ar}</b>",
+                "help_text": "<b>DOOM COMBINE</b>\n\nP — you\nM/👾 — monsters\nA — ammo\nH — heal\nR — armor\nS — secret\nD — heavy demon\n\nStart cmd: <code>{pref}doom</code>",
+                "profile": "<b>Profile</b>\nGames: <b>{gp}</b>\nKills: <b>{tk}</b>\nDeaths: <b>{td}</b>\nBest score: <b>{bs}</b>\nShots: <b>{sh}</b>\nHits: <b>{hh}</b>\nAccuracy: <b>{acc}%</b>",
+                "in_game": "🕹️ In-game",
+                "difficulty_pick": "Pick difficulty:",
+                "set_ok": "Settings updated.",
+                "game_closed": "Game closed.",
+            },
+            "uk": {},
+            "de": {},
+            "jp": {},
+            "neofit": {},
+            "tiktok": {},
+            "leet": {},
+            "uwu": {},
+        }
 
     async def client_ready(self, client, db):
         self.client = client
         self.db = db
+
+    def _lang(self, st=None):
+        if st and st.get("settings", {}).get("lang"):
+            return st["settings"]["lang"]
+        return self.db.get("Doom", "lang", "ru")
+
+    def _tr(self, key, st=None, **fmt):
+        lang = self._lang(st)
+        base = self.locale.get("ru", {})
+        loc = self.locale.get(lang, {})
+        val = loc.get(key) or self.locale.get("en", {}).get(key) or base.get(key) or key
+        return val.format(**fmt)
+
+    def _settings(self):
+        return self.db.get("Doom", "settings", {"difficulty": "normal", "view": "both", "autosave": 15, "lang": "ru"})
+
+    def _save_settings(self, s):
+        self.db.set("Doom", "settings", s)
+        self.db.set("Doom", "lang", s.get("lang", "ru"))
+
+    def _profile(self):
+        return self.db.get("Doom", "profile", {"games": 0, "total_kills": 0, "deaths": 0, "best_score": 0, "shots": 0, "hits": 0})
+
+    def _save_profile(self, p):
+        self.db.set("Doom", "profile", p)
 
     async def safe_edit(self, call, text, reply_markup):
         try:
@@ -102,39 +245,83 @@ class Doom(loader.Module):
                     return False
             return False
 
-    @loader.command(ru_doc="Справка по игре DOOM")
-    async def hdoomcmd(self, message: Message):
-        text = (
-            "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Справка по DOOM</b>\n\n"
-            "<b>Интерфейс (Карта / 3D):</b>\n"
-            "<code>P</code> - Ваш персонаж\n"
-            "<code>M</code> / <code>👾</code> - Монстр (Атакует вблизи)\n"
-            "<code>A</code> / <code>[A]</code> - Патроны (+5)\n"
-            "<code>H</code> / <code>[+]</code> - Аптечка (+25 HP)\n\n"
-            "Запуск игры: <code>(префикс)doom</code>"
-        )
-        await utils.answer(message, text)
+    def _parse_map(self):
+        m, enemies = [], {}
+        for y, row in enumerate(self.base_map):
+            r = []
+            for x, c in enumerate(row):
+                if c in ("E", "D"):
+                    et = "imp" if c == "E" else "demon"
+                    hp = 24 if et == "imp" else 44
+                    enemies[f"{x}:{y}"] = {"x": x, "y": y, "type": et, "hp": hp}
+                    r.append(" ")
+                elif c == ".":
+                    r.append(" ")
+                else:
+                    r.append(c)
+            m.append(r)
+        return m, enemies
 
-    @loader.command(ru_doc="Запуск меню DOOM")
-    async def doomcmd(self, message: Message):
-        buttons = [
-            [{"text": "🟢 Новая игра", "callback": self.action_new}],
-            [{"text": "🟡 Продолжить", "callback": self.action_cont}]
+    def _enemy_stats(self, st, etype):
+        mul_hp = self.difficulty[st["difficulty"]]["enemy_hp_mul"]
+        mul_dmg = self.difficulty[st["difficulty"]]["enemy_dmg_mul"]
+        if etype == "imp":
+            return int(24 * mul_hp), max(3, int(8 * mul_dmg))
+        return int(44 * mul_hp), max(5, int(12 * mul_dmg))
+
+    def _acc(self, st):
+        return round((st["hits"] / st["shots"] * 100.0), 1) if st["shots"] else 0.0
+
+    def _menu_buttons(self):
+        return [
+            [{"text": self._tr("new_game"), "callback": self.action_new_menu}],
+            [{"text": self._tr("continue"), "callback": self.action_cont}],
+            [{"text": self._tr("records"), "callback": self.action_records}, {"text": self._tr("settings"), "callback": self.action_settings}],
+            [{"text": self._tr("help"), "callback": self.action_help}],
         ]
-        await self.inline.form(
-            text="<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>DOOM</b>\n\nВыбери действие:",
-            message=message,
-            reply_markup=buttons
-        )
 
-    def render_3d_frame(self, state):
+    async def _show_menu(self, call_or_msg):
+        text = self._tr("menu_title", t=self.strings["e_title"])
+        if hasattr(call_or_msg, "edit"):
+            await self.safe_edit(call_or_msg, text, self._menu_buttons())
+        else:
+            await self.inline.form(text=text, message=call_or_msg, reply_markup=self._menu_buttons())
+
+    @loader.command(
+        ru_doc="Справка по игре DOOM",
+        uk_doc="Довідка по грі DOOM",
+        de_doc="Hilfe zum DOOM-Spiel",
+        jp_doc="DOOMゲームのヘルプ",
+        neofit_doc="Справка по doom",
+        tiktok_doc="Гайд по doom-модулю",
+        leet_doc="D00M h3lp",
+        uwu_doc="DOOM hewp",
+    )
+    async def hdoomcmd(self, message: Message):
+        pref = getattr(self, "get_prefix", lambda: ".")()
+        await utils.answer(message, self._tr("help_text", pref=pref))
+
+    @loader.command(
+        ru_doc="Открыть меню DOOM",
+        uk_doc="Відкрити меню DOOM",
+        de_doc="DOOM-Menü öffnen",
+        jp_doc="DOOMメニューを開く",
+        neofit_doc="Открыть doom-меню",
+        tiktok_doc="Открыть doom hub",
+        leet_doc="0p3n d00m m3nu",
+        uwu_doc="open doom menuu",
+    )
+    async def doomcmd(self, message: Message):
+        await self._show_menu(message)
+
+    def render_3d_frame(self, st):
         w = self.game_config["scr_w"]
         h = self.game_config["scr_h"]
         fov = self.game_config["fov"]
         depth = self.game_config["depth"]
         shades = self.game_config["shades"]
-
-        px, py, pa = state["x"], state["y"], state["a"]
+        px, py, pa = st["x"], st["y"], st["a"]
+        enemy_pos = {(e["x"], e["y"]): e for e in st["enemies"].values()}
         screen = []
 
         for x in range(w):
@@ -142,112 +329,134 @@ class Doom(loader.Module):
             dist_w = 0.0
             hit_w = False
             cell_hit = " "
-
             eye_x = math.sin(ray_a)
             eye_y = math.cos(ray_a)
 
             while not hit_w and dist_w < depth:
-                dist_w += 0.1
-                test_x = int(px + eye_x * dist_w)
-                test_y = int(py + eye_y * dist_w)
-
-                if test_x < 0 or test_x >= self.map_w or test_y < 0 or test_y >= self.map_h:
+                dist_w += 0.08
+                tx = int(px + eye_x * dist_w)
+                ty = int(py + eye_y * dist_w)
+                if tx < 0 or tx >= self.map_w or ty < 0 or ty >= self.map_h:
                     hit_w = True
                     dist_w = depth
                 else:
-                    cell = state["map"][test_y][test_x]
-                    if cell in ["#", "E", "A", "H"]:
+                    if (tx, ty) in enemy_pos:
                         hit_w = True
-                        cell_hit = cell
+                        cell_hit = "D" if enemy_pos[(tx, ty)]["type"] == "demon" else "E"
+                    else:
+                        c = st["map"][ty][tx]
+                        if c in ("#", "A", "H", "R", "S"):
+                            hit_w = True
+                            cell_hit = c
 
-            ceil = float(h / 2.0) - h / dist_w
+            ceil = float(h / 2.0) - h / max(dist_w, 0.01)
             floor = h - ceil
-
             shade = " "
-            if cell_hit not in ["E", "A", "H"]:
-                if dist_w <= depth / 5.0: shade = shades[4]
-                elif dist_w <= depth / 4.0: shade = shades[3]
-                elif dist_w <= depth / 3.0: shade = shades[2]
-                elif dist_w <= depth / 1.5: shade = shades[1]
-                elif dist_w < depth: shade = shades[0]
+            if cell_hit not in ("E", "D", "A", "H", "R", "S"):
+                if dist_w <= depth / 5.0:
+                    shade = shades[4]
+                elif dist_w <= depth / 4.0:
+                    shade = shades[3]
+                elif dist_w <= depth / 3.0:
+                    shade = shades[2]
+                elif dist_w <= depth / 1.6:
+                    shade = shades[1]
+                elif dist_w < depth:
+                    shade = shades[0]
 
             col = []
             for y in range(h):
                 if y <= ceil:
                     col.append(" ")
-                elif y > ceil and y <= floor:
-                    if cell_hit == "E": col.append("👾")
+                elif ceil < y <= floor:
+                    if cell_hit == "E":
+                        col.append("👾")
+                    elif cell_hit == "D":
+                        col.append("💢")
                     elif cell_hit == "A":
-                        if y == int(floor): col.append("A")
-                        elif y == int(floor) - 1: col.append("[")
-                        elif y == int(floor) + 1: col.append("]")
-                        else: col.append(" ")
+                        col.append("A" if y == int(floor) else " ")
                     elif cell_hit == "H":
-                        if y == int(floor): col.append("+")
-                        elif y == int(floor) - 1: col.append("[")
-                        elif y == int(floor) + 1: col.append("]")
-                        else: col.append(" ")
+                        col.append("+" if y == int(floor) else " ")
+                    elif cell_hit == "R":
+                        col.append("R" if y == int(floor) else " ")
+                    elif cell_hit == "S":
+                        col.append("$" if y == int(floor) else " ")
                     else:
                         col.append(shade)
                 else:
                     b = 1.0 - ((float(y) - h / 2.0) / (h / 2.0))
-                    if b < 0.25: col.append(".")
-                    elif b < 0.5: col.append("-")
-                    elif b < 0.75: col.append("=")
-                    else: col.append(" ")
+                    col.append("." if b < 0.25 else "-" if b < 0.5 else "=" if b < 0.75 else " ")
             screen.append(col)
 
         out = []
         for y in range(h):
-            row = "".join([screen[x][y] for x in range(w)])
+            row = "".join(screen[x][y] for x in range(w))
             out.append(row)
-        cx = w // 2
-        cy = h // 2
-        if 0 <= cy < len(out) and 0 <= cx < len(out[cy]):
-            r = list(out[cy])
-            r[cx] = "✚"
-            out[cy] = "".join(r)
+        cx, cy = w // 2, h // 2
+        rr = list(out[cy])
+        rr[cx] = "✚"
+        out[cy] = "".join(rr)
         return "\n".join(out)
 
-    def get_mini_map(self, state):
-        px, py = int(state["x"]), int(state["y"])
-        m = []
-        for y, row in enumerate(state["map"]):
-            r = [" " if c == "." else c for c in row]
-            r = ["M" if c == "E" else c for c in r]
-            if y == py and 0 <= px < len(r):
-                r[px] = "P"
-            m.append("".join(r))
-        return "\n".join(m)
+    def get_mini_map(self, st):
+        px, py = int(st["x"]), int(st["y"])
+        enemy_map = {(e["x"], e["y"]): e for e in st["enemies"].values()}
+        out = []
+        for y, row in enumerate(st["map"]):
+            r = []
+            for x, c in enumerate(row):
+                if (x, y) in enemy_map:
+                    r.append("D" if enemy_map[(x, y)]["type"] == "demon" else "M")
+                elif x == px and y == py:
+                    r.append("P")
+                elif c == " ":
+                    r.append(".")
+                else:
+                    r.append(c)
+            out.append("".join(r))
+        return "\n".join(out)
+
+    def _hud_text(self, st):
+        view = st["settings"]["view"]
+        parts = []
+        if view in ("both", "map"):
+            parts.append(f"{self.strings['e_map']} <b>Mini-Map</b>:\n<pre>{self.get_mini_map(st)}</pre>")
+        if view in ("both", "3d"):
+            parts.append(f"{self.strings['e_action']} <b>Action</b>:\n<pre>{self.render_3d_frame(st)}</pre>")
+        parts.append(
+            f"{self.strings['e_hp']} HP: <b>{st['hp']}</b> | AR: <b>{st['armor']}</b> | {self.strings['e_ammo']} Ammo: <b>{st['ammo']}</b>/<b>{st['reserve']}</b> | Med: <b>{st['medkits']}</b> | {self.strings['e_kills']} Kills: <b>{st['score']}</b>"
+        )
+        parts.append(self._tr("hud_deadline", st, k=st["score"], a=self._acc(st), ar=st["armor"]))
+        parts.append(f"{self.strings['e_log']} <i>{st['log']}</i>")
+        return "\n".join(parts)
+
+    def _buttons_game(self):
+        return [
+            [{"text": "🔄 L", "callback": self.action_rot_l}, {"text": "⬆️", "callback": self.action_fw}, {"text": "🔄 R", "callback": self.action_rot_r}],
+            [{"text": "⬅️", "callback": self.action_m_l}, {"text": "💥", "callback": self.action_shoot}, {"text": "➡️", "callback": self.action_m_r}],
+            [{"text": "🤜", "callback": self.action_melee}, {"text": "🔁", "callback": self.action_reload}, {"text": "🩹", "callback": self.action_medkit}],
+            [{"text": "⬇️", "callback": self.action_bw}, {"text": "💾", "callback": self.action_save}, {"text": "⚙️", "callback": self.action_settings_in_game}, {"text": "🚪", "callback": self.action_exit}],
+        ]
 
     async def do_render(self, call, st):
         if st["hp"] <= 0:
             st["running"] = False
-            dead_text = f"<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>ВЫ ПОГИБЛИ</b>\n\nСчет: {st['score']}\nНажмите Новая игра, чтобы воскреснуть."
-            btn = [[{"text": "🔄 Новая игра", "callback": self.action_new}]]
+            p = self._profile()
+            p["deaths"] += 1
+            p["best_score"] = max(p["best_score"], st["score"])
+            p["total_kills"] += st["score"]
+            p["shots"] += st["shots"]
+            p["hits"] += st["hits"]
+            self._save_profile(p)
+            dead_text = self._tr("dead", st, d=self.strings["e_dead"], s=st["score"])
+            btn = [[{"text": self._tr("new_game", st), "callback": self.action_new_menu}], [{"text": self._tr("back", st), "callback": self.action_main_menu}]]
             await self.safe_edit(call, dead_text, btn)
             return
 
-        frame = self.render_3d_frame(st)
-        mmap = self.get_mini_map(st)
-
-        hud = (
-            f"<tg-emoji emoji-id=5253713110111365241>📍</tg-emoji> <b>Mini-Map</b>:\n"
-            f"<pre>{mmap}</pre>\n"
-            f"<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> <b>Action</b>:\n"
-            f"<pre>{frame}</pre>\n"
-            f"<tg-emoji emoji-id=5253549669425882943>🔋</tg-emoji> HP: <b>{st['hp']}</b> | <tg-emoji emoji-id=5256094480498436162>📦</tg-emoji> Ammo: <b>{st['ammo']}</b> | <tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> Kills: <b>{st['score']}</b>\n"
-            f"<tg-emoji emoji-id=5253590213917158323>💬</tg-emoji> <i>{st['log']}</i>"
-        )
-
-        btn = [
-            [{"text": "🔄 L", "callback": self.action_rot_l}, {"text": "⬆️", "callback": self.action_fw}, {"text": "🔄 R", "callback": self.action_rot_r}],
-            [{"text": "⬅️", "callback": self.action_m_l}, {"text": "💥", "callback": self.action_shoot}, {"text": "➡️", "callback": self.action_m_r}],
-            [{"text": "⬇️", "callback": self.action_bw}, {"text": "💾", "callback": self.action_save}, {"text": "🚪", "callback": self.action_exit}]
-        ]
+        hud = self._hud_text(st)
         if st.get("last_hud") == hud:
             return
-        if await self.safe_edit(call, hud, btn):
+        if await self.safe_edit(call, hud, self._buttons_game()):
             st["last_hud"] = hud
 
     async def game_loop(self, call):
@@ -255,47 +464,63 @@ class Doom(loader.Module):
         while user_id in self.sessions and self.sessions[user_id].get("running"):
             st = self.sessions[user_id]
             now = time.time()
+            ai_tick = self.difficulty[st["difficulty"]]["enemy_ai"]
 
-            if now - st.get("last_ai", 0) > 0.7:
+            if now - st.get("last_ai", 0) > ai_tick:
                 moved = False
-                enemies = []
-                for y in range(self.map_h):
-                    for x in range(self.map_w):
-                        if st["map"][y][x] == "E":
-                            enemies.append((x, y))
+                enemy_keys = list(st["enemies"].keys())
+                random.shuffle(enemy_keys)
+                occupied = {(e["x"], e["y"]) for e in st["enemies"].values()}
 
-                for ex, ey in enemies:
+                for key in enemy_keys:
+                    e = st["enemies"].get(key)
+                    if not e:
+                        continue
+                    ex, ey = e["x"], e["y"]
                     dist = math.hypot(st["x"] - ex, st["y"] - ey)
-                    if dist < 1.5:
-                        st["hp"] -= 8
-                        st["log"] = "Монстр атакует! -8 HP"
+                    if dist < 1.45:
+                        _, dmg = self._enemy_stats(st, e["type"])
+                        if st["armor"] > 0:
+                            blocked = min(st["armor"], int(dmg * 0.45))
+                            st["armor"] -= blocked
+                            dmg -= blocked
+                        st["hp"] -= max(1, dmg)
+                        st["log"] = self._tr("enemy_attack", st, n=max(1, dmg))
                         moved = True
-                    else:
-                        dx = 1 if st["x"] > ex else (-1 if st["x"] < ex else 0)
-                        dy = 1 if st["y"] > ey else (-1 if st["y"] < ey else 0)
+                        continue
 
-                        if dx != 0 and st["map"][ey][ex+dx] == " ":
-                            st["map"][ey][ex] = " "
-                            st["map"][ey][ex+dx] = "E"
-                            moved = True
-                        elif dy != 0 and st["map"][ey+dy][ex] == " ":
-                            st["map"][ey][ex] = " "
-                            st["map"][ey+dy][ex] = "E"
-                            moved = True
+                    dx = 1 if st["x"] > ex else (-1 if st["x"] < ex else 0)
+                    dy = 1 if st["y"] > ey else (-1 if st["y"] < ey else 0)
+                    candidates = [(ex + dx, ey), (ex, ey + dy), (ex + dx, ey + dy)]
+                    random.shuffle(candidates)
+                    for nx, ny in candidates:
+                        if nx <= 0 or nx >= self.map_w - 1 or ny <= 0 or ny >= self.map_h - 1:
+                            continue
+                        if st["map"][ny][nx] != " ":
+                            continue
+                        if (nx, ny) in occupied:
+                            continue
+                        occupied.discard((ex, ey))
+                        occupied.add((nx, ny))
+                        e["x"], e["y"] = nx, ny
+                        st["enemies"].pop(key, None)
+                        st["enemies"][f"{nx}:{ny}"] = e
+                        moved = True
+                        break
 
-                if moved: st["dirty"] = True
+                if moved:
+                    st["dirty"] = True
                 st["last_ai"] = now
 
-            if now - st.get("last_save", 0) >= 15:
+            if now - st.get("last_save", 0) >= st["settings"]["autosave"]:
                 sv = st.copy()
                 sv["running"] = False
                 self.db.set("Doom", "save", sv)
                 st["last_save"] = now
-                if st.get("log") != "Автосохранение выполнено.":
-                    st["log"] = "Автосохранение выполнено."
-                    st["dirty"] = True
+                st["log"] = self._tr("autosaved", st)
+                st["dirty"] = True
 
-            if st.get("dirty") and now - st.get("last_render", 0) >= 0.6:
+            if st.get("dirty") and now - st.get("last_render", 0) >= 0.55:
                 try:
                     await self.do_render(call, st)
                     st["last_render"] = time.time()
@@ -303,103 +528,240 @@ class Doom(loader.Module):
                 except Exception:
                     pass
 
-            await asyncio.sleep(0.12)
+            await asyncio.sleep(0.1)
 
     def update_player(self, dx, dy, dr):
-        if "doom_user" not in self.sessions: return
-        st = self.sessions["doom_user"]
-        if st["hp"] <= 0: return
+        st = self.sessions.get("doom_user")
+        if not st or st["hp"] <= 0:
+            return
 
         def is_walkable(x, y):
             r = 0.17
-            points = [(x-r, y-r), (x+r, y-r), (x-r, y+r), (x+r, y+r)]
+            points = [(x - r, y - r), (x + r, y - r), (x - r, y + r), (x + r, y + r)]
+            enemy_pos = {(e["x"], e["y"]) for e in st["enemies"].values()}
             for px, py in points:
                 tx, ty = int(px), int(py)
                 if tx < 0 or tx >= self.map_w or ty < 0 or ty >= self.map_h:
                     return False
-                if st["map"][ty][tx] in ["#", "E"]:
+                if st["map"][ty][tx] == "#":
+                    return False
+                if (tx, ty) in enemy_pos:
                     return False
             return True
 
         st["a"] += dr
+        old_x, old_y = st["x"], st["y"]
         if dx or dy:
-            old_x, old_y = st["x"], st["y"]
             nx = st["x"] + dx
+            ny = st["y"] + dy
             if is_walkable(nx, st["y"]):
                 st["x"] = nx
-            ny = st["y"] + dy
             if is_walkable(st["x"], ny):
                 st["y"] = ny
 
-            cell_x, cell_y = int(st["x"]), int(st["y"])
-            if 0 <= cell_x < self.map_w and 0 <= cell_y < self.map_h:
-                cell = st["map"][cell_y][cell_x]
-                if cell == "A":
-                    st["ammo"] += 5
-                    st["log"] = "Патроны! +5"
-                    st["map"][cell_y][cell_x] = " "
-                elif cell == "H":
-                    st["hp"] = min(100, st["hp"] + 25)
-                    st["log"] = "Аптечка! +25 HP"
-                    st["map"][cell_y][cell_x] = " "
+            cx, cy = int(st["x"]), int(st["y"])
+            if 0 <= cx < self.map_w and 0 <= cy < self.map_h:
+                c = st["map"][cy][cx]
+                if c == "A":
+                    st["ammo"] += 6
+                    st["reserve"] += 6
+                    st["log"] = self._tr("pickup_ammo", st)
+                    st["map"][cy][cx] = " "
+                elif c == "H":
+                    st["hp"] = min(st["max_hp"], st["hp"] + 20)
+                    st["log"] = self._tr("pickup_hp", st)
+                    st["map"][cy][cx] = " "
+                elif c == "R":
+                    st["armor"] = min(100, st["armor"] + 15)
+                    st["log"] = self._tr("pickup_armor", st)
+                    st["map"][cy][cx] = " "
+                elif c == "S":
+                    st["reserve"] += 8
+                    st["medkits"] += 1
+                    st["log"] = self._tr("pickup_secret", st)
+                    st["map"][cy][cx] = " "
+
             if old_x == st["x"] and old_y == st["y"] and (dx or dy):
-                st["log"] = "Упёрлись в стену."
+                st["log"] = self._tr("wall", st)
+
         st["dirty"] = True
 
     async def action_shoot(self, call):
         st = self.sessions.get("doom_user")
-        if not st or st["hp"] <= 0: return
-
+        if not st or st["hp"] <= 0:
+            return
         if st["ammo"] <= 0:
-            st["log"] = "Клик! Нет патронов!"
+            st["log"] = self._tr("no_ammo", st)
             st["dirty"] = True
             return
 
         st["ammo"] -= 1
-        hit = False
+        st["shots"] += 1
         rx, ry = math.sin(st["a"]), math.cos(st["a"])
-        d = 0.0
+        hit_key = None
+        hit_dist = 999
 
-        while d < self.game_config["depth"]:
-            d += 0.1
-            fx, fy = st["x"] + rx * d, st["y"] + ry * d
-            tx, ty = int(fx), int(fy)
-            if 0 <= tx < self.map_w and 0 <= ty < self.map_h:
-                cell = st["map"][ty][tx]
-                if cell == "E":
-                    st["map"][ty][tx] = " "
+        for key, e in st["enemies"].items():
+            ex, ey = e["x"] + 0.5, e["y"] + 0.5
+            vx, vy = ex - st["x"], ey - st["y"]
+            proj = vx * rx + vy * ry
+            if proj <= 0:
+                continue
+            perp = abs(vx * ry - vy * rx)
+            if perp < 0.45 and proj < hit_dist:
+                # simple wall check
+                steps = int(proj / 0.1)
+                blocked = False
+                for i in range(1, steps + 1):
+                    tx = int(st["x"] + rx * i * 0.1)
+                    ty = int(st["y"] + ry * i * 0.1)
+                    if st["map"][ty][tx] == "#":
+                        blocked = True
+                        break
+                if not blocked:
+                    hit_key = key
+                    hit_dist = proj
+
+        if hit_key:
+            e = st["enemies"].get(hit_key)
+            if e:
+                dmg = 14 if e["type"] == "imp" else 10
+                e["hp"] -= dmg
+                st["hits"] += 1
+                if e["hp"] <= 0:
+                    st["enemies"].pop(hit_key, None)
                     st["score"] += 1
-                    st["log"] = "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Монстр разорван!"
-                    hit = True
-                    break
-                if cell == "#":
-                    break
-            else:
-                break
+                    st["log"] = self._tr("hit", st, f=self.strings["e_fire"])
+                    if random.random() < 0.22:
+                        st["reserve"] += 4
+                    if random.random() < 0.11:
+                        st["medkits"] += 1
+                else:
+                    st["log"] = self._tr("enemy_hit", st)
+        else:
+            st["log"] = self._tr("shot_wall", st)
 
-        if not hit: st["log"] = "Выстрел в стену."
         st["dirty"] = True
 
-    async def action_new(self, call):
+    async def action_melee(self, call):
+        st = self.sessions.get("doom_user")
+        if not st or st["hp"] <= 0:
+            return
+        nearest = None
+        nd = 999
+        for key, e in st["enemies"].items():
+            d = math.hypot(st["x"] - e["x"], st["y"] - e["y"])
+            if d < nd:
+                nd = d
+                nearest = key
+        if nearest and nd < 1.4:
+            e = st["enemies"][nearest]
+            e["hp"] -= 9
+            st["hits"] += 1
+            if e["hp"] <= 0:
+                st["enemies"].pop(nearest, None)
+                st["score"] += 1
+                st["log"] = self._tr("hit", st, f=self.strings["e_fire"])
+            else:
+                st["log"] = self._tr("enemy_hit", st)
+        else:
+            st["log"] = self._tr("enemy_miss", st)
+        st["dirty"] = True
+
+    async def action_reload(self, call):
+        st = self.sessions.get("doom_user")
+        if not st or st["hp"] <= 0:
+            return
+        if st["reserve"] <= 0:
+            st["log"] = self._tr("reload_none", st)
+        else:
+            need = st["mag_size"] - st["ammo"]
+            add = min(need, st["reserve"]) if need > 0 else 0
+            st["ammo"] += add
+            st["reserve"] -= add
+            st["log"] = self._tr("reload_done", st, n=add)
+        st["dirty"] = True
+
+    async def action_medkit(self, call):
+        st = self.sessions.get("doom_user")
+        if not st or st["hp"] <= 0:
+            return
+        if st["medkits"] <= 0:
+            st["log"] = self._tr("med_none", st)
+        else:
+            st["medkits"] -= 1
+            st["hp"] = min(st["max_hp"], st["hp"] + 30)
+            st["log"] = self._tr("med_used", st)
+        st["dirty"] = True
+
+    async def action_new_menu(self, call):
+        txt = f"{self.strings['e_title']} <b>DOOM COMBINE</b>\n\n{self._tr('difficulty_pick')}"
+        btn = [
+            [{"text": "🟢 EASY", "callback": self.action_new_easy}, {"text": "🟡 NORMAL", "callback": self.action_new_normal}],
+            [{"text": "🟠 HARD", "callback": self.action_new_hard}, {"text": "🔴 NIGHTMARE", "callback": self.action_new_nightmare}],
+            [{"text": self._tr("back"), "callback": self.action_main_menu}],
+        ]
+        await self.safe_edit(call, txt, btn)
+
+    async def _start_game(self, call, diff):
         try:
-            m = []
-            for row in self.base_map:
-                m.append(list(row.replace(".", " ")))
+            settings = self._settings()
+            settings["difficulty"] = diff
+            self._save_settings(settings)
+
+            game_map, enemies = self._parse_map()
+            hp0 = self.difficulty[diff]["hp"]
+            ammo0 = self.difficulty[diff]["ammo"]
+            for e in enemies.values():
+                hp, _ = self._enemy_stats({"difficulty": diff}, e["type"])
+                e["hp"] = hp
+
+            p = self._profile()
+            p["games"] += 1
+            self._save_profile(p)
 
             self.sessions["doom_user"] = {
-                "x": 1.5, "y": 1.5, "a": 0.0,
-                "hp": 100, "ammo": 10, "score": 0,
-                "log": "Добро пожаловать в Ад.",
-                "last_render": 0, "last_ai": 0,
+                "x": 1.5,
+                "y": 1.5,
+                "a": 0.0,
+                "hp": hp0,
+                "max_hp": hp0,
+                "armor": 0,
+                "ammo": min(ammo0, 12),
+                "mag_size": 12,
+                "reserve": max(0, ammo0 - 12),
+                "medkits": 1,
+                "score": 0,
+                "shots": 0,
+                "hits": 0,
+                "difficulty": diff,
+                "settings": settings,
+                "log": self._tr("started"),
+                "last_render": 0,
+                "last_ai": 0,
                 "last_save": 0,
-                "dirty": True, "running": True,
-                "map": m,
-                "last_hud": ""
+                "dirty": True,
+                "running": True,
+                "map": game_map,
+                "enemies": enemies,
+                "last_hud": "",
             }
             asyncio.create_task(self.game_loop(call))
-        except Exception as e:
+        except Exception:
             err = traceback.format_exc()
             await self.safe_edit(call, f"<b>CRITICAL ERROR:</b>\n<pre>{err}</pre>", [])
+
+    async def action_new_easy(self, call):
+        await self._start_game(call, "easy")
+
+    async def action_new_normal(self, call):
+        await self._start_game(call, "normal")
+
+    async def action_new_hard(self, call):
+        await self._start_game(call, "hard")
+
+    async def action_new_nightmare(self, call):
+        await self._start_game(call, "nightmare")
 
     async def action_cont(self, call):
         try:
@@ -407,44 +769,133 @@ class Doom(loader.Module):
             if sv:
                 sv["running"] = True
                 sv["dirty"] = True
-                sv["log"] = "Игра загружена."
+                sv["log"] = self._tr("loaded", sv)
                 sv["last_hud"] = ""
                 sv["last_save"] = time.time()
                 self.sessions["doom_user"] = sv
                 asyncio.create_task(self.game_loop(call))
             else:
-                await self.safe_edit(call, "Нет сохранений! Запустите модуль заново.", [])
-        except Exception as e:
+                await self.safe_edit(call, self._tr("no_save"), [[{"text": self._tr("back"), "callback": self.action_main_menu}]])
+        except Exception:
             err = traceback.format_exc()
             await self.safe_edit(call, f"<b>CRITICAL ERROR:</b>\n<pre>{err}</pre>", [])
 
     async def action_save(self, call):
-        if "doom_user" in self.sessions:
-            st = self.sessions["doom_user"].copy()
-            st["running"] = False
-            self.db.set("Doom", "save", st)
-            st["log"] = "Сохранено!"
+        st = self.sessions.get("doom_user")
+        if st:
+            sv = st.copy()
+            sv["running"] = False
+            self.db.set("Doom", "save", sv)
+            st["log"] = self._tr("saved", st)
             st["dirty"] = True
 
     async def action_exit(self, call):
         if "doom_user" in self.sessions:
             self.sessions["doom_user"]["running"] = False
             del self.sessions["doom_user"]
-        await self.safe_edit(call, "Игра завершена.", [])
+        await self.safe_edit(call, self._tr("game_closed"), [[{"text": self._tr("back"), "callback": self.action_main_menu}]])
 
-    async def action_rot_l(self, call): self.update_player(0, 0, -0.4)
-    async def action_rot_r(self, call): self.update_player(0, 0, 0.4)
+    async def action_records(self, call):
+        p = self._profile()
+        acc = round((p["hits"] / p["shots"] * 100.0), 1) if p["shots"] else 0.0
+        text = self._tr("profile", gp=p["games"], tk=p["total_kills"], td=p["deaths"], bs=p["best_score"], sh=p["shots"], hh=p["hits"], acc=acc)
+        btn = [[{"text": self._tr("back"), "callback": self.action_main_menu}]]
+        if "doom_user" in self.sessions and self.sessions["doom_user"].get("running"):
+            btn.insert(0, [{"text": self._tr("in_game", self.sessions["doom_user"]), "callback": self.action_refresh_game}])
+        await self.safe_edit(call, text, btn)
+
+    async def action_help(self, call):
+        pref = getattr(self, "get_prefix", lambda: ".")()
+        txt = self._tr("help_text", pref=pref)
+        await self.safe_edit(call, txt, [[{"text": self._tr("back"), "callback": self.action_main_menu}]])
+
+    async def action_settings(self, call):
+        s = self._settings()
+        text = (
+            f"<b>{self._tr('settings')}</b>\n\n"
+            f"{self._tr('difficulty')}: <b>{s['difficulty'].upper()}</b>\n"
+            f"{self._tr('view')}: <b>{s['view']}</b>\n"
+            f"{self._tr('autosave')}: <b>{s['autosave']}s</b>\n"
+            f"{self._tr('lang')}: <b>{s['lang']}</b>"
+        )
+        btn = [
+            [{"text": f"{self._tr('difficulty')}: {s['difficulty'].upper()}", "callback": self.action_cycle_difficulty}],
+            [{"text": f"{self._tr('view')}: {s['view']}", "callback": self.action_cycle_view}],
+            [{"text": f"{self._tr('autosave')}: {s['autosave']}s", "callback": self.action_cycle_autosave}],
+            [{"text": f"{self._tr('lang')}: {s['lang']}", "callback": self.action_cycle_lang}],
+            [{"text": self._tr("back"), "callback": self.action_main_menu}],
+        ]
+        await self.safe_edit(call, text, btn)
+
+    async def action_settings_in_game(self, call):
+        await self.action_settings(call)
+
+    async def action_cycle_difficulty(self, call):
+        s = self._settings()
+        seq = ["easy", "normal", "hard", "nightmare"]
+        s["difficulty"] = seq[(seq.index(s["difficulty"]) + 1) % len(seq)]
+        self._save_settings(s)
+        await self.action_settings(call)
+
+    async def action_cycle_view(self, call):
+        s = self._settings()
+        seq = ["both", "3d", "map"]
+        s["view"] = seq[(seq.index(s["view"]) + 1) % len(seq)]
+        self._save_settings(s)
+        st = self.sessions.get("doom_user")
+        if st:
+            st["settings"] = s
+            st["dirty"] = True
+            st["log"] = self._tr("set_ok", st)
+        await self.action_settings(call)
+
+    async def action_cycle_autosave(self, call):
+        s = self._settings()
+        seq = [10, 15, 20, 30, 45]
+        s["autosave"] = seq[(seq.index(s["autosave"]) + 1) % len(seq)] if s["autosave"] in seq else 15
+        self._save_settings(s)
+        await self.action_settings(call)
+
+    async def action_cycle_lang(self, call):
+        s = self._settings()
+        seq = ["ru", "en", "uk", "de", "jp", "neofit", "tiktok", "leet", "uwu"]
+        s["lang"] = seq[(seq.index(s["lang"]) + 1) % len(seq)] if s["lang"] in seq else "ru"
+        self._save_settings(s)
+        st = self.sessions.get("doom_user")
+        if st:
+            st["settings"] = s
+            st["dirty"] = True
+        await self.action_settings(call)
+
+    async def action_main_menu(self, call):
+        await self._show_menu(call)
+
+    async def action_refresh_game(self, call):
+        st = self.sessions.get("doom_user")
+        if st and st.get("running"):
+            st["dirty"] = True
+            await self.do_render(call, st)
+        else:
+            await self._show_menu(call)
+
+    async def action_rot_l(self, call):
+        self.update_player(0, 0, -0.38)
+
+    async def action_rot_r(self, call):
+        self.update_player(0, 0, 0.38)
+
     async def action_fw(self, call):
         a = self.sessions.get("doom_user", {}).get("a", 0)
-        self.update_player(math.sin(a)*0.45, math.cos(a)*0.45, 0)
+        self.update_player(math.sin(a) * 0.42, math.cos(a) * 0.42, 0)
+
     async def action_bw(self, call):
         a = self.sessions.get("doom_user", {}).get("a", 0)
-        self.update_player(-math.sin(a)*0.45, -math.cos(a)*0.45, 0)
+        self.update_player(-math.sin(a) * 0.42, -math.cos(a) * 0.42, 0)
+
     async def action_m_l(self, call):
-        a = self.sessions.get("doom_user", {}).get("a", 0) - math.pi/2
-        self.update_player(math.sin(a)*0.4, math.cos(a)*0.4, 0)
+        a = self.sessions.get("doom_user", {}).get("a", 0) - math.pi / 2
+        self.update_player(math.sin(a) * 0.36, math.cos(a) * 0.36, 0)
+
     async def action_m_r(self, call):
-        a = self.sessions.get("doom_user", {}).get("a", 0) + math.pi/2
-        self.update_player(math.sin(a)*0.4, math.cos(a)*0.4, 0)
-
-
+        a = self.sessions.get("doom_user", {}).get("a", 0) + math.pi / 2
+        self.update_player(math.sin(a) * 0.36, math.cos(a) * 0.36, 0)
