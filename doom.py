@@ -41,6 +41,16 @@ class Doom(loader.Module):
         "_cls_doc": "Inline DOOM mini-game.",
     }
     strings_ru = {"_cls_doc": "Мини-игра DOOM в инлайне."}
+    if "_cls_doc" not in strings and __doc__:
+        strings["_cls_doc"] = (__doc__ or "").strip()
+    strings_ru = {**strings, **locals().get("strings_ru", {})}
+    strings_uk = {**strings, **locals().get("strings_ua", {}), **locals().get("strings_uk", {})}
+    strings_de = {**strings, **locals().get("strings_de", {})}
+    strings_jp = {**strings, **locals().get("strings_jp", {})}
+    strings_neofit = {**strings, **locals().get("strings_neofit", {})}
+    strings_tiktok = {**strings, **locals().get("strings_tiktok", {})}
+    strings_leet = {**strings, **locals().get("strings_leet", {})}
+    strings_uwu = {**strings, **locals().get("strings_uwu", {})}
 
     def __init__(self):
         self.sessions = {}
@@ -437,39 +447,4 @@ class Doom(loader.Module):
         a = self.sessions.get("doom_user", {}).get("a", 0) + math.pi/2
         self.update_player(math.sin(a)*0.4, math.cos(a)*0.4, 0)
 
-_cls_doc_Doom = (Doom.__doc__ or "").strip()
-if _cls_doc_Doom:
-    Doom.strings.setdefault("_cls_doc", _cls_doc_Doom)
-if not hasattr(Doom, "strings_uk") and hasattr(Doom, "strings_ua"):
-    Doom.strings_uk = dict(getattr(Doom, "strings_ua"))
-for _loc in ("ru", "uk", "de", "jp", "neofit", "tiktok", "leet", "uwu"):
-    _attr = f"strings_{_loc}"
-    if not hasattr(Doom, _attr):
-        setattr(Doom, _attr, dict(getattr(Doom, "strings", {})))
-    _d = getattr(Doom, _attr)
-    if isinstance(_d, dict) and _cls_doc_Doom:
-        _d.setdefault("_cls_doc", _cls_doc_Doom)
-for _name in dir(Doom):
-    _fn = getattr(Doom, _name, None)
-    if not callable(_fn) or not getattr(_fn, "is_command", False):
-        continue
-    _base = (
-        getattr(_fn, "en_doc", None)
-        or getattr(_fn, "ru_doc", None)
-        or getattr(_fn, "uk_doc", None)
-        or getattr(_fn, "de_doc", None)
-        or getattr(_fn, "jp_doc", None)
-        or getattr(_fn, "neofit_doc", None)
-        or getattr(_fn, "tiktok_doc", None)
-        or getattr(_fn, "leet_doc", None)
-        or getattr(_fn, "uwu_doc", None)
-        or getattr(_fn, "__doc__", None)
-        or ""
-    ).strip()
-    if not _base:
-        continue
-    for _doc in ("en_doc", "ru_doc", "uk_doc", "de_doc", "jp_doc", "neofit_doc", "tiktok_doc", "leet_doc", "uwu_doc"):
-        if not getattr(_fn, _doc, None):
-            setattr(_fn, _doc, _base)
-_i18n_boot_Doom = True
 
