@@ -20,9 +20,9 @@
 # Description: Inline DOOM mini-game module.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/doom.png
 
-"""Huge inline DOOM combine with settings, profiles, stats, difficulties and better menus."""
+"""Huge inline DOOM module with settings, profiles, stats, waves and upgrades."""
 
-__version__ = (1, 3, 0)
+__version__ = (1, 3, 1)
 
 import asyncio
 import math
@@ -51,7 +51,7 @@ class Doom(loader.Module):
         "e_fire": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji>",
         "e_dead": "<tg-emoji emoji-id=5237682408163110073>💀</tg-emoji>",
     }
-    strings_ru = {"_cls_doc": "Огромный инлайн DOOM-комбайн с меню, режимами и статой."}
+    strings_ru = {"_cls_doc": "Огромный инлайн DOOM-модуль с меню, режимами и статой."}
     strings_uk = {"_cls_doc": "Великий inline DOOM-комбайн з меню, режимами та статистикою."}
     strings_de = {"_cls_doc": "Großer Inline-DOOM-Kombinator mit Menü, Modi und Statistik."}
     strings_jp = {"_cls_doc": "メニュー・モード・統計付きの大型インラインDOOMモジュール。"}
@@ -105,7 +105,7 @@ class Doom(loader.Module):
     def _build_locale(self):
         return {
             "ru": {
-                "menu_title": "{t} <b>DOOM COMBINE</b>\n\nВыбери действие:",
+                "menu_title": "{t} <b>DOOM</b>\n\nВыбери действие:",
                 "new_game": "🟢 Новая игра",
                 "continue": "🟡 Продолжить",
                 "records": "🏆 Профиль/Рекорды",
@@ -139,7 +139,7 @@ class Doom(loader.Module):
                 "enemy_attack": "Монстр атакует! -{n} HP",
                 "dead": "{d} <b>ВЫ ПОГИБЛИ</b>\n\nСчёт: {s}\n\nНажми Новая игра.",
                 "hud_deadline": "Убито: <b>{k}</b> | Точность: <b>{a}%</b> | Броня: <b>{ar}</b>",
-                "help_text": "<b>DOOM COMBINE</b>\n\nP — ты\nM/👾 — монстры\nA — патроны\nH — хилка\nR — броня\nS — секретка\nD — жирный демон\n\nКоманда запуска: <code>{pref}doom</code>",
+                "help_text": "<b>DOOM</b>\n\nP — ты\nM/👾 — монстры\nA — патроны\nH — хилка\nR — броня\nS — секретка\nD — жирный демон\nB — босс\n\nКоманда запуска: <code>{pref}doom</code>",
                 "profile": "<b>Профиль</b>\nИгр: <b>{gp}</b>\nКиллов: <b>{tk}</b>\nСмертей: <b>{td}</b>\nЛучший счёт: <b>{bs}</b>\nВыстрелов: <b>{sh}</b>\nПопаданий: <b>{hh}</b>\nТочность: <b>{acc}%</b>\nDaily best: <b>{db}</b>\nАчивок: <b>{ac}</b>",
                 "in_game": "🕹️ В игру",
                 "difficulty_pick": "Выбери сложность:",
@@ -169,7 +169,7 @@ class Doom(loader.Module):
                 "profile_ach": "Ачивок: <b>{ac}</b>",
             },
             "en": {
-                "menu_title": "{t} <b>DOOM COMBINE</b>\n\nChoose action:",
+                "menu_title": "{t} <b>DOOM</b>\n\nChoose action:",
                 "new_game": "🟢 New game",
                 "continue": "🟡 Continue",
                 "records": "🏆 Profile/Records",
@@ -203,7 +203,7 @@ class Doom(loader.Module):
                 "enemy_attack": "Monster attacks! -{n} HP",
                 "dead": "{d} <b>YOU DIED</b>\n\nScore: {s}\n\nTap New game.",
                 "hud_deadline": "Kills: <b>{k}</b> | Accuracy: <b>{a}%</b> | Armor: <b>{ar}</b>",
-                "help_text": "<b>DOOM COMBINE</b>\n\nP — you\nM/👾 — monsters\nA — ammo\nH — heal\nR — armor\nS — secret\nD — heavy demon\n\nStart cmd: <code>{pref}doom</code>",
+                "help_text": "<b>DOOM</b>\n\nP — you\nM/👾 — monsters\nA — ammo\nH — heal\nR — armor\nS — secret\nD — heavy demon\nB — boss\n\nStart cmd: <code>{pref}doom</code>",
                 "profile": "<b>Profile</b>\nGames: <b>{gp}</b>\nKills: <b>{tk}</b>\nDeaths: <b>{td}</b>\nBest score: <b>{bs}</b>\nShots: <b>{sh}</b>\nHits: <b>{hh}</b>\nAccuracy: <b>{acc}%</b>\nDaily best: <b>{db}</b>\nAchievements: <b>{ac}</b>",
                 "in_game": "🕹️ In-game",
                 "difficulty_pick": "Pick difficulty:",
@@ -285,7 +285,7 @@ class Doom(loader.Module):
         self.db.set("Doom", "profile", p)
 
     def _today_key(self):
-        return time.strftime("%Y-%m-%d", time.gmtime() + 3 * 3600)
+        return time.strftime("%Y-%m-%d", time.localtime())
 
     def _unlock_achievement(self, st, code, title):
         if code in st["ach"]:
@@ -396,7 +396,10 @@ class Doom(loader.Module):
         if hasattr(call_or_msg, "edit"):
             await self.safe_edit(call_or_msg, text, self._menu_buttons())
         else:
-            await self.inline.form(text=text, message=call_or_msg, reply_markup=self._menu_buttons())
+            try:
+                await self.inline.form(text=text, message=call_or_msg, reply_markup=self._menu_buttons())
+            except Exception:
+                await utils.answer(call_or_msg, text)
 
     @loader.command(
         ru_doc="Справка по игре DOOM",
@@ -423,7 +426,10 @@ class Doom(loader.Module):
         uwu_doc="open doom menuu",
     )
     async def doomcmd(self, message: Message):
-        await self._show_menu(message)
+        try:
+            await self._show_menu(message)
+        except Exception:
+            await utils.answer(message, "<b>DOOM</b>\nНе получилось открыть inline-меню. Проверь, что inline включен у бота.")
 
     def render_3d_frame(self, st):
         w = self.game_config["scr_w"]
@@ -840,7 +846,7 @@ class Doom(loader.Module):
         st["dirty"] = True
 
     async def action_new_menu(self, call):
-        txt = f"{self.strings['e_title']} <b>DOOM COMBINE</b>\n\n{self._tr('difficulty_pick')}"
+        txt = f"{self.strings['e_title']} <b>DOOM</b>\n\n{self._tr('difficulty_pick')}"
         btn = [
             [{"text": "🟢 EASY", "callback": self.action_new_easy}, {"text": "🟡 NORMAL", "callback": self.action_new_normal}],
             [{"text": "🟠 HARD", "callback": self.action_new_hard}, {"text": "🔴 NIGHTMARE", "callback": self.action_new_nightmare}],
