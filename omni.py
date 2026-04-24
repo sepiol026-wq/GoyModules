@@ -20,7 +20,7 @@
 # Description: Universal media downloader.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/omniload.png
 
-__version__ = (1, 5)
+__version__ = (1, 6)
 import asyncio
 import contextlib
 import json
@@ -307,3 +307,40 @@ class OmniLoad(loader.Module):
             await call.answer("Canceled")
         with contextlib.suppress(Exception):
             await call.delete()
+
+_cls_doc_OmniLoad = (OmniLoad.__doc__ or "").strip()
+if _cls_doc_OmniLoad:
+    OmniLoad.strings.setdefault("_cls_doc", _cls_doc_OmniLoad)
+if not hasattr(OmniLoad, "strings_uk") and hasattr(OmniLoad, "strings_ua"):
+    OmniLoad.strings_uk = dict(getattr(OmniLoad, "strings_ua"))
+for _loc in ("ru", "uk", "de", "jp", "neofit", "tiktok", "leet", "uwu"):
+    _attr = f"strings_{_loc}"
+    if not hasattr(OmniLoad, _attr):
+        setattr(OmniLoad, _attr, dict(getattr(OmniLoad, "strings", {})))
+    _d = getattr(OmniLoad, _attr)
+    if isinstance(_d, dict) and _cls_doc_OmniLoad:
+        _d.setdefault("_cls_doc", _cls_doc_OmniLoad)
+for _name in dir(OmniLoad):
+    _fn = getattr(OmniLoad, _name, None)
+    if not callable(_fn) or not getattr(_fn, "is_command", False):
+        continue
+    _base = (
+        getattr(_fn, "en_doc", None)
+        or getattr(_fn, "ru_doc", None)
+        or getattr(_fn, "uk_doc", None)
+        or getattr(_fn, "de_doc", None)
+        or getattr(_fn, "jp_doc", None)
+        or getattr(_fn, "neofit_doc", None)
+        or getattr(_fn, "tiktok_doc", None)
+        or getattr(_fn, "leet_doc", None)
+        or getattr(_fn, "uwu_doc", None)
+        or getattr(_fn, "__doc__", None)
+        or ""
+    ).strip()
+    if not _base:
+        continue
+    for _doc in ("en_doc", "ru_doc", "uk_doc", "de_doc", "jp_doc", "neofit_doc", "tiktok_doc", "leet_doc", "uwu_doc"):
+        if not getattr(_fn, _doc, None):
+            setattr(_fn, _doc, _base)
+_i18n_boot_OmniLoad = True
+
