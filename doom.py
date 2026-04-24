@@ -397,7 +397,16 @@ class Doom(loader.Module):
             await self.safe_edit(call_or_msg, text, self._menu_buttons())
             return True
 
-        form = await self.inline.form(text=text, message=call_or_msg, reply_markup=self._menu_buttons())
+        form = await self.inline.form(
+            text="<b>DOOM</b>\nОткрываю меню...",
+            message=call_or_msg,
+            reply_markup=self._menu_buttons(),
+        )
+        await asyncio.sleep(0.15)
+        try:
+            await form.edit(text=text, reply_markup=self._menu_buttons())
+        except Exception:
+            form = await self.inline.form(text=text, message=call_or_msg, reply_markup=self._menu_buttons())
         return bool(form)
 
     @loader.command(
@@ -429,22 +438,16 @@ class Doom(loader.Module):
             ok = await self._show_menu(message)
             if ok:
                 return
-            await utils.answer(
-                message,
-                "<b>DOOM</b>\n"
-                "Inline-меню не открылось (пустой ответ от inline).\n"
-                "Попробуй в обычном чате (не Избранное) или проверь inline-бота.\n"
-                "Для справки: <code>.hdoom</code>",
-            )
+            raise RuntimeError("inline.form returned empty form")
         except Exception as e:
             err = utils.escape_html(str(e))[:220]
             await utils.answer(
                 message,
                 "<b>DOOM</b>\n"
-                "Не удалось открыть inline-меню.\n"
+                "Inline-меню не поднялось.\n"
                 f"Ошибка: <code>{err}</code>\n\n"
-                "Проверь: inline-бот включён и не заблокирован.\n"
-                "Для справки: <code>.hdoom</code>",
+                "Временный fallback: открой справку <code>.hdoom</code>\n"
+                "и попробуй снова <code>.doom</code> в обычном чате.",
             )
 
     def render_3d_frame(self, st):
