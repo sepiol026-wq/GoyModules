@@ -17,7 +17,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/recon.png
 # meta developer: @goymodules
 # requires: aiohttp beautifulsoup4
-__version__ = (1, 1)
+__version__ = (1, 2)
 
 import aiohttp
 import asyncio
@@ -1090,8 +1090,7 @@ class Recon(loader.Module):
                 "> `-T4` fast | `-A` aggressive | `-Pn` no ping"
             ))
         if not shutil.which("nmap"):
-            await utils.answer(message, "<b><tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Installing nmap...</b>")
-            os.system("apt-get update && apt-get install nmap -y")
+            return await utils.answer(message, "<b><tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> nmap не найден. Установи вручную и повтори.</b>")
         await self.rtc(cid, uid, message, f"nmap {args}", "<tg-emoji emoji-id=5249019346512008974>▶️</tg-emoji> Nmap")
 
     @loader.command(
@@ -1116,8 +1115,7 @@ class Recon(loader.Module):
             ))
         sp = "sqlmap-dev/sqlmap.py"
         if not os.path.exists("sqlmap-dev"):
-            await utils.answer(message, "<b><tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Pulling sqlmap...</b>")
-            os.system("git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-dev")
+            return await utils.answer(message, "<b><tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> sqlmap-dev не найден. Клонируй sqlmap вручную в папку sqlmap-dev.</b>")
         await self.rtc(cid, uid, message, f"python3 {sp} {args}", "<tg-emoji emoji-id=5256054356913957552>🎙</tg-emoji> SQLMap")
 
     async def watcher(self, message: Message):
@@ -1138,3 +1136,40 @@ class Recon(loader.Module):
 
         if sender_id == self._tg_id:
             return
+
+_cls_doc_Recon = (Recon.__doc__ or "").strip()
+if _cls_doc_Recon:
+    Recon.strings.setdefault("_cls_doc", _cls_doc_Recon)
+if not hasattr(Recon, "strings_uk") and hasattr(Recon, "strings_ua"):
+    Recon.strings_uk = dict(getattr(Recon, "strings_ua"))
+for _loc in ("ru", "uk", "de", "jp", "neofit", "tiktok", "leet", "uwu"):
+    _attr = f"strings_{_loc}"
+    if not hasattr(Recon, _attr):
+        setattr(Recon, _attr, dict(getattr(Recon, "strings", {})))
+    _d = getattr(Recon, _attr)
+    if isinstance(_d, dict) and _cls_doc_Recon:
+        _d.setdefault("_cls_doc", _cls_doc_Recon)
+for _name in dir(Recon):
+    _fn = getattr(Recon, _name, None)
+    if not callable(_fn) or not getattr(_fn, "is_command", False):
+        continue
+    _base = (
+        getattr(_fn, "en_doc", None)
+        or getattr(_fn, "ru_doc", None)
+        or getattr(_fn, "uk_doc", None)
+        or getattr(_fn, "de_doc", None)
+        or getattr(_fn, "jp_doc", None)
+        or getattr(_fn, "neofit_doc", None)
+        or getattr(_fn, "tiktok_doc", None)
+        or getattr(_fn, "leet_doc", None)
+        or getattr(_fn, "uwu_doc", None)
+        or getattr(_fn, "__doc__", None)
+        or ""
+    ).strip()
+    if not _base:
+        continue
+    for _doc in ("en_doc", "ru_doc", "uk_doc", "de_doc", "jp_doc", "neofit_doc", "tiktok_doc", "leet_doc", "uwu_doc"):
+        if not getattr(_fn, _doc, None):
+            setattr(_fn, _doc, _base)
+_i18n_boot_Recon = True
+
