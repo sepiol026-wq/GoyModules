@@ -22,7 +22,7 @@
 
 """Huge inline DOOM combine with settings, profiles, stats, difficulties and better menus."""
 
-__version__ = (1, 2, 0)
+__version__ = (1, 3, 0)
 
 import asyncio
 import math
@@ -140,11 +140,33 @@ class Doom(loader.Module):
                 "dead": "{d} <b>ВЫ ПОГИБЛИ</b>\n\nСчёт: {s}\n\nНажми Новая игра.",
                 "hud_deadline": "Убито: <b>{k}</b> | Точность: <b>{a}%</b> | Броня: <b>{ar}</b>",
                 "help_text": "<b>DOOM COMBINE</b>\n\nP — ты\nM/👾 — монстры\nA — патроны\nH — хилка\nR — броня\nS — секретка\nD — жирный демон\n\nКоманда запуска: <code>{pref}doom</code>",
-                "profile": "<b>Профиль</b>\nИгр: <b>{gp}</b>\nКиллов: <b>{tk}</b>\nСмертей: <b>{td}</b>\nЛучший счёт: <b>{bs}</b>\nВыстрелов: <b>{sh}</b>\nПопаданий: <b>{hh}</b>\nТочность: <b>{acc}%</b>",
+                "profile": "<b>Профиль</b>\nИгр: <b>{gp}</b>\nКиллов: <b>{tk}</b>\nСмертей: <b>{td}</b>\nЛучший счёт: <b>{bs}</b>\nВыстрелов: <b>{sh}</b>\nПопаданий: <b>{hh}</b>\nТочность: <b>{acc}%</b>\nDaily best: <b>{db}</b>\nАчивок: <b>{ac}</b>",
                 "in_game": "🕹️ В игру",
                 "difficulty_pick": "Выбери сложность:",
                 "set_ok": "Настройки обновлены.",
                 "game_closed": "Игра завершена.",
+                "shop": "🛒 Магазин",
+                "daily_run": "☣️ Daily Run",
+                "credits": "Кредиты",
+                "wave": "Волна",
+                "shop_title": "<b>Магазин апгрейдов</b>\nКредиты: <b>{c}</b>",
+                "upgrade_damage": "Урон +{v}%",
+                "upgrade_armor": "Броня +{v}",
+                "upgrade_med": "+1 медкит в старт",
+                "upgrade_mag": "Магазин +{v}",
+                "buy_ok": "Куплено: {n}",
+                "buy_no": "Не хватает кредитов.",
+                "buy_max": "Апгрейд уже в максимуме.",
+                "wave_start": "Старт волны {w}.",
+                "wave_done": "Волна {w} очищена.",
+                "boss_wave": "Босс-волна {w}!",
+                "daily_started": "Daily Run стартовал.",
+                "daily_done": "Daily Run завершен: {s}",
+                "daily_cooldown": "Daily Run уже сыгран сегодня.",
+                "ach_title": "<b>Ачивки</b>",
+                "ach_unlock": "Открыта ачивка: {n}",
+                "profile_daily": "Daily best: <b>{db}</b>",
+                "profile_ach": "Ачивок: <b>{ac}</b>",
             },
             "en": {
                 "menu_title": "{t} <b>DOOM COMBINE</b>\n\nChoose action:",
@@ -182,11 +204,33 @@ class Doom(loader.Module):
                 "dead": "{d} <b>YOU DIED</b>\n\nScore: {s}\n\nTap New game.",
                 "hud_deadline": "Kills: <b>{k}</b> | Accuracy: <b>{a}%</b> | Armor: <b>{ar}</b>",
                 "help_text": "<b>DOOM COMBINE</b>\n\nP — you\nM/👾 — monsters\nA — ammo\nH — heal\nR — armor\nS — secret\nD — heavy demon\n\nStart cmd: <code>{pref}doom</code>",
-                "profile": "<b>Profile</b>\nGames: <b>{gp}</b>\nKills: <b>{tk}</b>\nDeaths: <b>{td}</b>\nBest score: <b>{bs}</b>\nShots: <b>{sh}</b>\nHits: <b>{hh}</b>\nAccuracy: <b>{acc}%</b>",
+                "profile": "<b>Profile</b>\nGames: <b>{gp}</b>\nKills: <b>{tk}</b>\nDeaths: <b>{td}</b>\nBest score: <b>{bs}</b>\nShots: <b>{sh}</b>\nHits: <b>{hh}</b>\nAccuracy: <b>{acc}%</b>\nDaily best: <b>{db}</b>\nAchievements: <b>{ac}</b>",
                 "in_game": "🕹️ In-game",
                 "difficulty_pick": "Pick difficulty:",
                 "set_ok": "Settings updated.",
                 "game_closed": "Game closed.",
+                "shop": "🛒 Shop",
+                "daily_run": "☣️ Daily Run",
+                "credits": "Credits",
+                "wave": "Wave",
+                "shop_title": "<b>Upgrade shop</b>\nCredits: <b>{c}</b>",
+                "upgrade_damage": "Damage +{v}%",
+                "upgrade_armor": "Armor +{v}",
+                "upgrade_med": "+1 medkit at start",
+                "upgrade_mag": "Mag size +{v}",
+                "buy_ok": "Bought: {n}",
+                "buy_no": "Not enough credits.",
+                "buy_max": "Upgrade already maxed.",
+                "wave_start": "Wave {w} started.",
+                "wave_done": "Wave {w} cleared.",
+                "boss_wave": "Boss wave {w}!",
+                "daily_started": "Daily Run started.",
+                "daily_done": "Daily Run complete: {s}",
+                "daily_cooldown": "Daily Run already played today.",
+                "ach_title": "<b>Achievements</b>",
+                "ach_unlock": "Achievement unlocked: {n}",
+                "profile_daily": "Daily best: <b>{db}</b>",
+                "profile_ach": "Achievements: <b>{ac}</b>",
             },
             "uk": {},
             "de": {},
@@ -221,10 +265,75 @@ class Doom(loader.Module):
         self.db.set("Doom", "lang", s.get("lang", "ru"))
 
     def _profile(self):
-        return self.db.get("Doom", "profile", {"games": 0, "total_kills": 0, "deaths": 0, "best_score": 0, "shots": 0, "hits": 0})
+        return self.db.get(
+            "Doom",
+            "profile",
+            {
+                "games": 0,
+                "total_kills": 0,
+                "deaths": 0,
+                "best_score": 0,
+                "shots": 0,
+                "hits": 0,
+                "daily_best": 0,
+                "daily_last": "",
+                "achievements": [],
+            },
+        )
 
     def _save_profile(self, p):
         self.db.set("Doom", "profile", p)
+
+    def _today_key(self):
+        return time.strftime("%Y-%m-%d", time.gmtime() + 3 * 3600)
+
+    def _unlock_achievement(self, st, code, title):
+        if code in st["ach"]:
+            return
+        st["ach"].add(code)
+        st["new_ach"] = title
+
+    def _sync_achievements_to_profile(self, st):
+        p = self._profile()
+        old = set(p.get("achievements", []))
+        old.update(st.get("ach", set()))
+        p["achievements"] = sorted(old)
+        self._save_profile(p)
+
+    def _award_for_kill(self, st, etype):
+        gain = 8 if etype == "imp" else 18
+        st["credits"] += gain
+
+    def _spawn_wave(self, st, wave):
+        st["wave"] = wave
+        count = 2 + wave
+        boss = wave % 5 == 0
+        if boss:
+            count += 2
+        enemy_pool = []
+        for y in range(1, self.map_h - 1):
+            for x in range(1, self.map_w - 1):
+                if st["map"][y][x] == " ":
+                    if abs(x - int(st["x"])) + abs(y - int(st["y"])) > 6:
+                        enemy_pool.append((x, y))
+        random.shuffle(enemy_pool)
+        st["enemies"] = {}
+        for i in range(min(count, len(enemy_pool))):
+            x, y = enemy_pool[i]
+            et = "demon" if boss and i % 3 == 0 else "imp"
+            hp, _ = self._enemy_stats(st, et)
+            if boss and i == 0:
+                et = "boss"
+                hp = int(130 * self.difficulty[st["difficulty"]]["enemy_hp_mul"])
+            st["enemies"][f"{x}:{y}"] = {"x": x, "y": y, "type": et, "hp": hp}
+        st["log"] = self._tr("boss_wave" if boss else "wave_start", st, w=wave)
+        st["dirty"] = True
+
+    def _snapshot_state(self, st):
+        sv = st.copy()
+        if isinstance(sv.get("ach"), set):
+            sv["ach"] = sorted(sv["ach"])
+        return sv
 
     async def safe_edit(self, call, text, reply_markup):
         try:
@@ -267,7 +376,9 @@ class Doom(loader.Module):
         mul_dmg = self.difficulty[st["difficulty"]]["enemy_dmg_mul"]
         if etype == "imp":
             return int(24 * mul_hp), max(3, int(8 * mul_dmg))
-        return int(44 * mul_hp), max(5, int(12 * mul_dmg))
+        if etype == "demon":
+            return int(44 * mul_hp), max(5, int(12 * mul_dmg))
+        return int(130 * mul_hp), max(10, int(18 * mul_dmg))
 
     def _acc(self, st):
         return round((st["hits"] / st["shots"] * 100.0), 1) if st["shots"] else 0.0
@@ -277,7 +388,7 @@ class Doom(loader.Module):
             [{"text": self._tr("new_game"), "callback": self.action_new_menu}],
             [{"text": self._tr("continue"), "callback": self.action_cont}],
             [{"text": self._tr("records"), "callback": self.action_records}, {"text": self._tr("settings"), "callback": self.action_settings}],
-            [{"text": self._tr("help"), "callback": self.action_help}],
+            [{"text": self._tr("daily_run"), "callback": self.action_daily_run}, {"text": self._tr("help"), "callback": self.action_help}],
         ]
 
     async def _show_menu(self, call_or_msg):
@@ -342,7 +453,8 @@ class Doom(loader.Module):
                 else:
                     if (tx, ty) in enemy_pos:
                         hit_w = True
-                        cell_hit = "D" if enemy_pos[(tx, ty)]["type"] == "demon" else "E"
+                        et = enemy_pos[(tx, ty)]["type"]
+                        cell_hit = "B" if et == "boss" else ("D" if et == "demon" else "E")
                     else:
                         c = st["map"][ty][tx]
                         if c in ("#", "A", "H", "R", "S"):
@@ -352,7 +464,7 @@ class Doom(loader.Module):
             ceil = float(h / 2.0) - h / max(dist_w, 0.01)
             floor = h - ceil
             shade = " "
-            if cell_hit not in ("E", "D", "A", "H", "R", "S"):
+            if cell_hit not in ("E", "D", "B", "A", "H", "R", "S"):
                 if dist_w <= depth / 5.0:
                     shade = shades[4]
                 elif dist_w <= depth / 4.0:
@@ -373,6 +485,8 @@ class Doom(loader.Module):
                         col.append("👾")
                     elif cell_hit == "D":
                         col.append("💢")
+                    elif cell_hit == "B":
+                        col.append("☠️")
                     elif cell_hit == "A":
                         col.append("A" if y == int(floor) else " ")
                     elif cell_hit == "H":
@@ -406,7 +520,8 @@ class Doom(loader.Module):
             r = []
             for x, c in enumerate(row):
                 if (x, y) in enemy_map:
-                    r.append("D" if enemy_map[(x, y)]["type"] == "demon" else "M")
+                    et = enemy_map[(x, y)]["type"]
+                    r.append("B" if et == "boss" else ("D" if et == "demon" else "M"))
                 elif x == px and y == py:
                     r.append("P")
                 elif c == " ":
@@ -426,6 +541,7 @@ class Doom(loader.Module):
         parts.append(
             f"{self.strings['e_hp']} HP: <b>{st['hp']}</b> | AR: <b>{st['armor']}</b> | {self.strings['e_ammo']} Ammo: <b>{st['ammo']}</b>/<b>{st['reserve']}</b> | Med: <b>{st['medkits']}</b> | {self.strings['e_kills']} Kills: <b>{st['score']}</b>"
         )
+        parts.append(f"{self._tr('wave', st)}: <b>{st['wave']}</b> | {self._tr('credits', st)}: <b>{st['credits']}</b>{' | DAILY' if st.get('daily') else ''}")
         parts.append(self._tr("hud_deadline", st, k=st["score"], a=self._acc(st), ar=st["armor"]))
         parts.append(f"{self.strings['e_log']} <i>{st['log']}</i>")
         return "\n".join(parts)
@@ -435,7 +551,7 @@ class Doom(loader.Module):
             [{"text": "🔄 L", "callback": self.action_rot_l}, {"text": "⬆️", "callback": self.action_fw}, {"text": "🔄 R", "callback": self.action_rot_r}],
             [{"text": "⬅️", "callback": self.action_m_l}, {"text": "💥", "callback": self.action_shoot}, {"text": "➡️", "callback": self.action_m_r}],
             [{"text": "🤜", "callback": self.action_melee}, {"text": "🔁", "callback": self.action_reload}, {"text": "🩹", "callback": self.action_medkit}],
-            [{"text": "⬇️", "callback": self.action_bw}, {"text": "💾", "callback": self.action_save}, {"text": "⚙️", "callback": self.action_settings_in_game}, {"text": "🚪", "callback": self.action_exit}],
+            [{"text": "⬇️", "callback": self.action_bw}, {"text": "💾", "callback": self.action_save}, {"text": "🛒", "callback": self.action_shop}, {"text": "🚪", "callback": self.action_exit}],
         ]
 
     async def do_render(self, call, st):
@@ -447,12 +563,22 @@ class Doom(loader.Module):
             p["total_kills"] += st["score"]
             p["shots"] += st["shots"]
             p["hits"] += st["hits"]
+            if st["wave"] >= 10:
+                self._unlock_achievement(st, "wave_10", "Wave 10")
+            if st.get("daily"):
+                today = self._today_key()
+                p["daily_last"] = today
+                p["daily_best"] = max(p.get("daily_best", 0), st["score"])
+                st["log"] = self._tr("daily_done", st, s=st["score"])
+            p["achievements"] = sorted(set(p.get("achievements", [])) | set(st.get("ach", set())))
             self._save_profile(p)
             dead_text = self._tr("dead", st, d=self.strings["e_dead"], s=st["score"])
             btn = [[{"text": self._tr("new_game", st), "callback": self.action_new_menu}], [{"text": self._tr("back", st), "callback": self.action_main_menu}]]
             await self.safe_edit(call, dead_text, btn)
             return
 
+        if st.get("new_ach"):
+            st["log"] = self._tr("ach_unlock", st, n=st.pop("new_ach"))
         hud = self._hud_text(st)
         if st.get("last_hud") == hud:
             return
@@ -465,6 +591,14 @@ class Doom(loader.Module):
             st = self.sessions[user_id]
             now = time.time()
             ai_tick = self.difficulty[st["difficulty"]]["enemy_ai"]
+
+            if not st["enemies"]:
+                st["log"] = self._tr("wave_done", st, w=st["wave"])
+                self._spawn_wave(st, st["wave"] + 1)
+                if st["wave"] >= 3:
+                    self._unlock_achievement(st, "slayer_3", "Slayer III")
+                if st["wave"] >= 7:
+                    self._unlock_achievement(st, "slayer_7", "Slayer VII")
 
             if now - st.get("last_ai", 0) > ai_tick:
                 moved = False
@@ -513,7 +647,7 @@ class Doom(loader.Module):
                 st["last_ai"] = now
 
             if now - st.get("last_save", 0) >= st["settings"]["autosave"]:
-                sv = st.copy()
+                sv = self._snapshot_state(st)
                 sv["running"] = False
                 self.db.set("Doom", "save", sv)
                 st["last_save"] = now
@@ -625,12 +759,17 @@ class Doom(loader.Module):
         if hit_key:
             e = st["enemies"].get(hit_key)
             if e:
-                dmg = 14 if e["type"] == "imp" else 10
+                base = 14 if e["type"] == "imp" else 12 if e["type"] == "demon" else 9
+                dmg = int(base * (1.0 + 0.12 * st["upg"]["damage"]))
                 e["hp"] -= dmg
                 st["hits"] += 1
                 if e["hp"] <= 0:
+                    etype = e["type"]
                     st["enemies"].pop(hit_key, None)
-                    st["score"] += 1
+                    st["score"] += 3 if etype == "boss" else 1
+                    self._award_for_kill(st, etype)
+                    if etype == "boss":
+                        self._unlock_achievement(st, "boss_kill", "Boss Killer")
                     st["log"] = self._tr("hit", st, f=self.strings["e_fire"])
                     if random.random() < 0.22:
                         st["reserve"] += 4
@@ -641,6 +780,8 @@ class Doom(loader.Module):
         else:
             st["log"] = self._tr("shot_wall", st)
 
+        if st["shots"] >= 25 and self._acc(st) >= 70:
+            self._unlock_achievement(st, "sharpshooter", "Sharpshooter")
         st["dirty"] = True
 
     async def action_melee(self, call):
@@ -656,11 +797,15 @@ class Doom(loader.Module):
                 nearest = key
         if nearest and nd < 1.4:
             e = st["enemies"][nearest]
-            e["hp"] -= 9
+            e["hp"] -= int(9 * (1.0 + 0.1 * st["upg"]["damage"]))
             st["hits"] += 1
             if e["hp"] <= 0:
+                etype = e["type"]
                 st["enemies"].pop(nearest, None)
-                st["score"] += 1
+                st["score"] += 3 if etype == "boss" else 1
+                self._award_for_kill(st, etype)
+                if etype == "boss":
+                    self._unlock_achievement(st, "boss_kill", "Boss Killer")
                 st["log"] = self._tr("hit", st, f=self.strings["e_fire"])
             else:
                 st["log"] = self._tr("enemy_hit", st)
@@ -709,18 +854,15 @@ class Doom(loader.Module):
             settings["difficulty"] = diff
             self._save_settings(settings)
 
-            game_map, enemies = self._parse_map()
+            game_map, _ = self._parse_map()
             hp0 = self.difficulty[diff]["hp"]
             ammo0 = self.difficulty[diff]["ammo"]
-            for e in enemies.values():
-                hp, _ = self._enemy_stats({"difficulty": diff}, e["type"])
-                e["hp"] = hp
 
             p = self._profile()
             p["games"] += 1
             self._save_profile(p)
 
-            self.sessions["doom_user"] = {
+            st = {
                 "x": 1.5,
                 "y": 1.5,
                 "a": 0.0,
@@ -734,6 +876,12 @@ class Doom(loader.Module):
                 "score": 0,
                 "shots": 0,
                 "hits": 0,
+                "credits": 0,
+                "wave": 0,
+                "upg": {"damage": 0, "armor": 0, "med": 0, "mag": 0},
+                "ach": set(p.get("achievements", [])),
+                "new_ach": "",
+                "daily": False,
                 "difficulty": diff,
                 "settings": settings,
                 "log": self._tr("started"),
@@ -743,9 +891,15 @@ class Doom(loader.Module):
                 "dirty": True,
                 "running": True,
                 "map": game_map,
-                "enemies": enemies,
+                "enemies": {},
                 "last_hud": "",
             }
+            st["armor"] += st["upg"]["armor"]
+            st["medkits"] += st["upg"]["med"]
+            st["mag_size"] += st["upg"]["mag"] * 2
+            st["ammo"] = min(st["ammo"], st["mag_size"])
+            self._spawn_wave(st, 1)
+            self.sessions["doom_user"] = st
             asyncio.create_task(self.game_loop(call))
         except Exception:
             err = traceback.format_exc()
@@ -767,6 +921,15 @@ class Doom(loader.Module):
         try:
             sv = self.db.get("Doom", "save", None)
             if sv:
+                sv.setdefault("credits", 0)
+                sv.setdefault("wave", 1)
+                sv.setdefault("upg", {"damage": 0, "armor": 0, "med": 0, "mag": 0})
+                sv.setdefault("ach", set())
+                if isinstance(sv.get("ach"), list):
+                    sv["ach"] = set(sv["ach"])
+                sv.setdefault("new_ach", "")
+                sv.setdefault("daily", False)
+                sv.setdefault("enemies", {})
                 sv["running"] = True
                 sv["dirty"] = True
                 sv["log"] = self._tr("loaded", sv)
@@ -783,14 +946,16 @@ class Doom(loader.Module):
     async def action_save(self, call):
         st = self.sessions.get("doom_user")
         if st:
-            sv = st.copy()
+            sv = self._snapshot_state(st)
             sv["running"] = False
             self.db.set("Doom", "save", sv)
+            self._sync_achievements_to_profile(st)
             st["log"] = self._tr("saved", st)
             st["dirty"] = True
 
     async def action_exit(self, call):
         if "doom_user" in self.sessions:
+            self._sync_achievements_to_profile(self.sessions["doom_user"])
             self.sessions["doom_user"]["running"] = False
             del self.sessions["doom_user"]
         await self.safe_edit(call, self._tr("game_closed"), [[{"text": self._tr("back"), "callback": self.action_main_menu}]])
@@ -798,11 +963,98 @@ class Doom(loader.Module):
     async def action_records(self, call):
         p = self._profile()
         acc = round((p["hits"] / p["shots"] * 100.0), 1) if p["shots"] else 0.0
-        text = self._tr("profile", gp=p["games"], tk=p["total_kills"], td=p["deaths"], bs=p["best_score"], sh=p["shots"], hh=p["hits"], acc=acc)
+        ach = p.get("achievements", [])
+        text = self._tr(
+            "profile",
+            gp=p["games"],
+            tk=p["total_kills"],
+            td=p["deaths"],
+            bs=p["best_score"],
+            sh=p["shots"],
+            hh=p["hits"],
+            acc=acc,
+            db=p.get("daily_best", 0),
+            ac=len(ach),
+        )
+        if ach:
+            text += "\n\n" + self._tr("ach_title") + "\n" + "\n".join(f"• {x}" for x in ach[-8:])
         btn = [[{"text": self._tr("back"), "callback": self.action_main_menu}]]
         if "doom_user" in self.sessions and self.sessions["doom_user"].get("running"):
             btn.insert(0, [{"text": self._tr("in_game", self.sessions["doom_user"]), "callback": self.action_refresh_game}])
         await self.safe_edit(call, text, btn)
+
+    async def action_daily_run(self, call):
+        p = self._profile()
+        today = self._today_key()
+        if p.get("daily_last") == today:
+            await self.safe_edit(call, self._tr("daily_cooldown"), [[{"text": self._tr("back"), "callback": self.action_main_menu}]])
+            return
+        random.seed(int(today.replace("-", "")))
+        await self._start_game(call, "hard")
+        st = self.sessions.get("doom_user")
+        if st:
+            st["daily"] = True
+            st["log"] = self._tr("daily_started", st)
+            st["dirty"] = True
+
+    async def action_shop(self, call):
+        st = self.sessions.get("doom_user")
+        if not st or st["hp"] <= 0:
+            await self._show_menu(call)
+            return
+        c = st["credits"]
+        text = self._tr("shop_title", st, c=c)
+        dmg = 1 + st["upg"]["damage"] * 0.12
+        btn = [
+            [{"text": f"{self._tr('upgrade_damage', st, v=int((dmg-1)*100))} | 25", "callback": self.action_buy_damage}],
+            [{"text": f"{self._tr('upgrade_armor', st, v=5)} | 20", "callback": self.action_buy_armor}],
+            [{"text": f"{self._tr('upgrade_med', st)} | 30", "callback": self.action_buy_med}],
+            [{"text": f"{self._tr('upgrade_mag', st, v=2)} | 22", "callback": self.action_buy_mag}],
+            [{"text": self._tr("back", st), "callback": self.action_refresh_game}],
+        ]
+        await self.safe_edit(call, text, btn)
+
+    async def _buy_upgrade(self, call, key, cost, max_lvl):
+        st = self.sessions.get("doom_user")
+        if not st or st["hp"] <= 0:
+            return
+        lvl = st["upg"].get(key, 0)
+        if lvl >= max_lvl:
+            st["log"] = self._tr("buy_max", st)
+            st["dirty"] = True
+            await self.action_shop(call)
+            return
+        if st["credits"] < cost:
+            st["log"] = self._tr("buy_no", st)
+            st["dirty"] = True
+            await self.action_shop(call)
+            return
+        st["credits"] -= cost
+        st["upg"][key] = lvl + 1
+        if key == "armor":
+            st["armor"] = min(100, st["armor"] + 5)
+        elif key == "med":
+            st["medkits"] += 1
+        elif key == "mag":
+            st["mag_size"] += 2
+            st["ammo"] += 2
+        st["log"] = self._tr("buy_ok", st, n=key)
+        st["dirty"] = True
+        if sum(st["upg"].values()) >= 6:
+            self._unlock_achievement(st, "engineer", "Doom Engineer")
+        await self.action_shop(call)
+
+    async def action_buy_damage(self, call):
+        await self._buy_upgrade(call, "damage", 25, 6)
+
+    async def action_buy_armor(self, call):
+        await self._buy_upgrade(call, "armor", 20, 8)
+
+    async def action_buy_med(self, call):
+        await self._buy_upgrade(call, "med", 30, 4)
+
+    async def action_buy_mag(self, call):
+        await self._buy_upgrade(call, "mag", 22, 6)
 
     async def action_help(self, call):
         pref = getattr(self, "get_prefix", lambda: ".")()
