@@ -17,7 +17,7 @@
 # meta developer: @GoyModules
 # requires: aiohttp
 
-__version__ = (2, 4)
+__version__ = (2, 4, 5)
 import re
 import aiohttp
 import asyncio
@@ -1567,6 +1567,7 @@ class KeyScanner(loader.Module):
                     f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}",
                     json=payload, timeout=5,
                 ) as r:
+                    # Explicitly check for 200 OK. 403 means permission denied (invalid key or bad region).
                     return "Gemini", r.status == 200
 
             elif key.startswith("sk-ant-"):
@@ -1620,6 +1621,14 @@ class KeyScanner(loader.Module):
                         if r.status == 200:
                             data = await r.json()
                             if data.get("data"):
+                                # Check for codex quota (code-davinci-002 or completions endpoint viability)
+                                try:
+                                    payload = {"model": "gpt-3.5-turbo-instruct", "prompt": "hi", "max_tokens": 1}
+                                    async with session.post("https://api.openai.com/v1/completions", headers=headers, json=payload, timeout=4) as cr:
+                                        if cr.status == 429: # Quota exceeded
+                                            return "OpenAI", False
+                                except Exception:
+                                    pass
                                 return "OpenAI", True
                 except Exception:
                     pass
@@ -1743,6 +1752,19 @@ class KeyScanner(loader.Module):
 
             if provider == "OpenAI" or (key.startswith("sk-") and not key.startswith(("sk-or-v1-", "sk-ant-"))):
                 tier = self._openai_tier_from_models(models)
+                # Try to get balance via usage API
+                try:
+                    async with session.get("https://api.openai.com/v1/dashboard/billing/credit_grants", headers=headers, timeout=5) as r:
+                        if r.status == 200:
+                            d = await r.json()
+                            total = d.get("total_granted", 0)
+                            used = d.get("total_used", 0)
+                            bal = total - used
+                            if bal > 0:
+                                return f"paid (${bal:.2f})"
+                except Exception:
+                    pass
+                
                 if tier:
                     return tier
                 async with session.get("https://api.openai.com/v1/models", headers=headers, timeout=5) as r:
@@ -1779,7 +1801,14 @@ class KeyScanner(loader.Module):
                     if r.status == 200:
                         d       = await r.json()
                         credits = d.get("data", {}).get("limit", None)
+                        usage = d.get("data", {}).get("usage", 0)
                         is_free = d.get("data", {}).get("is_free_tier", True)
+                        
+                        if credits is not None and usage is not None:
+                            balance = credits - usage
+                            if balance > 0:
+                                return f"paid (${balance:.2f})"
+                        
                         return "paid" if (not is_free or (credits and credits > 1)) else "free"
 
             elif provider == "Stripe" or key.startswith("sk_live_"):
