@@ -17,7 +17,7 @@
 # meta developer: @GoyModules
 # requires: aiohttp
 
-__version__ = (2, 4, 6)
+__version__ = (2, 4, 7)
 import re
 import aiohttp
 import asyncio
@@ -1034,9 +1034,10 @@ class KeyScanner(loader.Module):
         names = self._model_names_normalized(models)
         if not names:
             return None
-        free_only = ("omni-moderation", "text-moderation")
-        billable = [name for name in names if not any(name.startswith(prefix) for prefix in free_only)]
-        if billable:
+        # Models that are heavily restricted or typically indicate paid API access
+        paid_markers = {"gpt-4", "gpt-4-32k", "gpt-5.5"}
+        has_paid = any(any(m.startswith(marker) for marker in paid_markers) for m in names)
+        if has_paid:
             return "paid"
         return "free"
 
@@ -1571,13 +1572,10 @@ class KeyScanner(loader.Module):
                     return "Gemini", r.status == 200
 
             elif key.startswith("sk-ant-"):
-                ant_h = {"x-api-key": key, "anthropic-version": "2023-06-01"}
-                async with session.get("https://api.anthropic.com/v1/models",
-                                       headers=ant_h, timeout=5) as r:
-                    if r.status == 200:
-                        data = await r.json()
-                        return "Anthropic", bool(data.get("data"))
-                    return "Anthropic", False
+                ant_h = {"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
+                payload = {"model": "claude-3-haiku-20240307", "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]}
+                async with session.post("https://api.anthropic.com/v1/messages", headers=ant_h, json=payload, timeout=5) as r:
+                    return "Anthropic", r.status != 401
 
             elif key.startswith("hf_"):
                 async with session.get("https://huggingface.co/api/whoami-v2", headers=headers, timeout=5) as r:
@@ -1746,9 +1744,19 @@ class KeyScanner(loader.Module):
         models = models or []
         try:
             if provider == "Gemini" or key.startswith("AIza"):
-                if any(re.search(r"(veo|lyria|computer-use|imagen|2\.5-pro|3-pro|preview|experimental|thinking|ultra)", m, re.I) for m in models):
-                    return "paid"
-                return "unknown"
+                # Also do a live check if model list is empty
+                paid_status = "unknown"
+                if any(re.search(r"(veo|lyria|computer-use|imagen|2\\.5-pro|3-pro|preview|experimental|thinking|ultra)", m, re.I) for m in models):
+                    paid_status = "paid"
+                else:
+                    # Send a test to gemini-3.1-pro-preview
+                    payload = {"contents": [{"parts": [{"text": "hi"}]}]}
+                    async with session.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={key}", json=payload, timeout=5) as r:
+                        if r.status == 200:
+                            paid_status = "paid"
+                        else:
+                            paid_status = "free"
+                return paid_status
 
             if provider == "OpenAI" or (key.startswith("sk-") and not key.startswith(("sk-or-v1-", "sk-ant-"))):
                 tier = self._openai_tier_from_models(models)
@@ -1816,6 +1824,18 @@ class KeyScanner(loader.Module):
                         return "paid" if total > 0 else "free"
 
             elif provider in ("Gemini",) or key.startswith("AIza"):
+                return "unknown"
+
+            elif provider == "HuggingFace" or key.startswith("hf_"):
+                async with session.get("https://huggingface.co/api/whoami-v2", headers=headers, timeout=5) as r:
+                    if r.status == 200:
+                        d = await r.json()
+                        name = d.get("name", "unknown")
+                        is_pro = d.get("isPro", False)
+                        role = d.get("role", "")
+                        if is_pro or role.upper() == "PRO":
+                            return f"paid ({name})"
+                        return f"free ({name})"
                 return "unknown"
 
             elif provider == "Groq" or key.startswith("gsk_"):
