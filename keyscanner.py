@@ -17,7 +17,7 @@
 # meta developer: @GoyModules
 # requires: aiohttp
 
-__version__ = (2, 4, 8)
+__version__ = (2, 4, 9)
 import re
 import aiohttp
 import asyncio
@@ -312,7 +312,7 @@ class KeyScanner(loader.Module):
         "btn_check_single": "🔃 Проверить",
         "btn_del_single":   "🗑 Удалить",
         "btn_models_single": "📚 Модели ({count})",
-        "btn_refresh_balance": "💰 Refresh Balance",
+        "btn_refresh_balance": "💰 Обновить баланс",
         "key_models_title": f"{E_LIST} <b>Модели для {{provider}}</b> · {{count}}\n\n{{models}}",
         "quota_unknown": "—",
         "quota_refreshing": f"{E_SYNC} <b>Обновляю баланс ключа...</b>",
@@ -617,7 +617,12 @@ class KeyScanner(loader.Module):
         return int(time.time())
 
     def _normalize_tier(self, tier: str | None) -> str:
-        return tier if tier in {"paid", "free"} else "unknown"
+        tier = str(tier or "").strip().lower()
+        if tier.startswith("paid"):
+            return "paid"
+        if tier.startswith("free"):
+            return "free"
+        return "unknown"
 
     def _record_key_meta(self, key: str, provider: str, source_chat_id=None, via: str | None = None, models=None, tier: str | None = None):
         meta = self._key_meta.setdefault(key, {})
@@ -1044,12 +1049,53 @@ class KeyScanner(loader.Module):
         if quota.get("kind") == "unsupported":
             return self.strings["quota_unsupported"]
         if quota.get("kind") == "error":
+            message = quota.get("message")
+            if message:
+                return f"{self.strings['quota_error']}: <code>{html.escape(str(message))}</code>"
             return self.strings["quota_error"]
         return self.strings["quota_unknown"]
 
     def _quota_text(self, key: str):
         meta = self._key_meta.get(key, {}) if isinstance(getattr(self, "_key_meta", None), dict) else {}
         return self._format_quota(meta.get("quota"))
+
+    def _short_api_error(self, text: str) -> str:
+        text = re.sub(r"\s+", " ", str(text or "")).strip()
+        low = text.lower()
+        if "credit balance is too low" in low:
+            return "billing: credit balance is too low"
+        if "insufficient_quota" in low or "quota" in low:
+            return "quota/billing error"
+        return text[:96] if text else self.strings["quota_error"]
+
+    async def _anthropic_messages_probe(self, session, key: str):
+        headers = {
+            "x-api-key": key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        }
+        last_headers = {}
+        last_text = ""
+        for model in ("claude-3-5-haiku-latest", "claude-3-haiku-20240307"):
+            payload = {
+                "model": model,
+                "max_tokens": 1,
+                "messages": [{"role": "user", "content": "hi"}],
+            }
+            async with session.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=8) as r:
+                if r.status == 200:
+                    return True, r.headers, ""
+                last_headers = r.headers
+                last_text = await r.text()
+                if "model" not in last_text.lower() and "not_found" not in last_text.lower():
+                    break
+        return False, last_headers, last_text
+
+    def _hf_has_zerogpu(self, data: dict) -> bool:
+        if data.get("isPro") or str(data.get("role", "")).upper() == "PRO":
+            return True
+        blob = json.dumps(data, ensure_ascii=False).lower()
+        return any(token in blob for token in ("zerogpu", "zero_gpu", "zero-gpu"))
 
     async def _fetch_key_quota(self, session, key: str, provider: str):
         try:
@@ -1078,6 +1124,29 @@ class KeyScanner(loader.Module):
             if provider == "Gemini":
                 async with session.get(f"https://generativelanguage.googleapis.com/v1beta/models?key={key}", timeout=8) as r:
                     return self._quota_from_headers(provider, r.headers) or {"kind": "unsupported", "checked_at": self._now_ts()}
+
+            if provider == "Anthropic" or key.startswith("sk-ant-"):
+                ok, headers, err = await self._anthropic_messages_probe(session, key)
+                quota = self._quota_from_headers(provider, headers)
+                if ok:
+                    return quota or {"kind": "usage", "provider": provider, "checked_at": self._now_ts(), "usage": "messages ok", "limit": "—", "left": "—"}
+                return {"kind": "error", "provider": provider, "checked_at": self._now_ts(), "message": self._short_api_error(err)}
+
+            if provider == "HuggingFace" or key.startswith("hf_"):
+                headers = {"Authorization": f"Bearer {key}"}
+                async with session.get("https://huggingface.co/api/whoami-v2", headers=headers, timeout=8) as r:
+                    if r.status != 200:
+                        return {"kind": "error", "provider": provider, "checked_at": self._now_ts(), "message": f"whoami-v2 {r.status}"}
+                    data = await r.json()
+                    has_zero = self._hf_has_zerogpu(data)
+                    return {
+                        "kind": "usage",
+                        "provider": provider,
+                        "checked_at": self._now_ts(),
+                        "usage": "ZeroGPU yes" if has_zero else "ZeroGPU no",
+                        "limit": "—",
+                        "left": "—",
+                    }
 
             base = self._provider_model_base(provider)
             if base:
@@ -1636,6 +1705,8 @@ class KeyScanner(loader.Module):
         tier = await self._check_paid(session, key, provider, models=models)
         if tier in (None, "unknown"):
             tier = self._tier_from_models(provider, models) or "unknown"
+        tier = self._normalize_tier(tier)
+        quota = await self._fetch_key_quota(session, key, provider)
         self._keys[key] = provider
         self._paid_status[key] = tier
         if models:
@@ -1643,6 +1714,10 @@ class KeyScanner(loader.Module):
         else:
             self._ensure_model_cache().pop(key, None)
         self._record_key_meta(key, provider, source_chat_id, via=via, models=models, tier=tier)
+        meta = self._key_meta.setdefault(key, {})
+        meta["quota"] = quota
+        meta["valid"] = True
+        meta["validated_at"] = self._now_ts()
         await self._handle_new_key(key, provider, source_chat_id, via=via)
 
     async def _handle_new_key(self, key: str, provider: str, source_chat_id, via: str = "message"):
@@ -1707,10 +1782,8 @@ class KeyScanner(loader.Module):
                     return "Gemini", r.status == 200
 
             elif key.startswith("sk-ant-"):
-                ant_h = {"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
-                payload = {"model": "claude-3-haiku-20240307", "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]}
-                async with session.post("https://api.anthropic.com/v1/messages", headers=ant_h, json=payload, timeout=5) as r:
-                    return "Anthropic", r.status != 401
+                ok, _, _ = await self._anthropic_messages_probe(session, key)
+                return "Anthropic", ok
 
             elif key.startswith("hf_"):
                 async with session.get("https://huggingface.co/api/whoami-v2", headers=headers, timeout=5) as r:
@@ -1917,21 +1990,8 @@ class KeyScanner(loader.Module):
                     return "unknown"
 
             elif provider == "Anthropic" or key.startswith("sk-ant-"):
-                tier = self._anthropic_tier_from_models(models)
-                ant_h = {"x-api-key": key, "anthropic-version": "2023-06-01"}
-                async with session.get("https://api.anthropic.com/v1/models",
-                                       headers=ant_h, timeout=5) as r:
-                    if r.status == 200:
-                        d = await r.json()
-                        return self._anthropic_tier_from_models([item.get("id") for item in d.get("data", [])]) or "unknown"
-                async with session.get("https://api.anthropic.com/v1/organizations",
-                                       headers=ant_h, timeout=5) as r:
-                    if r.status == 200:
-                        d = await r.json()
-                        for org in d.get("data", []):
-                            if org.get("billing_type", "") not in ("free_tier", ""):
-                                return "paid"
-                        return tier or "free"
+                ok, _, _ = await self._anthropic_messages_probe(session, key)
+                return "paid" if ok else "unknown"
 
             elif provider == "OpenRouter" or key.startswith("sk-or-v1-"):
                 tier = self._openrouter_tier_from_models(models)
@@ -1965,12 +2025,7 @@ class KeyScanner(loader.Module):
                 async with session.get("https://huggingface.co/api/whoami-v2", headers=headers, timeout=5) as r:
                     if r.status == 200:
                         d = await r.json()
-                        name = d.get("name", "unknown")
-                        is_pro = d.get("isPro", False)
-                        role = d.get("role", "")
-                        if is_pro or role.upper() == "PRO":
-                            return f"paid ({name})"
-                        return f"free ({name})"
+                        return "paid" if self._hf_has_zerogpu(d) else "free"
                 return "unknown"
 
             elif provider == "Groq" or key.startswith("gsk_"):
@@ -2017,7 +2072,7 @@ class KeyScanner(loader.Module):
         "btn_check_single": "🔃 Перевірити",
         "btn_del_single":   "🗑 Видалити",
         "btn_models_single": "📚 Моделі ({count})",
-        "btn_refresh_balance": "💰 Refresh Balance",
+        "btn_refresh_balance": "💰 Оновити баланс",
         "key_models_title": f"{E_LIST} <b>Моделі для {{provider}}</b> · {{count}}\n\n{{models}}",
         "quota_unknown": "—",
         "quota_refreshing": f"{E_SYNC} <b>Оновлюю баланс ключа...</b>",
@@ -2097,7 +2152,7 @@ class KeyScanner(loader.Module):
         "btn_check_single": "🔃 Prüfen",
         "btn_del_single":   "🗑 Löschen",
         "btn_models_single": "📚 Modelle ({count})",
-        "btn_refresh_balance": "💰 Refresh Balance",
+        "btn_refresh_balance": "💰 Guthaben aktualisieren",
         "key_models_title": f"{E_LIST} <b>Modelle für {{provider}}</b> · {{count}}\n\n{{models}}",
         "quota_unknown": "—",
         "quota_refreshing": f"{E_SYNC} <b>Key-Balance wird aktualisiert...</b>",
@@ -2179,7 +2234,7 @@ class KeyScanner(loader.Module):
         "btn_check_single": "🔃 検証",
         "btn_del_single":   "🗑 削除",
         "btn_models_single": "📚 モデル ({count})",
-        "btn_refresh_balance": "💰 Refresh Balance",
+        "btn_refresh_balance": "💰 残高更新",
         "key_models_title": f"{E_LIST} <b>{{provider}} のモデル</b> · {{count}}\n\n{{models}}",
         "quota_unknown": "—",
         "quota_refreshing": f"{E_SYNC} <b>キー残高を更新中...</b>",
@@ -2408,7 +2463,7 @@ class KeyScanner(loader.Module):
         "btn_check_single": "🔃 чекнуть",
         "btn_del_single":   "🗑 делитнуть",
         "btn_models_single": "📚 модели ({count})",
-        "btn_refresh_balance": "💰 Refresh Balance",
+        "btn_refresh_balance": "💰 рефреш баланса",
         "key_models_title": f"{E_LIST} <b>модели {{provider}}</b> · {{count}}\n\n{{models}}",
         "quota_unknown": "—",
         "quota_refreshing": f"{E_SYNC} <b>рефрешу баланс кея...</b>",
@@ -2568,7 +2623,7 @@ class KeyScanner(loader.Module):
         "btn_check_single": "🔃 check",
         "btn_del_single":   "🗑 dewete",
         "btn_models_single": "📚 modews ({count})",
-        "btn_refresh_balance": "💰 Refresh Balance",
+        "btn_refresh_balance": "💰 wefwesh bawance",
         "key_models_title": f"{E_LIST} <b>modews for {{provider}}</b> · {{count}}\n\n{{models}}",
         "quota_unknown": "—",
         "quota_refreshing": f"{E_SYNC} <b>wefweshing key bawance...</b>",
@@ -3018,16 +3073,27 @@ class KeyScanner(loader.Module):
         await call.edit(text=self.strings["quota_refreshing"])
         async with aiohttp.ClientSession() as session:
             try:
+                prov, ok = await self._validate_key(session, k)
+                self._keys[k] = prov
+                meta = self._key_meta.setdefault(k, {})
+                meta["valid"] = ok
+                meta["validated_at"] = self._now_ts()
+                if not ok:
+                    self._paid_status[k] = "unknown"
+                    meta["quota"] = {"kind": "error", "provider": prov, "checked_at": self._now_ts(), "message": "real request failed"}
+                    self._save()
+                    return await self.ks_key_menu(call, idx, hidden, page, filter_mode, sort_mode)
                 models = await self._discover_models(session, k, prov)
                 if models:
                     models = self._sort_models(prov, models)
                     self._ensure_model_cache()[k] = models
+                else:
+                    self._ensure_model_cache().pop(k, None)
                 tier = await self._check_paid(session, k, prov, models=self._ensure_model_cache().get(k, []))
                 if not tier or tier == "unknown":
                     tier = self._tier_from_models(prov, self._ensure_model_cache().get(k, [])) or "unknown"
                 self._paid_status[k] = self._normalize_tier(tier)
                 quota = await self._fetch_key_quota(session, k, prov)
-                meta = self._key_meta.setdefault(k, {})
                 meta["quota"] = quota
                 meta["provider"] = prov
                 meta["tier"] = self._normalize_tier(tier)
@@ -3044,6 +3110,25 @@ class KeyScanner(loader.Module):
         k = all_keys[idx]
         async with aiohttp.ClientSession() as session:
             prov, ok = await self._validate_key(session, k)
+            if prov != "Unknown":
+                self._keys[k] = prov
+            meta = self._key_meta.setdefault(k, {})
+            meta["valid"] = ok
+            meta["validated_at"] = self._now_ts()
+            if ok:
+                models = await self._discover_models(session, k, prov)
+                if models:
+                    self._ensure_model_cache()[k] = self._sort_models(prov, models)
+                tier = await self._check_paid(session, k, prov, models=self._ensure_model_cache().get(k, []))
+                if tier in (None, "unknown"):
+                    tier = self._tier_from_models(prov, self._ensure_model_cache().get(k, [])) or "unknown"
+                self._paid_status[k] = self._normalize_tier(tier)
+                self._record_key_meta(k, prov, models=self._ensure_model_cache().get(k, []), tier=tier)
+                self._key_meta.setdefault(k, {})["quota"] = await self._fetch_key_quota(session, k, prov)
+            else:
+                self._paid_status[k] = "unknown"
+                meta["quota"] = {"kind": "error", "provider": prov, "checked_at": self._now_ts(), "message": "real request failed"}
+        self._save()
         status = self.strings["status_valid"] if ok else self.strings["status_invalid"]
         await call.edit(
             text=self.strings["check_res_single"].format(provider=prov, status=status),
@@ -3089,13 +3174,23 @@ class KeyScanner(loader.Module):
                         tier = await self._check_paid(session, k, prov, models=model_cache.get(k, []))
                         if tier in (None, "unknown"):
                             tier = self._tier_from_models(prov, model_cache.get(k, [])) or "unknown"
+                        tier = self._normalize_tier(tier)
                         self._paid_status[k] = tier
                         self._record_key_meta(k, prov, models=model_cache.get(k, []), tier=tier)
+                        meta = self._key_meta.setdefault(k, {})
+                        meta["valid"] = True
+                        meta["validated_at"] = self._now_ts()
+                        meta["quota"] = await self._fetch_key_quota(session, k, prov)
                     except Exception:
                         pass
                 else:
                     invalid_c += 1
                     self._invalid_keys_cache.append(k)
+                    meta = self._key_meta.setdefault(k, {})
+                    meta["valid"] = False
+                    meta["validated_at"] = self._now_ts()
+                    meta["quota"] = {"kind": "error", "provider": prov, "checked_at": self._now_ts(), "message": "real request failed"}
+                    self._paid_status[k] = "unknown"
         self._save()
         stats_str = "".join(
             f"<b>[{p}]:</b> {s['total']} | {s['valid']} valid\n"
@@ -3330,6 +3425,24 @@ class KeyScanner(loader.Module):
         paid = free = unknown = done = 0
         async with aiohttp.ClientSession() as session:
             for key, prov in list(self._keys.items()):
+                real_prov, ok = await self._validate_key(session, key)
+                if real_prov != "Unknown":
+                    prov = real_prov
+                    self._keys[key] = prov
+                meta = self._key_meta.setdefault(key, {})
+                meta["valid"] = ok
+                meta["validated_at"] = self._now_ts()
+                if not ok:
+                    self._paid_status[key] = "unknown"
+                    meta["quota"] = {"kind": "error", "provider": prov, "checked_at": self._now_ts(), "message": "real request failed"}
+                    unknown += 1
+                    done += 1
+                    if done % 5 == 0:
+                        try:
+                            await call.edit(text=self.strings["sorting"].format(done=done, total=total))
+                        except Exception:
+                            pass
+                    continue
                 models = await self._discover_models(session, key, prov)
                 if models:
                     self._ensure_model_cache()[key] = self._sort_models(prov, models)
@@ -3339,8 +3452,10 @@ class KeyScanner(loader.Module):
                 status = await self._check_paid(session, key, prov, models=sorted_models)
                 if status == "unknown":
                     status = self._tier_from_models(prov, sorted_models) or "unknown"
+                status = self._normalize_tier(status)
                 self._paid_status[key] = status
                 self._record_key_meta(key, prov, models=sorted_models, tier=status)
+                self._key_meta.setdefault(key, {})["quota"] = await self._fetch_key_quota(session, key, prov)
                 if status == "paid":   paid    += 1
                 elif status == "free": free    += 1
                 else:                  unknown += 1
