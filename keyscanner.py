@@ -17,7 +17,7 @@
 # meta developer: @GoyModules
 # requires: aiohttp
 
-__version__ = (2, 4, 9)
+__version__ = (2, 5, 0)
 import re
 import aiohttp
 import asyncio
@@ -176,6 +176,7 @@ class KeyScanner(loader.Module):
             f"{E_BELL} Capture: chat <b>{{auto_chat}}</b> · global <b>{{auto_global}}</b>\n"
             f"{E_FOLD} Files <b>{{file_scan}}</b> · edits <b>{{edit_scan}}</b> · notify <b>{{notify_new_keys}}</b>\n"
             f"{E_LIST} View: compact <b>{{compact}}</b> · hide keys <b>{{auto_hide}}</b>\n"
+            f"{E_COPY} Premium emoji <b>{{premium_emoji}}</b> · color buttons <b>{{color_buttons}}</b>\n"
             f"{E_RIGHT} Page size <b>{{page_size}}</b> · default sort <b>{{default_sort}}</b>\n"
             f"{E_LINK} Logs: <b>{{log_mode}}</b>\n{{log_target_line}}"
         ),
@@ -191,6 +192,8 @@ class KeyScanner(loader.Module):
             f"{E_LIST} <b>View Settings</b>\n\n"
             f"Compact list: <b>{{compact}}</b>\n"
             f"Auto-hide keys: <b>{{auto_hide}}</b>\n"
+            f"Premium emoji: <b>{{premium_emoji}}</b>\n"
+            f"Color buttons: <b>{{color_buttons}}</b>\n"
             f"Page size: <b>{{page_size}}</b>\n"
             f"Default sort: <b>{{default_sort}}</b>"
         ),
@@ -210,6 +213,8 @@ class KeyScanner(loader.Module):
         "btn_cycle_page_size": "↕️ Page Size",
         "btn_cycle_default_sort": "🧭 Default Sort",
         "btn_toggle_autohide": "🙈 Auto-Hide Key",
+        "btn_toggle_premium_emoji": "© Premium Emoji",
+        "btn_toggle_color_buttons": "🎨 Color Buttons",
         "btn_open_list": "📝 Open List",
         "btn_open_export": "⬇️ Export",
         "state_on": "ON",
@@ -375,6 +380,7 @@ class KeyScanner(loader.Module):
             f"{E_BELL} Ловля: чат <b>{{auto_chat}}</b> · global <b>{{auto_global}}</b>\n"
             f"{E_FOLD} Файлы <b>{{file_scan}}</b> · правки <b>{{edit_scan}}</b> · уведомления <b>{{notify_new_keys}}</b>\n"
             f"{E_LIST} Вид: compact <b>{{compact}}</b> · скрытие ключей <b>{{auto_hide}}</b>\n"
+            f"{E_COPY} Премиум эмодзи <b>{{premium_emoji}}</b> · цветные кнопки <b>{{color_buttons}}</b>\n"
             f"{E_RIGHT} Размер страницы <b>{{page_size}}</b> · сортировка по умолчанию <b>{{default_sort}}</b>\n"
             f"{E_LINK} Логи: <b>{{log_mode}}</b>\n{{log_target_line}}"
         ),
@@ -390,6 +396,8 @@ class KeyScanner(loader.Module):
             f"{E_LIST} <b>Настройки отображения</b>\n\n"
             f"Компактный список: <b>{{compact}}</b>\n"
             f"Автоскрытие ключей: <b>{{auto_hide}}</b>\n"
+            f"Премиум эмодзи: <b>{{premium_emoji}}</b>\n"
+            f"Цветные кнопки: <b>{{color_buttons}}</b>\n"
             f"Размер страницы: <b>{{page_size}}</b>\n"
             f"Сортировка по умолчанию: <b>{{default_sort}}</b>"
         ),
@@ -409,6 +417,8 @@ class KeyScanner(loader.Module):
         "btn_cycle_page_size": "↕️ Размер страницы",
         "btn_cycle_default_sort": "🧭 Сортировка",
         "btn_toggle_autohide": "🙈 Скрывать ключ",
+        "btn_toggle_premium_emoji": "© Премиум эмодзи",
+        "btn_toggle_color_buttons": "🎨 Цветные кнопки",
         "btn_open_list": "📝 Открыть список",
         "btn_open_export": "⬇️ Экспорт",
         "state_on": "ON",
@@ -513,6 +523,8 @@ class KeyScanner(loader.Module):
             "list_page_size": 5,
             "default_sort": "recent",
             "auto_hide_keys": True,
+            "premium_emoji": True,
+            "color_buttons": True,
             "log_target": {
                 "chat_id": None,
                 "thread_id": None,
@@ -922,7 +934,7 @@ class KeyScanner(loader.Module):
         progress_key = "global_scanning" if global_mode else "scanning"
         source = "Global Scan" if global_mode else getattr(message.to_id, "chat_id", "ScanLLM")
         via = "global" if global_mode else "scan"
-        msg = await utils.answer(message, self.strings[progress_key].format(limit=limit))
+        msg = await self._answer(message, self.strings[progress_key].format(limit=limit))
         found = set()
 
         for query in self.search_queries:
@@ -954,19 +966,54 @@ class KeyScanner(loader.Module):
                         await self._register_key(session, key, prov, source, via=via)
             self._save()
 
-        await utils.answer(msg, self.strings["found"].format(valid_count=valid_count))
+        await self._answer(msg, self.strings["found"].format(valid_count=valid_count))
 
     def _style(self, kind: str | None):
+        if not self._settings.get("color_buttons", True):
+            return None
         return {"danger": "danger", "success": "success", "primary": "primary"}.get(kind or "", None)
 
     def _btn(self, text: str, callback, args=None, style: str | None = None):
-        btn = {"text": text, "callback": callback}
+        btn = {"text": self._ui_text(text), "callback": callback}
         if args is not None:
             btn["args"] = args
         btn_style = self._style(style)
         if btn_style:
             btn["style"] = btn_style
         return btn
+
+    def _ui_text(self, text):
+        if not isinstance(text, str):
+            return text
+        if self._settings.get("premium_emoji", True):
+            return text
+        return re.sub(r"<tg-emoji\b[^>]*>(.*?)</tg-emoji>", r"\1", text, flags=re.S)
+
+    def _ui_markup(self, markup):
+        if markup is None:
+            return None
+        if isinstance(markup, list):
+            return [self._ui_markup(item) for item in markup]
+        if isinstance(markup, dict):
+            item = dict(markup)
+            if "text" in item:
+                item["text"] = self._ui_text(item["text"])
+            if not self._settings.get("color_buttons", True):
+                item.pop("style", None)
+            return item
+        return markup
+
+    async def _answer(self, message, text, **kwargs):
+        if "reply_markup" in kwargs:
+            kwargs["reply_markup"] = self._ui_markup(kwargs["reply_markup"])
+        return await utils.answer(message, self._ui_text(text), **kwargs)
+
+    async def _edit(self, call, *, text=None, reply_markup=None, **kwargs):
+        if text is not None:
+            kwargs["text"] = self._ui_text(text)
+        if reply_markup is not None:
+            kwargs["reply_markup"] = self._ui_markup(reply_markup)
+        return await call.edit(**kwargs)
 
     def _models_text(self, models, limit: int = 5, provider: str | None = None):
         models = [m for m in dict.fromkeys(models or []) if m]
@@ -1413,7 +1460,7 @@ class KeyScanner(loader.Module):
                     CreateForumTopicRequest(
                         peer=entity,
                         title=title,
-                        icon_emoji_id=WATERMELON_EMOJI_ID if getattr(getattr(self.client, "heroku_me", None), "premium", False) else None,
+                        icon_emoji_id=WATERMELON_EMOJI_ID if self._settings.get("premium_emoji", True) and getattr(getattr(self.client, "heroku_me", None), "premium", False) else None,
                     )
                 )
                 thread_id = create_result.updates[0].id
@@ -1448,7 +1495,8 @@ class KeyScanner(loader.Module):
             
             WATERMELON_EMOJI_ID = 5431815664017161984
             if (
-                getattr(getattr(self.client, "heroku_me", None), "premium", False)
+                self._settings.get("premium_emoji", True)
+                and getattr(getattr(self.client, "heroku_me", None), "premium", False)
                 and getattr(topic, "icon_emoji_id", None) != WATERMELON_EMOJI_ID
             ):
                 try:
@@ -1551,7 +1599,7 @@ class KeyScanner(loader.Module):
 
         if mode == "saved":
             try:
-                await self.client.send_message("me", text, parse_mode="html")
+                await self.client.send_message("me", self._ui_text(text), parse_mode="html")
             except Exception:
                 pass
             return
@@ -1577,7 +1625,7 @@ class KeyScanner(loader.Module):
             try:
                 await self.client.send_message(
                     chat_ref,
-                    text,
+                    self._ui_text(text),
                     parse_mode="html",
                     reply_to=thread_id,
                 )
@@ -1600,7 +1648,7 @@ class KeyScanner(loader.Module):
             if thread_id:
                 kwargs["reply_to"] = thread_id
             try:
-                await self.client.send_message(chat_ref, text, **kwargs)
+                await self.client.send_message(chat_ref, self._ui_text(text), **kwargs)
             except Exception:
                 pass
             return
@@ -2114,6 +2162,8 @@ class KeyScanner(loader.Module):
         "sorting":       f"{E_SYNC} <b>Сортування платні/безкоштовні...</b>\n{{done}}/{{total}}",
         "sort_done":     f"{E_OK} <b>Сортування завершено!</b>\n\n{E_CARD} <b>Платних:</b> {{paid}}\n{E_BATT} <b>Безкоштовних:</b> {{free}}\n❓ <b>Невідомо:</b> {{unknown}}",
         "deleted_filter": f"{E_TRASH} Видалено <b>{{count}}</b> ключів.",
+        "btn_toggle_premium_emoji": "© Преміум емодзі",
+        "btn_toggle_color_buttons": "🎨 Кольорові кнопки",
     }
 
     strings_de = {
@@ -2194,6 +2244,8 @@ class KeyScanner(loader.Module):
         "sorting":       f"{E_SYNC} <b>Sortiere bezahlt/kostenlos...</b>\n{{done}}/{{total}}",
         "sort_done":     f"{E_OK} <b>Sortierung abgeschlossen!</b>\n\n{E_CARD} <b>Bezahlt:</b> {{paid}}\n{E_BATT} <b>Kostenlos:</b> {{free}}\n❓ <b>Unbekannt:</b> {{unknown}}",
         "deleted_filter": f"{E_TRASH} <b>{{count}}</b> Schlüssel gelöscht.",
+        "btn_toggle_premium_emoji": "© Premium-Emoji",
+        "btn_toggle_color_buttons": "🎨 Farbige Buttons",
     }
 
     strings_jp = {
@@ -2297,6 +2349,7 @@ class KeyScanner(loader.Module):
             f"{E_BELL} キャッチ: このチャット <b>{{auto_chat}}</b> ・ global <b>{{auto_global}}</b>\n"
             f"{E_FOLD} ファイル <b>{{file_scan}}</b> ・ 編集 <b>{{edit_scan}}</b> ・ 通知 <b>{{notify_new_keys}}</b>\n"
             f"{E_LIST} 表示: compact <b>{{compact}}</b> ・ キー非表示 <b>{{auto_hide}}</b>\n"
+            f"{E_COPY} プレミアム絵文字 <b>{{premium_emoji}}</b> ・ 色付きボタン <b>{{color_buttons}}</b>\n"
             f"{E_RIGHT} 1ページ <b>{{page_size}}</b> 件 ・ 既定ソート <b>{{default_sort}}</b>\n"
             f"{E_LINK} ログ: <b>{{log_mode}}</b>\n{{log_target_line}}"
         ),
@@ -2312,6 +2365,8 @@ class KeyScanner(loader.Module):
             f"{E_LIST} <b>表示設定</b>\n\n"
             f"コンパクト表示: <b>{{compact}}</b>\n"
             f"キー自動非表示: <b>{{auto_hide}}</b>\n"
+            f"プレミアム絵文字: <b>{{premium_emoji}}</b>\n"
+            f"色付きボタン: <b>{{color_buttons}}</b>\n"
             f"ページサイズ: <b>{{page_size}}</b>\n"
             f"既定ソート: <b>{{default_sort}}</b>"
         ),
@@ -2331,6 +2386,8 @@ class KeyScanner(loader.Module):
         "btn_cycle_page_size": "↕️ ページサイズ",
         "btn_cycle_default_sort": "🧭 既定ソート",
         "btn_toggle_autohide": "🙈 キー自動非表示",
+        "btn_toggle_premium_emoji": "© プレミアム絵文字",
+        "btn_toggle_color_buttons": "🎨 色付きボタン",
         "btn_open_list": "📝 一覧を開く",
         "btn_open_export": "⬇️ エクスポート",
         "state_on": "ON",
@@ -2425,6 +2482,8 @@ class KeyScanner(loader.Module):
         "sorting":       f"{E_SYNC} <b>Sorting keys by paid/free...</b>\n{{done}}/{{total}}",
         "sort_done":     f"{E_OK} <b>Sort finished!</b>\n\n{E_CARD} <b>Paid:</b> {{paid}}\n{E_BATT} <b>Free:</b> {{free}}\n❓ <b>Unknown:</b> {{unknown}}",
         "deleted_filter": f"{E_TRASH} Deleted <b>{{count}}</b> keys.",
+        "btn_toggle_premium_emoji": "© Premium Emoji",
+        "btn_toggle_color_buttons": "🎨 Color Buttons",
     }
 
     strings_tiktok = {
@@ -2505,6 +2564,8 @@ class KeyScanner(loader.Module):
         "sorting":       f"{E_SYNC} <b>сортим...</b>\n{{done}}/{{total}}",
         "sort_done":     f"{E_OK} <b>сорт дан!</b>\n\n{E_CARD} <b>пейд:</b> {{paid}}\n{E_BATT} <b>фри:</b> {{free}}\n❓ <b>анноун:</b> {{unknown}}",
         "deleted_filter": f"{E_TRASH} делитнул <b>{{count}}</b> кейсов.",
+        "btn_toggle_premium_emoji": "© прем эмодзи",
+        "btn_toggle_color_buttons": "🎨 цвет кнопки",
     }
 
     strings_leet = {
@@ -2585,6 +2646,8 @@ class KeyScanner(loader.Module):
         "sorting":       f"{E_SYNC} <b>50rt1ng...</b>\n{{done}}/{{total}}",
         "sort_done":     f"{E_OK} <b>50rt3d!</b>\n\n{E_CARD} <b>p41d:</b> {{paid}}\n{E_BATT} <b>fr33:</b> {{free}}\n❓ <b>unkn0wn:</b> {{unknown}}",
         "deleted_filter": f"{E_TRASH} d3l3t3d <b>{{count}}</b> k3y5.",
+        "btn_toggle_premium_emoji": "© pr3m1um 3m0j1",
+        "btn_toggle_color_buttons": "🎨 c0l0r butt0n5",
     }
 
     strings_uwu = {
@@ -2665,6 +2728,8 @@ class KeyScanner(loader.Module):
         "sorting":       f"{E_SYNC} <b>sowting uwu...</b>\n{{done}}/{{total}}",
         "sort_done":     f"{E_OK} <b>sowted uwu!!</b>\n\n{E_CARD} <b>paid:</b> {{paid}}\n{E_BATT} <b>fwee:</b> {{free}}\n❓ <b>idk:</b> {{unknown}}",
         "deleted_filter": f"{E_TRASH} deweted <b>{{count}}</b> keys uwu.",
+        "btn_toggle_premium_emoji": "© pwemium emoji",
+        "btn_toggle_color_buttons": "🎨 cowow buttons",
     }
 
     @loader.command(
@@ -2716,14 +2781,14 @@ class KeyScanner(loader.Module):
         disabled_key = "auto_off_global" if global_mode else "auto_off"
 
         if self._toggle_autocatch_target(target):
-            await utils.answer(message, self.strings[enabled_key])
+            await self._answer(message, self.strings[enabled_key])
             if self._settings.get("log_mode") == "heroku":
                 try:
                     await self._bootstrap_heroku_logs()
                 except Exception:
                     pass
         else:
-            await utils.answer(message, self.strings[disabled_key])
+            await self._answer(message, self.strings[disabled_key])
 
     @loader.command(
         ru_doc="Переключить режим логирования",
@@ -2749,7 +2814,7 @@ class KeyScanner(loader.Module):
                 await self._bootstrap_heroku_logs()
             except Exception:
                 pass
-        await utils.answer(message, f"{E_BELL} <b>Logging →</b> <b>{nxt.upper()}</b>")
+        await self._answer(message, f"{E_BELL} <b>Logging →</b> <b>{nxt.upper()}</b>")
 
     @loader.command(
         ru_doc="Удалить все невалидные ключи",
@@ -2763,7 +2828,7 @@ class KeyScanner(loader.Module):
         uwu_doc="wemove aww invawid keys uwu",
     )
     async def ksclean(self, message: Message):
-        msg   = await utils.answer(message, self.strings["checking_all"].format(total=len(self._keys)))
+        msg   = await self._answer(message, self.strings["checking_all"].format(total=len(self._keys)))
         keys  = list(self._keys.keys())
         inv   = 0
         async with aiohttp.ClientSession() as session:
@@ -2774,7 +2839,7 @@ class KeyScanner(loader.Module):
                     self._keys.pop(k, None)
                     self._paid_status.pop(k, None)
         self._save()
-        await utils.answer(msg, f"{E_OK} <b>Cleaned!</b> Removed: <b>{inv}</b>")
+        await self._answer(msg, f"{E_OK} <b>Cleaned!</b> Removed: <b>{inv}</b>")
 
     @loader.command(
         ru_doc="<реплай/ссылка/текст> - Импорт ключей",
@@ -2788,7 +2853,7 @@ class KeyScanner(loader.Module):
         uwu_doc="<wepwy/wink/text> - impowt keys uwu",
     )
     async def ksimport(self, message: Message):
-        msg       = await utils.answer(message, self.strings["importing"])
+        msg       = await self._answer(message, self.strings["importing"])
         text_data = ""
         reply     = await message.get_reply_message()
         args      = utils.get_args_raw(message)
@@ -2812,7 +2877,7 @@ class KeyScanner(loader.Module):
             text_data = args
 
         if not text_data:
-            return await utils.answer(msg, self.strings["import_err"])
+            return await self._answer(msg, self.strings["import_err"])
 
         unique  = set(self.key_regex.findall(text_data))
         count   = 0
@@ -2824,7 +2889,7 @@ class KeyScanner(loader.Module):
                     await self._register_key(session, key, prov, "Import", via="import")
         if count:
             self._save()
-        await utils.answer(msg, self.strings["imported"].format(count=count))
+        await self._answer(msg, self.strings["imported"].format(count=count))
 
     @loader.command(
         ru_doc="Меню ключей",
@@ -2839,25 +2904,25 @@ class KeyScanner(loader.Module):
     )
     async def mykeys(self, message: Message):
         if not self._keys:
-            return await utils.answer(message, self.strings["empty"])
+            return await self._answer(message, self.strings["empty"])
 
         form = await self.inline.form(
-            text=self.strings["loading"],
+            text=self._ui_text(self.strings["loading"]),
             message=message,
-            reply_markup=self._get_main_markup(),
+            reply_markup=self._ui_markup(self._get_main_markup()),
         )
         await asyncio.sleep(0.35)
 
         try:
             await form.edit(
-                text=self._db_stats_text(),
-                reply_markup=self._get_main_markup(),
+                text=self._ui_text(self._db_stats_text()),
+                reply_markup=self._ui_markup(self._get_main_markup()),
             )
         except Exception:
             await self.inline.form(
-                text=self._db_stats_text(),
+                text=self._ui_text(self._db_stats_text()),
                 message=message,
-                reply_markup=self._get_main_markup(),
+                reply_markup=self._ui_markup(self._get_main_markup()),
             )
 
     @loader.watcher(only_messages=True)
@@ -2963,7 +3028,8 @@ class KeyScanner(loader.Module):
                 self._btn("▶️", self.ks_list, (page + 1, filter_mode, sort_mode), "primary"),
             ])
         markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["list_title"].format(
                 page=page + 1,
                 total_pages=total_pages,
@@ -2987,7 +3053,7 @@ class KeyScanner(loader.Module):
             ],
             [self._btn(self.strings["btn_back"], self.ks_list, (page, filter_mode, sort_mode), "primary")],
         ]
-        await call.edit(text=self.strings["sort_menu_title"], reply_markup=markup)
+        await self._edit(call, text=self.strings["sort_menu_title"], reply_markup=markup)
 
     async def ks_provider_menu(self, call, page=0, filter_mode="all", sort_mode=None):
         sort_mode = self._normalize_sort_mode(sort_mode)
@@ -3010,7 +3076,7 @@ class KeyScanner(loader.Module):
                 self._btn("▶️", self.ks_provider_menu, (page + 1, filter_mode, sort_mode), "primary"),
             ])
         markup.append([self._btn(self.strings["btn_back"], self.ks_list, (page, filter_mode, sort_mode), "primary")])
-        await call.edit(text=self.strings["provider_menu_title"], reply_markup=markup)
+        await self._edit(call, text=self.strings["provider_menu_title"], reply_markup=markup)
 
     async def ks_key_menu(self, call, idx, hidden=True, page=0, filter_mode="all", sort_mode="recent"):
         all_keys = sorted(self._keys.keys())
@@ -3037,7 +3103,8 @@ class KeyScanner(loader.Module):
             [self._btn(self.strings["btn_refresh_balance"], self.ks_refresh_balance, (idx, hidden, page, filter_mode, sort_mode), "success")],
             [self._btn(self.strings["btn_back"], self.ks_list, (page, filter_mode, sort_mode), "primary")],
         ]
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["key_info"].format(
                 provider=html.escape(str(prov)),
                 tier=tier,
@@ -3055,7 +3122,8 @@ class KeyScanner(loader.Module):
         k = all_keys[idx]
         prov = self._keys.get(k, "Unknown")
         models = self._ensure_model_cache().get(k, [])
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["key_models_title"].format(
                 provider=html.escape(str(prov)),
                 count=len(models),
@@ -3070,7 +3138,7 @@ class KeyScanner(loader.Module):
             return
         k = all_keys[idx]
         prov = self._keys.get(k, "Unknown")
-        await call.edit(text=self.strings["quota_refreshing"])
+        await self._edit(call, text=self.strings["quota_refreshing"])
         async with aiohttp.ClientSession() as session:
             try:
                 prov, ok = await self._validate_key(session, k)
@@ -3130,7 +3198,8 @@ class KeyScanner(loader.Module):
                 meta["quota"] = {"kind": "error", "provider": prov, "checked_at": self._now_ts(), "message": "real request failed"}
         self._save()
         status = self.strings["status_valid"] if ok else self.strings["status_invalid"]
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["check_res_single"].format(provider=prov, status=status),
             reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_key_menu, "args": (idx, True, page, filter_mode, sort_mode)}]],
         )
@@ -3144,13 +3213,14 @@ class KeyScanner(loader.Module):
             self._key_meta.pop(k, None)
             self._ensure_model_cache().pop(k, None)
             self._save()
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["deleted"],
             reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_list, "args": (page, filter_mode, sort_mode)}]],
         )
 
     async def ks_val_all(self, call):
-        await call.edit(text=self.strings["checking_all"].format(total=len(self._keys)))
+        await self._edit(call, text=self.strings["checking_all"].format(total=len(self._keys)))
         keys        = sorted(self._keys.keys())
         valid_c     = invalid_c = 0
         prov_stats  = {}
@@ -3200,7 +3270,8 @@ class KeyScanner(loader.Module):
         if invalid_c > 0:
             markup.append([{"text": self.strings["btn_clr_inv"], "callback": self.ks_clr_inv}])
         markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["check_res_all"].format(
                 total=len(self._keys), v=valid_c, i=invalid_c, prov_stats=stats_str),
             reply_markup=markup,
@@ -3214,7 +3285,8 @@ class KeyScanner(loader.Module):
             self._ensure_model_cache().pop(k, None)
         self._save()
         self._invalid_keys_cache.clear()
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["deleted"],
             reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
         )
@@ -3262,7 +3334,8 @@ class KeyScanner(loader.Module):
             classified=classified,
         )
 
-        await call.edit(
+        await self._edit(
+            call,
             text=header + ("\n".join(lines) or "—"),
             reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back, "style": "primary"}]],
         )
@@ -3305,7 +3378,8 @@ class KeyScanner(loader.Module):
             ])
         markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
         scope = self._export_scope_label(tier_raw, provider_raw)
-        await call.edit(
+        await self._edit(
+            call,
             text=(
                 f"{E_DOWN} <b>{self.strings['export_scope_title']}</b>\n"
                 f"{E_LIST} <b>{scope}</b>\n"
@@ -3324,7 +3398,7 @@ class KeyScanner(loader.Module):
     async def ks_exp_formats(self, call, tier_raw="", provider_raw=""):
         data = self._export_candidates(tier_raw, provider_raw)
         if not data:
-            return await call.edit(text=self.strings["export_empty_filter"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_exp_menu, (tier_raw, provider_raw, 0), "primary")]])
+            return await self._edit(call, text=self.strings["export_empty_filter"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_exp_menu, (tier_raw, provider_raw, 0), "primary")]])
 
         markup = [
             [
@@ -3342,7 +3416,8 @@ class KeyScanner(loader.Module):
             [self._btn("ENV", self.ks_exp_send, ("env", tier_raw, provider_raw), "primary")],
             [self._btn(self.strings["btn_back"], self.ks_exp_menu, (tier_raw, provider_raw, 0), "primary")],
         ]
-        await call.edit(
+        await self._edit(
+            call,
             text=(
                 f"{E_DOWN} <b>{self.strings['export_format_title']}</b>\n"
                 f"{E_LIST} <b>{self._export_scope_label(tier_raw, provider_raw)}</b>\n"
@@ -3354,21 +3429,22 @@ class KeyScanner(loader.Module):
     async def ks_exp_send(self, call, fmt, tier_raw="", provider_raw=""):
         data = self._export_candidates(tier_raw, provider_raw)
         if not data:
-            return await call.edit(text=self.strings["export_empty_filter"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_exp_menu, (tier_raw, provider_raw, 0), "primary")]])
+            return await self._edit(call, text=self.strings["export_empty_filter"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_exp_menu, (tier_raw, provider_raw, 0), "primary")]])
         payload, filename, label = self._export_payload(data, fmt, tier_raw, provider_raw)
         fd = io.BytesIO(payload)
         fd.name = filename
         await self.client.send_file(
             "me",
             file=fd,
-            caption=self.strings["export_caption"].format(
+            caption=self._ui_text(self.strings["export_caption"].format(
                 label=label,
                 scope=self._export_scope_label(tier_raw, provider_raw),
                 count=len(data),
-            ),
+            )),
             parse_mode="html",
         )
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["exported"],
             reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
         )
@@ -3388,10 +3464,10 @@ class KeyScanner(loader.Module):
         fd.name = f"keys{suffix}.json"
         await self.client.send_file(
             "me", file=fd,
-            caption=f"{E_COPY} <b>{label}</b> ({len(data)} {self.strings['export_key_count_label'].lower()})",
+            caption=self._ui_text(f"{E_COPY} <b>{label}</b> ({len(data)} {self.strings['export_key_count_label'].lower()})"),
             parse_mode="html",
         )
-        await call.edit(text=self.strings["exported"],
+        await self._edit(call, text=self.strings["exported"],
             reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]])
 
     async def ks_exp_txt(self, call, filter_mode="all"):
@@ -3409,19 +3485,19 @@ class KeyScanner(loader.Module):
         fd.name = f"keys{suffix}.txt"
         await self.client.send_file(
             "me", file=fd,
-            caption=f"{E_COPY} <b>{label}</b> ({len(data)} {self.strings['export_key_count_label'].lower()})",
+            caption=self._ui_text(f"{E_COPY} <b>{label}</b> ({len(data)} {self.strings['export_key_count_label'].lower()})"),
             parse_mode="html",
         )
-        await call.edit(text=self.strings["exported"],
+        await self._edit(call, text=self.strings["exported"],
             reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]])
 
     async def ks_sort_paid_free(self, call):
         total = len(self._keys)
         if not total:
-            await call.edit(text=self.strings["empty"],
+            await self._edit(call, text=self.strings["empty"],
                 reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]])
             return
-        await call.edit(text=self.strings["sorting"].format(done=0, total=total))
+        await self._edit(call, text=self.strings["sorting"].format(done=0, total=total))
         paid = free = unknown = done = 0
         async with aiohttp.ClientSession() as session:
             for key, prov in list(self._keys.items()):
@@ -3439,7 +3515,7 @@ class KeyScanner(loader.Module):
                     done += 1
                     if done % 5 == 0:
                         try:
-                            await call.edit(text=self.strings["sorting"].format(done=done, total=total))
+                            await self._edit(call, text=self.strings["sorting"].format(done=done, total=total))
                         except Exception:
                             pass
                     continue
@@ -3462,7 +3538,7 @@ class KeyScanner(loader.Module):
                 done += 1
                 if done % 5 == 0:
                     try:
-                        await call.edit(text=self.strings["sorting"].format(done=done, total=total))
+                        await self._edit(call, text=self.strings["sorting"].format(done=done, total=total))
                     except Exception:
                         pass
         self._save()
@@ -3476,7 +3552,8 @@ class KeyScanner(loader.Module):
             self._btn(f"{self.strings['btn_exp_free']} ({free})", self.ks_exp_txt, ("free",), "primary"),
         ])
         markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["sort_done"].format(paid=paid, free=free, unknown=unknown),
             reply_markup=markup,
         )
@@ -3489,7 +3566,8 @@ class KeyScanner(loader.Module):
             self._key_meta.pop(k, None)
             self._ensure_model_cache().pop(k, None)
         self._save()
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["deleted_filter"].format(count=len(to_del)),
             reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
         )
@@ -3502,6 +3580,8 @@ class KeyScanner(loader.Module):
         notify_new_keys = self._setting_state(self._settings.get("notify_new_keys", True))
         compact = self._setting_state(self._settings.get("list_compact", True))
         auto_hide = self._setting_state(self._settings.get("auto_hide_keys", True))
+        premium_emoji = self._setting_state(self._settings.get("premium_emoji", True))
+        color_buttons = self._setting_state(self._settings.get("color_buttons", True))
         auto_chat = self._setting_state(self._is_autocatch_enabled_for(current_chat_id))
         auto_global = self._setting_state(self._is_autocatch_enabled_for(GLOBAL_AUTOCATCH))
         default_sort = self.strings[f"sort_label_{self._normalize_sort_mode(self._settings.get('default_sort'))}"]
@@ -3533,6 +3613,8 @@ class KeyScanner(loader.Module):
             text = self.strings["settings_view_title"].format(
                 compact=compact,
                 auto_hide=auto_hide,
+                premium_emoji=premium_emoji,
+                color_buttons=color_buttons,
                 page_size=page_size,
                 default_sort=default_sort,
             )
@@ -3540,6 +3622,10 @@ class KeyScanner(loader.Module):
                 [
                     self._btn(f"{self.strings['btn_toggle_compact']} {compact}", self.ks_toggle_compact, style="success" if self._settings.get("list_compact", True) else "danger"),
                     self._btn(f"{self.strings['btn_toggle_autohide']} {auto_hide}", self.ks_toggle_autohide, style="success" if self._settings.get("auto_hide_keys", True) else "danger"),
+                ],
+                [
+                    self._btn(f"{self.strings['btn_toggle_premium_emoji']} {premium_emoji}", self.ks_toggle_premium_emoji, style="success" if self._settings.get("premium_emoji", True) else "danger"),
+                    self._btn(f"{self.strings['btn_toggle_color_buttons']} {color_buttons}", self.ks_toggle_color_buttons, style="success" if self._settings.get("color_buttons", True) else "danger"),
                 ],
                 [
                     self._btn(f"{self.strings['btn_cycle_page_size']}: {page_size}", self.ks_cycle_page_size, style="primary"),
@@ -3567,6 +3653,8 @@ class KeyScanner(loader.Module):
                 notify_new_keys=notify_new_keys,
                 compact=compact,
                 auto_hide=auto_hide,
+                premium_emoji=premium_emoji,
+                color_buttons=color_buttons,
                 page_size=page_size,
                 default_sort=default_sort,
                 log_mode=mode,
@@ -3580,7 +3668,7 @@ class KeyScanner(loader.Module):
                 [self._btn(self.strings["btn_logs_settings"], self.ks_settings_menu, ("logs",), "primary")],
                 [self._btn(self.strings["btn_back"], self.ks_back, style="primary")],
             ]
-        await call.edit(text=text, reply_markup=markup)
+        await self._edit(call, text=text, reply_markup=markup)
 
     async def ks_cycle_log(self, call):
         modes = ["none", "saved", "heroku", "custom"]
@@ -3617,13 +3705,13 @@ class KeyScanner(loader.Module):
         """
         raw = utils.get_args_raw(message).strip()
         if not raw:
-            return await utils.answer(message, self.strings["log_target_help"])
+            return await self._answer(message, self.strings["log_target_help"])
 
         target = self._log_target()
         if raw.lower().startswith("topic "):
             title = raw[6:].strip()[:128]
             if not title:
-                return await utils.answer(message, self.strings["log_target_help"])
+                return await self._answer(message, self.strings["log_target_help"])
             target["topic_title"] = title
             target["thread_id"] = None
             self._save()
@@ -3639,7 +3727,7 @@ class KeyScanner(loader.Module):
                             self._save()
                 except Exception:
                     pass
-            return await utils.answer(
+            return await self._answer(
                 message,
                 self.strings["log_target_topic"]
                 + f"\n{self.strings['log_target_label'].format(target=self._log_target_text())}"
@@ -3656,7 +3744,7 @@ class KeyScanner(loader.Module):
             resolved = target_raw
 
         if resolved is None:
-            return await utils.answer(message, self.strings["log_target_help"])
+            return await self._answer(message, self.strings["log_target_help"])
 
         if target.get("chat_id") != resolved or topic_title:
             target["thread_id"] = None
@@ -3679,7 +3767,7 @@ class KeyScanner(loader.Module):
         except Exception:
             pass
 
-        return await utils.answer(
+        return await self._answer(
             message,
             self.strings["log_target_set"]
             + f"\n{self.strings['log_target_label'].format(target=self._log_target_text())}"
@@ -3688,7 +3776,8 @@ class KeyScanner(loader.Module):
 
 
     async def ks_logchat_help(self, call):
-        await call.edit(
+        await self._edit(
+            call,
             text=self.strings["log_target_help"] + f"\n\n{self.strings['log_target_label'].format(target=self._log_target_text())}\n{self.strings['log_topic_label'].format(topic=self._log_target().get('topic_title') or 'Logs')}",
             reply_markup=[
                 [self._btn(self.strings["btn_back"], self.ks_settings_menu, ("logs",), "primary")],
@@ -3730,6 +3819,16 @@ class KeyScanner(loader.Module):
 
     async def ks_toggle_autohide(self, call):
         self._settings["auto_hide_keys"] = not self._settings.get("auto_hide_keys", True)
+        self._save()
+        await self.ks_settings_menu(call, "view")
+
+    async def ks_toggle_premium_emoji(self, call):
+        self._settings["premium_emoji"] = not self._settings.get("premium_emoji", True)
+        self._save()
+        await self.ks_settings_menu(call, "view")
+
+    async def ks_toggle_color_buttons(self, call):
+        self._settings["color_buttons"] = not self._settings.get("color_buttons", True)
         self._save()
         await self.ks_settings_menu(call, "view")
 
@@ -4097,7 +4196,7 @@ class KeyScanner(loader.Module):
             [self._btn(self.strings["btn_clear"], self.ks_clr_all_step, (0,), style="danger")],
             [self._btn(self.strings["btn_back"], self.ks_back, style="primary")],
         ]
-        await call.edit(text=f"{self.strings['clear_menu_title']}\n{self.strings['clear_menu_subtitle']}", reply_markup=markup)
+        await self._edit(call, text=f"{self.strings['clear_menu_title']}\n{self.strings['clear_menu_subtitle']}", reply_markup=markup)
 
     async def ks_clr_all(self, call):
         await self.ks_clr_menu(call)
@@ -4105,22 +4204,22 @@ class KeyScanner(loader.Module):
     async def ks_clr_paid_confirm(self, call):
         count = sum(1 for k in self._keys if self._paid_status.get(k) == "paid")
         if not count:
-            return await call.edit(text=self.strings["empty"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
+            return await self._edit(call, text=self.strings["empty"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
         markup = [
             [self._btn(self._clear_paid_yes_text(), self.ks_clr_paid_execute, style="danger")],
             [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
         ]
-        await call.edit(text=self._clear_paid_confirm_text(), reply_markup=markup)
+        await self._edit(call, text=self._clear_paid_confirm_text(), reply_markup=markup)
 
     async def ks_clr_free_confirm(self, call):
         count = sum(1 for k in self._keys if self._paid_status.get(k) == "free")
         if not count:
-            return await call.edit(text=self.strings["empty"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
+            return await self._edit(call, text=self.strings["empty"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
         markup = [
             [self._btn(self._clear_free_yes_text(), self.ks_clr_free_execute, style="danger")],
             [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
         ]
-        await call.edit(text=self._clear_free_confirm_text(), reply_markup=markup)
+        await self._edit(call, text=self._clear_free_confirm_text(), reply_markup=markup)
 
     async def ks_clr_paid_execute(self, call):
         to_del = [k for k in list(self._keys.keys()) if self._paid_status.get(k) == "paid"]
@@ -4131,7 +4230,7 @@ class KeyScanner(loader.Module):
             self._ensure_model_cache().pop(k, None)
         self._save()
         msg = self.strings["clear_paid_done"].format(count=len(to_del))
-        await call.edit(text=msg, reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
+        await self._edit(call, text=msg, reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
 
     async def ks_clr_free_execute(self, call):
         to_del = [k for k in list(self._keys.keys()) if self._paid_status.get(k) == "free"]
@@ -4142,7 +4241,7 @@ class KeyScanner(loader.Module):
             self._ensure_model_cache().pop(k, None)
         self._save()
         msg = self.strings["clear_free_done"].format(count=len(to_del))
-        await call.edit(text=msg, reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
+        await self._edit(call, text=msg, reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]])
 
     async def ks_clr_all_step(self, call, step=0):
         warns = self._clear_all_warnings()
@@ -4152,13 +4251,13 @@ class KeyScanner(loader.Module):
                 [self._btn(self._clear_step_button(step), self.ks_clr_all_step, (step + 1,), style="danger")],
                 [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
             ]
-            await call.edit(text=warns[step], reply_markup=markup)
+            await self._edit(call, text=warns[step], reply_markup=markup)
             return
         markup = [
             [self._btn(self._clear_final_button(), self.ks_clr_all_execute, style="danger")],
             [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
         ]
-        await call.edit(text=warns[step], reply_markup=markup)
+        await self._edit(call, text=warns[step], reply_markup=markup)
 
     async def ks_clr_all_execute(self, call):
         self._keys.clear()
@@ -4166,7 +4265,7 @@ class KeyScanner(loader.Module):
         self._key_meta.clear()
         self._ensure_model_cache().clear()
         self._save()
-        await call.edit(text=self.strings["clear_all_done"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]])
+        await self._edit(call, text=self.strings["clear_all_done"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]])
 
     async def ks_back(self, call):
-        await call.edit(text=self._db_stats_text(), reply_markup=self._get_main_markup())
+        await self._edit(call, text=self._db_stats_text(), reply_markup=self._get_main_markup())
