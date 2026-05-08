@@ -9,3 +9,4 @@ QwenCLI
 recon
 sc
 yt
+iris
