@@ -19,7 +19,6 @@
 __version__ = (1, 1, 1)
 
 import asyncio
-import ast
 import base64
 import hashlib
 import json
@@ -37,32 +36,72 @@ from herokutl.types import Message
 
 from .. import loader, utils
 from ..inline.types import InlineQueryResultArticle, InputTextMessageContent
-from ..types import CoreOverwriteError
 
 
 VECTOR_API_BASE = "https://vector-three-sooty.vercel.app"
 VECTOR_TOKEN_PREFIX = "vector-token-v1"
 VECTOR_TOKEN_SALT = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
+VECTOR_OFFICIAL_DEVELOPERS = {"@goymodules", "@samsepi0l_ovf"}
 JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+SENSITIVE_LOG_KEY_RE = re.compile(r"(?:token|authorization|jwt|secret|session|password|cookie)", re.I)
+
+
+def _safe_log_value(value: Any, key: str = "") -> Any:
+    if key and SENSITIVE_LOG_KEY_RE.search(key):
+        return "<redacted>"
+
+    if isinstance(value, str):
+        redacted = JWT_RE.sub("<jwt-redacted>", value)
+        return redacted if len(redacted) <= 500 else f"{redacted[:500]}...<truncated:{len(redacted)}>"
+
+    if isinstance(value, bytes):
+        return f"<bytes:{len(value)}>"
+
+    if isinstance(value, dict):
+        return {str(k): _safe_log_value(v, str(k)) for k, v in list(value.items())[:40]}
+
+    if isinstance(value, (list, tuple, set)):
+        items = list(value)
+        safe_items = [_safe_log_value(item) for item in items[:20]]
+        if len(items) > 20:
+            safe_items.append(f"<truncated_items:{len(items) - 20}>")
+        return safe_items
+
+    return value
+
+
+def _log_preview(value: Any) -> str:
+    try:
+        rendered = json.dumps(_safe_log_value(value), ensure_ascii=False, default=str)
+    except Exception:
+        rendered = repr(_safe_log_value(value))
+
+    return rendered if len(rendered) <= 2500 else f"{rendered[:2500]}...<truncated:{len(rendered)}>"
 
 
 class VectorAPI:
     def __init__(self, owner: "Vector") -> None:
         self.owner = owner
         self.session: Optional[aiohttp.ClientSession] = None
+        self.last_status: int = 0
+        self.last_error_body: str = ""
 
     @property
     def base(self) -> str:
-        return str(self.owner.config["api_base"]).rstrip("/")
+        return VECTOR_API_BASE.rstrip("/")
 
     async def connect(self) -> aiohttp.ClientSession:
         if self.session is None or self.session.closed:
+            logger.info("Vector API: opening HTTP session base=%s", self.base)
             self.session = aiohttp.ClientSession()
         return self.session
 
     async def close(self) -> None:
         if self.session and not self.session.closed:
+            logger.info("Vector API: closing HTTP session")
             await self.session.close()
 
     async def request(
@@ -83,6 +122,19 @@ class VectorAPI:
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
+        self.last_status = 0
+        self.last_error_body = ""
+        logger.info(
+            "Vector API request: method=%s path=%s params=%s json=%s token=%s raw=%s timeout=%s",
+            method,
+            path,
+            _log_preview(params or {}),
+            _log_preview(json_payload or {}),
+            "yes" if token else "no",
+            raw,
+            timeout,
+        )
+
         try:
             async with session.request(
                 method,
@@ -92,80 +144,173 @@ class VectorAPI:
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=timeout),
             ) as response:
+                self.last_status = int(response.status)
+                logger.info("Vector API response status: method=%s path=%s status=%s", method, path, response.status)
                 if response.status < 200 or response.status >= 300:
-                    return {"_status": response.status} if with_status else None
+                    error_body = await response.text()
+                    self.last_error_body = error_body
+                    logger.warning(
+                        "Vector API non-2xx response: method=%s path=%s status=%s body=%s",
+                        method,
+                        path,
+                        response.status,
+                        _log_preview(error_body),
+                    )
+                    return {"_status": response.status, "_body": error_body} if with_status else None
                 if raw:
-                    return await response.read()
+                    body = await response.read()
+                    logger.info("Vector API raw response: method=%s path=%s bytes=%s", method, path, len(body))
+                    return body
                 data = await response.json(content_type=None)
                 if with_status and isinstance(data, dict):
                     data.setdefault("_status", response.status)
+                logger.info("Vector API JSON response: method=%s path=%s data=%s", method, path, _log_preview(data))
                 return data
         except Exception:
-            logger.debug("Vector API request failed: %s %s", method, path, exc_info=True)
+            logger.exception("Vector API request failed: %s %s", method, path)
             return None
 
     async def bot_username(self) -> Optional[str]:
+        logger.info("Vector API bot username lookup started")
         data = await self.request("GET", "/api/tg-bot")
+        logger.info("Vector API bot username payload: %s", _log_preview(data))
         username = data.get("username") if isinstance(data, dict) else None
         if isinstance(username, str) and username.strip():
-            return username.strip().lstrip("@")
+            normalized = username.strip().lstrip("@")
+            logger.info("Vector API bot username resolved: @%s", normalized)
+            return normalized
+        logger.warning("Vector API bot username missing or invalid: %s", _log_preview(data))
         return None
 
     async def search(self, query: str, limit: int, token: str) -> List[Dict[str, Any]]:
-        data = await self.request("GET", "/api/search", token=token, params={"q": query, "limit": str(limit)})
-        if not isinstance(data, dict):
+        params = {"q": query, "limit": str(limit)}
+        logger.warning("Vector API search started: url=%s/api/search params=%s token=%s", self.base, _log_preview(params), "yes" if token else "no")
+        data = await self.request("GET", "/api/search", token=token, params=params)
+        logger.warning("Vector API search raw response: query=%r type=%s payload=%s", query, type(data).__name__, _log_preview(data))
+
+        if isinstance(data, dict):
+            results = data.get("results", [])
+            logger.warning(
+                "Vector API search parsed dict response: query=%r keys=%s results_type=%s",
+                query,
+                list(data.keys())[:20],
+                type(results).__name__,
+            )
+        elif isinstance(data, list):
+            results = data
+            logger.warning("Vector API search parsed list response: query=%r items=%s", query, len(results))
+        else:
+            logger.warning("Vector API search unsupported payload: query=%r type=%s payload=%s", query, type(data).__name__, _log_preview(data))
             return []
-        results = data.get("results", [])
-        return [self.normalize(item) for item in results if isinstance(item, dict)]
+
+        if not isinstance(results, list):
+            logger.warning("Vector API search results is not a list: query=%r results=%s", query, _log_preview(results))
+            return []
+
+        normalized = [self.normalize(item) for item in results if isinstance(item, dict)]
+        logger.warning(
+            "Vector API search normalized response: query=%r raw_count=%s normalized_count=%s names=%s",
+            query,
+            len(results),
+            len(normalized),
+            [item.get("name") for item in normalized[:10]],
+        )
+        return normalized
+
+    async def search_with_reauth(self, query: str, limit: int) -> List[Dict[str, Any]]:
+        token = await self.owner.auth.ensure()
+        if not token:
+            token = await self.owner.auth.ensure(force=True)
+        if not token:
+            logger.warning("Vector API search_with_reauth stopped: auth failed before request query=%r", query)
+            return []
+
+        modules = await self.search(query, limit, token)
+        if self.last_status == 401:
+            logger.warning(
+                "Vector API search got 401, dropping cached token and retrying once: query=%r body=%s",
+                query,
+                _log_preview(self.last_error_body),
+            )
+            self.owner.auth.drop_cached("search returned 401")
+            token = await self.owner.auth.ensure(force=True)
+            if not token:
+                logger.warning("Vector API search retry stopped: auth refresh failed query=%r", query)
+                return []
+            modules = await self.search(query, limit, token)
+            logger.warning("Vector API search retry finished: query=%r status=%s count=%s", query, self.last_status, len(modules))
+
+        return modules
 
     async def rate(self, user_id: str, module_name: str, action: str, token: str) -> Optional[Dict[str, Any]]:
-        return await self.request(
+        logger.info("Vector API rate started: user_id=%s module=%s action=%s", user_id, module_name, action)
+        data = await self.request(
             "POST",
             f"/api/rate/{quote(user_id, safe='')}/{quote(module_name, safe='')}/{action}",
             token=token,
         )
+        logger.info("Vector API rate returned: module=%s action=%s payload=%s", module_name, action, _log_preview(data))
+        return data if isinstance(data, dict) else None
 
     async def comments_get(self, module_name: str, token: Optional[str] = None) -> List[Dict[str, Any]]:
+        logger.info("Vector API comments get started: module=%s", module_name)
         data = await self.request("GET", f"/api/modules/{quote(module_name, safe='')}/comments", token=token)
+        logger.info("Vector API comments get returned: module=%s payload=%s", module_name, _log_preview(data))
         if not isinstance(data, dict):
             return []
-        return [c for c in data.get("comments", []) if isinstance(c, dict)]
+        comments = [c for c in data.get("comments", []) if isinstance(c, dict)]
+        logger.info("Vector API comments normalized: module=%s count=%s", module_name, len(comments))
+        return comments
 
     async def comments_post(self, module_name: str, body: str, token: str, parent_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        logger.info("Vector API comment post started: module=%s parent_id=%s body_len=%s", module_name, parent_id, len(body))
         payload: Dict[str, Any] = {"body": body}
         if parent_id:
             payload["parent_id"] = parent_id
-        return await self.request("POST", f"/api/modules/{quote(module_name, safe='')}/comments", token=token, json_payload=payload)
+        data = await self.request("POST", f"/api/modules/{quote(module_name, safe='')}/comments", token=token, json_payload=payload)
+        logger.info("Vector API comment post returned: module=%s payload=%s", module_name, _log_preview(data))
+        return data if isinstance(data, dict) else None
 
     async def comment_edit(self, module_name: str, comment_id: str, body: str, token: str) -> Optional[Dict[str, Any]]:
-        return await self.request(
+        logger.info("Vector API comment edit started: module=%s comment_id=%s body_len=%s", module_name, comment_id, len(body))
+        data = await self.request(
             "PATCH",
             f"/api/modules/{quote(module_name, safe='')}/comments/{quote(comment_id, safe='')}",
             token=token,
             json_payload={"body": body},
         )
+        logger.info("Vector API comment edit returned: module=%s comment_id=%s payload=%s", module_name, comment_id, _log_preview(data))
+        return data if isinstance(data, dict) else None
 
     async def comment_delete(self, module_name: str, comment_id: str, token: str) -> Optional[Dict[str, Any]]:
-        return await self.request(
+        logger.info("Vector API comment delete started: module=%s comment_id=%s", module_name, comment_id)
+        data = await self.request(
             "DELETE",
             f"/api/modules/{quote(module_name, safe='')}/comments/{quote(comment_id, safe='')}",
             token=token,
         )
+        logger.info("Vector API comment delete returned: module=%s comment_id=%s payload=%s", module_name, comment_id, _log_preview(data))
+        return data if isinstance(data, dict) else None
 
     async def ratings_get(self, module_name: str, token: Optional[str] = None) -> Dict[str, Any]:
+        logger.info("Vector API ratings get started: module=%s", module_name)
         data = await self.request("GET", f"/api/modules/{quote(module_name, safe='')}/ratings", token=token)
+        logger.info("Vector API ratings get returned: module=%s payload=%s", module_name, _log_preview(data))
         return data if isinstance(data, dict) else {}
 
     async def security_status(self, module_name: str, token: str) -> Dict[str, Any]:
+        logger.info("Vector API security status started: module=%s", module_name)
         data = await self.request(
             "GET",
             f"/api/modules/{quote(module_name, safe='')}/security-check",
             token=token,
             with_status=True,
         )
+        logger.info("Vector API security status returned: module=%s payload=%s", module_name, _log_preview(data))
         return data if isinstance(data, dict) else {}
 
     async def security_run(self, module_name: str, token: str) -> Dict[str, Any]:
+        logger.info("Vector API security run started: module=%s", module_name)
         data = await self.request(
             "POST",
             f"/api/modules/{quote(module_name, safe='')}/security-check",
@@ -173,13 +318,18 @@ class VectorAPI:
             with_status=True,
             timeout=120,
         )
+        logger.info("Vector API security run returned: module=%s payload=%s", module_name, _log_preview(data))
         return data if isinstance(data, dict) else {}
 
     async def download(self, module_name: str, token: str) -> Optional[str]:
+        logger.info("Vector API download started: module=%s", module_name)
         data = await self.request("GET", f"/api/modules/{quote(module_name, safe='')}/download", token=token, raw=True)
         if not isinstance(data, (bytes, bytearray)):
+            logger.warning("Vector API download failed: module=%s payload_type=%s", module_name, type(data).__name__)
             return None
-        return bytes(data).decode("utf-8", errors="replace")
+        code = bytes(data).decode("utf-8", errors="replace")
+        logger.info("Vector API download decoded: module=%s bytes=%s chars=%s", module_name, len(data), len(code))
+        return code
 
     def download_url(self, module_name: str) -> str:
         return f"{self.base}/api/modules/{quote(module_name, safe='')}/download"
@@ -199,15 +349,28 @@ class VectorAPI:
             })
 
         dependencies = data.get("dependencies") if isinstance(data.get("dependencies"), list) else []
+        author = str(data.get("developer") or data.get("author") or "@Unknown")
+        author_key = author.strip().lower()
+        official = bool(
+            data.get("official")
+            or data.get("is_official")
+            or data.get("verified")
+            or data.get("is_verified")
+            or data.get("telegram_verified")
+            or data.get("official_developer")
+            or data.get("is_official_developer")
+            or author_key in VECTOR_OFFICIAL_DEVELOPERS
+        )
         name = str(data.get("name") or data.get("class_name") or "Unknown")
         return {
             "name": name,
             "class_name": data.get("class_name") or name,
             "version": data.get("version") or "?.?.?",
-            "author": data.get("developer") or data.get("author") or "@Unknown",
+            "author": author,
             "description": data.get("description") or "",
             "commands": normalized_commands,
             "dependencies": [str(item) for item in dependencies],
+            "official": official,
             "likes": int(data.get("likes") or 0),
             "dislikes": int(data.get("dislikes") or 0),
             "banner": data.get("banner"),
@@ -246,19 +409,35 @@ class VectorAuth:
         sub = self.decode_payload(token).get("sub")
         return str(sub) if sub else None
 
+    def drop_cached(self, reason: str = "") -> None:
+        logger.warning("Vector auth dropping cached token: reason=%s", reason or "not specified")
+        with suppress(Exception):
+            self.owner.set("auth_token", None)
+
     async def ensure(self, force: bool = False) -> Optional[str]:
+        logger.info("Vector auth ensure started: force=%s", force)
+        if force:
+            self.drop_cached("forced refresh")
         cached = self.owner.get("auth_token", None)
-        if not force and self.token_alive(cached):
+        cached_alive = self.token_alive(cached)
+        logger.info("Vector auth cache state: has_cached=%s alive=%s", bool(cached), cached_alive)
+        if not force and cached_alive:
+            logger.info("Vector auth ensure using cached token: payload=%s", _log_preview(self.decode_payload(cached or "")))
             return cached
 
         token = await self.obtain()
         if token:
+            logger.info("Vector auth ensure obtained token: payload=%s", _log_preview(self.decode_payload(token)))
             self.owner.set("auth_token", token)
+        else:
+            logger.warning("Vector auth ensure failed to obtain token")
         return token
 
     async def obtain(self) -> Optional[str]:
+        logger.info("Vector auth obtain started")
         bot_username = await self.owner.api.bot_username()
         if not bot_username:
+            logger.warning("Vector auth obtain stopped: bot username is unavailable")
             return None
 
         client = self.owner.client
@@ -268,35 +447,49 @@ class VectorAuth:
         first_name = getattr(me, "first_name", None) or ""
         last_name = getattr(me, "last_name", None) or ""
         nickname = " ".join(part for part in (first_name, last_name) if part).strip() or username or telegram_id
+        logger.info("Vector auth identity prepared: telegram_id=%s username=%s nickname_len=%s bot=@%s", telegram_id, username or "<empty>", len(nickname), bot_username)
 
         with suppress(Exception):
+            logger.info("Vector auth attempting to unblock bot: @%s", bot_username)
             await client(UnblockRequest(bot_username))
+            logger.info("Vector auth bot unblock request sent: @%s", bot_username)
 
         for attempt in range(2):
             bucket = int(time.time() // 10) - attempt
             cmd = self.payload_command(telegram_id, username, nickname, bucket=bucket)
+            logger.info("Vector auth conversation attempt started: attempt=%s bucket=%s command_hash=%s", attempt + 1, bucket, cmd[:10])
             try:
                 async with client.conversation(bot_username, timeout=15, exclusive=False) as conv:
                     outgoing = await conv.send_message(cmd)
+                    logger.info("Vector auth conversation command sent: attempt=%s", attempt + 1)
                     try:
                         response = await asyncio.wait_for(conv.get_response(), timeout=14)
-                        token = self.extract_token(getattr(response, "raw_text", "") or getattr(response, "text", ""))
+                        response_text = getattr(response, "raw_text", "") or getattr(response, "text", "")
+                        logger.info("Vector auth conversation response received: attempt=%s text=%s", attempt + 1, _log_preview(response_text))
+                        token = self.extract_token(response_text)
                         with suppress(Exception):
                             await outgoing.delete()
+                            logger.info("Vector auth conversation command deleted: attempt=%s", attempt + 1)
                         if token:
+                            logger.info("Vector auth conversation token extracted: attempt=%s payload=%s", attempt + 1, _log_preview(self.decode_payload(token)))
                             return token
+                        logger.warning("Vector auth conversation response did not contain token: attempt=%s", attempt + 1)
                     except asyncio.TimeoutError:
+                        logger.warning("Vector auth conversation timed out: attempt=%s", attempt + 1)
                         with suppress(Exception):
                             await outgoing.delete()
             except Exception:
-                pass
+                logger.exception("Vector auth conversation attempt failed: attempt=%s", attempt + 1)
 
         for attempt in range(2):
             bucket = int(time.time() // 10) - attempt
             cmd = self.payload_command(telegram_id, username, nickname, bucket=bucket)
+            logger.info("Vector auth polling attempt started: attempt=%s bucket=%s command_hash=%s", attempt + 1, bucket, cmd[:10])
             try:
                 outgoing = await client.send_message(bot_username, cmd)
+                logger.info("Vector auth polling command sent: attempt=%s", attempt + 1)
             except Exception:
+                logger.exception("Vector auth polling command send failed: attempt=%s", attempt + 1)
                 continue
 
             deadline = time.time() + 20
@@ -307,20 +500,27 @@ class VectorAuth:
                     async for msg in client.iter_messages(bot_username, limit=3):
                         if msg.out:
                             continue
-                        candidate = self.extract_token(getattr(msg, "raw_text", "") or getattr(msg, "text", ""))
+                        msg_text = getattr(msg, "raw_text", "") or getattr(msg, "text", "")
+                        logger.info("Vector auth polling message seen: attempt=%s text=%s", attempt + 1, _log_preview(msg_text))
+                        candidate = self.extract_token(msg_text)
                         if candidate:
                             token = candidate
                             break
                 except Exception:
-                    pass
+                    logger.exception("Vector auth polling iter_messages failed: attempt=%s", attempt + 1)
                 if token:
                     break
 
             with suppress(Exception):
                 await outgoing.delete()
+                logger.info("Vector auth polling command deleted: attempt=%s", attempt + 1)
             if token:
+                logger.info("Vector auth polling token extracted: attempt=%s payload=%s", attempt + 1, _log_preview(self.decode_payload(token)))
                 return token
 
+            logger.warning("Vector auth polling attempt finished without token: attempt=%s", attempt + 1)
+
+        logger.warning("Vector auth obtain failed after all attempts")
         return None
 
     def extract_token(self, text: str) -> Optional[str]:
@@ -329,79 +529,75 @@ class VectorAuth:
 
 
 class VectorInstaller:
+    MODULE_LOADING_FAILED = 0
+    MODULE_LOADING_SUCCESS = 1
+
     def _loader_module(self, plugin: "Vector") -> Optional[loader.Module]:
+        logger.info("Vector installer loader lookup started")
         lookup = getattr(plugin, "lookup", None) or getattr(plugin.allmodules, "lookup", None)
         if not callable(lookup):
+            logger.error("Vector installer loader lookup failed: lookup is not callable")
             return None
 
         module = lookup("loader")
-        return module if module and callable(getattr(module, "load_module", None)) else None
-
-    def _class_name(self, code: str) -> Optional[str]:
-        try:
-            tree = ast.parse(code)
-            for node in tree.body:
-                if not isinstance(node, ast.ClassDef):
-                    continue
-
-                for base in node.bases:
-                    if (
-                        isinstance(base, ast.Attribute)
-                        and getattr(base.value, "id", None) == "loader"
-                        and base.attr == "Module"
-                    ) or (isinstance(base, ast.Name) and base.id == "Module"):
-                        return node.name
-        except Exception:
-            logger.debug("Unable to parse Vector module class name", exc_info=True)
-
-        return None
-
-    def _module_loaded(self, plugin: "Vector", class_name: Optional[str], code: str) -> bool:
-        lookup = getattr(plugin, "lookup", None) or getattr(plugin.allmodules, "lookup", None)
-        if class_name and callable(lookup):
-            module = lookup(class_name)
-            if module:
-                return True
-
-        with suppress(Exception):
-            for module in getattr(plugin.allmodules, "modules", []):
-                if class_name and module.__class__.__name__ == class_name:
-                    return True
-
-                source = getattr(module, "__source__", None)
-                if isinstance(source, str) and source.strip() == code.strip():
-                    return True
-
-        return False
+        ok = bool(module and callable(getattr(module, "download_and_install", None)))
+        logger.info("Vector installer loader lookup result: found=%s has_download_and_install=%s", bool(module), ok)
+        return module if ok else None
 
     async def execute(self, plugin: "Vector", module_name: str, token: str) -> Tuple[str, List[str]]:
-        code = await plugin.api.download(module_name, token)
-        if not code:
-            return "error", []
-
+        logger.info("Vector installer execute started: module=%s token=%s", module_name, "yes" if token else "no")
         loader_module = self._loader_module(plugin)
         if loader_module is None:
             logger.error("Heroku built-in loader module is unavailable; Vector cannot install %s", module_name)
             return "error", []
 
-        class_name = self._class_name(code)
+        code = await plugin.api.download(module_name, token)
+        if not code:
+            logger.error("Vector installer stopped: download returned empty code for %s", module_name)
+            return "error", []
+        logger.info("Vector installer downloaded code: module=%s chars=%s", module_name, len(code))
+
         origin = plugin.api.download_url(module_name)
+        logger.info("Vector installer origin prepared: module=%s origin=%s", module_name, origin)
+        storage = getattr(loader_module, "_storage", None)
+        original_fetch = getattr(storage, "fetch", None)
+        if not callable(original_fetch):
+            logger.error("Heroku module storage is unavailable; Vector cannot install %s", module_name)
+            return "error", []
+
+        async def vector_fetch(url: str, auth: Optional[str] = None) -> str:
+            logger.info("Vector installer storage fetch called: url=%s auth=%s", url, "yes" if auth else "no")
+            if url == origin:
+                logger.info("Vector installer storage fetch served Vector code from memory: module=%s chars=%s", module_name, len(code))
+                return code
+            logger.info("Vector installer storage fetch delegated to original fetch: url=%s", url)
+            return await original_fetch(url, auth=auth)
 
         try:
-            await loader_module.load_module(code, None, origin=origin, save_fs=True)
-        except CoreOverwriteError:
-            return "overwrite", []
+            logger.info("Vector installer patching Heroku storage fetch: module=%s", module_name)
+            storage.fetch = vector_fetch
+            result = await loader_module.download_and_install(origin)
+            logger.info("Vector installer download_and_install returned: module=%s result=%r", module_name, result)
         except Exception:
             logger.exception("Heroku built-in loader failed to install %s", module_name)
             return "error", []
+        finally:
+            with suppress(Exception):
+                storage.fetch = original_fetch
+                logger.info("Vector installer restored Heroku storage fetch: module=%s", module_name)
 
-        if self._module_loaded(plugin, class_name, code):
+        if result == self.MODULE_LOADING_SUCCESS:
             if getattr(plugin, "fully_loaded", True):
                 with suppress(Exception):
+                    logger.info("Vector installer updating modules DB: module=%s", module_name)
                     plugin.update_modules_in_db()
+            logger.info("Vector installer finished successfully: module=%s", module_name)
             return "success", []
 
-        logger.error("Heroku built-in loader finished without loading %s", module_name)
+        if result == self.MODULE_LOADING_FAILED:
+            logger.error("Heroku built-in loader failed to install %s", module_name)
+        else:
+            logger.error("Heroku built-in loader returned %r while installing %s", result, module_name)
         return "error", []
 
 
@@ -410,7 +606,8 @@ class VectorUI:
         self.owner = owner
 
     def emoji(self, key: str) -> str:
-        return self.owner.THEMES[self.owner.config["theme"]][key]
+        theme = self.owner.config["theme"]
+        return self.owner.THEMES.get(theme, self.owner.THEMES["default"]).get(key, self.owner.THEMES["default"].get(key, ""))
 
     def plain_len(self, text: str) -> int:
         return len(re.sub(r"<[^>]+>", "", text))
@@ -422,6 +619,12 @@ class VectorUI:
         text = f"{self.emoji('module')} <code>{name}</code> <b>{self.owner.strings['author']}</b> <code>{author}</code>"
         if version != "?.?.?":
             text += f" (<code>v{utils.escape_html(version)}</code>)"
+
+        official = bool(data.get("official"))
+        text += (
+            f"\n{self.emoji('verified')} <b>{self.owner.strings['module_status']}:</b> "
+            f"<code>{self.owner.strings['official_module' if official else 'unofficial_module']}</code>"
+        )
         if total > 1:
             text += f"\n{self.emoji('modules_list')} <i>{self.owner.strings['counter'].format(idx=index, total=total)}</i>"
 
@@ -526,7 +729,15 @@ class VectorUI:
             lines.append(f"{self.emoji('quota')} <i>{self.owner.strings['security_quota'].format(remaining=quota.get('remaining', '?'), limit=quota.get('limit', '?'))}</i>")
         return "\n".join(lines)
 
-    def buttons(self, data: Dict[str, Any], index: int, modules: Optional[List[Dict[str, Any]]], query: str) -> List[List[Dict[str, Any]]]:
+    def buttons(
+        self,
+        data: Dict[str, Any],
+        index: int,
+        modules: Optional[List[Dict[str, Any]]],
+        query: str,
+        *,
+        expanded: bool = False,
+    ) -> List[List[Dict[str, Any]]]:
         name = str(data.get("name") or "")
         buttons = [
             [
@@ -537,21 +748,32 @@ class VectorUI:
             [
                 {"text": f"👍 {data.get('likes', 0)}", "callback": self.owner.rate, "args": (name, "like", index, modules, query)},
                 {"text": f"👎 {data.get('dislikes', 0)}", "callback": self.owner.rate, "args": (name, "dislike", index, modules, query)},
-                {"text": self.owner.strings["comments_btn"], "callback": self.owner.comments, "args": (name, index, modules, query)},
-            ],
-            [
-                {"text": self.owner.strings["security_check_btn"], "callback": self.owner.security_check, "args": (name, index, modules, query)},
             ],
         ]
+
         if modules and len(modules) > 1:
-            buttons[1].insert(1, {"text": self.owner.strings["counter"].format(idx=index + 1, total=len(modules)), "callback": self.owner.show, "args": (index, modules, query)})
-            navigation = []
-            if index > 0:
-                navigation.append({"text": "◀️", "callback": self.owner.navigate, "args": (index - 1, modules, query)})
-            if index < len(modules) - 1:
-                navigation.append({"text": "▶️", "callback": self.owner.navigate, "args": (index + 1, modules, query)})
-            if navigation:
-                buttons.append(navigation)
+            prev_index = (index - 1) % len(modules)
+            next_index = (index + 1) % len(modules)
+            buttons.append([
+                {"text": "◀️", "callback": self.owner.navigate, "args": (prev_index, modules, query)},
+                {"text": self.owner.strings["counter"].format(idx=index + 1, total=len(modules)), "callback": self.owner.show, "args": (index, modules, query)},
+                {"text": "▶️", "callback": self.owner.navigate, "args": (next_index, modules, query)},
+            ])
+
+        buttons.append([
+            {
+                "text": self.owner.strings["hide_actions_btn" if expanded else "more_actions_btn"],
+                "callback": self.owner.toggle_actions,
+                "args": (name, index, modules, query, not expanded),
+            },
+        ])
+
+        if expanded:
+            buttons.append([
+                {"text": self.owner.strings["comments_btn"], "callback": self.owner.comments, "args": (name, index, modules, query)},
+                {"text": self.owner.strings["security_check_btn"], "callback": self.owner.security_check, "args": (name, index, modules, query)},
+            ])
+
         return buttons
 
     def pagination(self, modules: List[Dict[str, Any]], query: str, page: int = 0, current: int = 0) -> List[List[Dict[str, Any]]]:
@@ -587,6 +809,9 @@ class Vector(loader.Module):
         "description": "Description",
         "commands": "Commands",
         "dependencies": "Dependencies",
+        "module_status": "Status",
+        "official_module": "official",
+        "unofficial_module": "unofficial",
         "morecommands": "...and {remaining} more commands.",
         "moredeps": "...and {remaining} more dependencies.",
         "list": "All found modules:",
@@ -611,7 +836,6 @@ class Vector(loader.Module):
         "dependency": "✘ Dependencies installation error! {deps}",
         "rated_set": "✔ Rating has been set!",
         "rated_removed": "✔ Rating has been removed!",
-        "docbase": "Vector API base URL.",
         "doctheme": "Theme for emojis.",
         "doclimit": "Maximum amount of search results.",
         "security_check_btn": "🛡 Security check",
@@ -634,8 +858,12 @@ class Vector(loader.Module):
         "security_fetch_error": "Failed to get module security status.",
         "edit_error": "Failed to update the inline message.",
         "security_verdicts": {"safe": "safe", "suspicious": "suspicious", "unsafe": "unsafe", "unknown": "unknown"},
-        "comments_btn": "💬",
-        "comments_title": "💬 <b>Comments — {name}</b>",
+        "more_actions_btn": "⬇️ More",
+        "hide_actions_btn": "⬆️ Hide",
+        "comments_btn": "💬 Comments",
+        "comments_title": "{emoji} <b>Comments — {name}</b>",
+        "comments_live": "Live module discussion",
+        "comments_count": "{count} comments and replies",
         "comments_empty": "No comments yet. Be the first!",
         "comments_fetch_error": "Failed to load comments.",
         "comment_posted": "✔ Comment posted!",
@@ -650,6 +878,9 @@ class Vector(loader.Module):
         "description": "Описание",
         "commands": "Команды",
         "dependencies": "Зависимости",
+        "module_status": "Статус",
+        "official_module": "официальный",
+        "unofficial_module": "неофициальный",
         "morecommands": "...и еще {remaining} команд.",
         "moredeps": "...и еще {remaining} зависимостей.",
         "list": "Все найденные модули:",
@@ -674,7 +905,6 @@ class Vector(loader.Module):
         "dependency": "✘ Ошибка установки зависимостей! {deps}",
         "rated_set": "✔ Оценка поставлена!",
         "rated_removed": "✔ Оценка убрана!",
-        "docbase": "Базовый URL Vector API.",
         "doctheme": "Тема эмодзи.",
         "doclimit": "Максимальное количество результатов поиска.",
         "security_check_btn": "🛡 Проверка безопасности",
@@ -697,8 +927,12 @@ class Vector(loader.Module):
         "security_fetch_error": "Не удалось получить статус проверки модуля.",
         "edit_error": "Не удалось обновить inline-сообщение.",
         "security_verdicts": {"safe": "безопасен", "suspicious": "подозрителен", "unsafe": "небезопасен", "unknown": "неизвестно"},
-        "comments_btn": "💬",
-        "comments_title": "💬 <b>Комментарии — {name}</b>",
+        "more_actions_btn": "⬇️ Ещё",
+        "hide_actions_btn": "⬆️ Скрыть",
+        "comments_btn": "💬 Комментарии",
+        "comments_title": "{emoji} <b>Комментарии — {name}</b>",
+        "comments_live": "Живое обсуждение модуля",
+        "comments_count": "{count} отзывов и ответов",
         "comments_empty": "Комментариев пока нет. Будьте первым!",
         "comments_fetch_error": "Не удалось загрузить комментарии.",
         "comment_posted": "✔ Комментарий опубликован!",
@@ -711,43 +945,49 @@ class Vector(loader.Module):
         "default": {
             "search": '<tg-emoji emoji-id="5447459604524971717">🔎</tg-emoji>',
             "error": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
-            "warn": "⚠️",
+            "warn": '<tg-emoji emoji-id="5881702736843511327">⚠️</tg-emoji>',
             "description": '<tg-emoji emoji-id="6008090211181923982">📝</tg-emoji>',
             "command": '<tg-emoji emoji-id="5877260593903177342">⚙</tg-emoji>',
             "dependency": '<tg-emoji emoji-id="5325732612084351248">📦</tg-emoji>',
             "module": '<tg-emoji emoji-id="5924720918826848520">📦</tg-emoji>',
             "modules_list": '<tg-emoji emoji-id="5883973610606956186">🗂</tg-emoji>',
-            "shield": "🛡",
-            "safe": "✅",
-            "unsafe": "❌",
-            "stats": "📊",
-            "quota": "⏳",
+            "shield": '<tg-emoji emoji-id="5926783847453692661">🛡</tg-emoji>',
+            "safe": '<tg-emoji emoji-id="5776375003280838798">✅</tg-emoji>',
+            "unsafe": '<tg-emoji emoji-id="5778527486270770928">❌</tg-emoji>',
+            "stats": '<tg-emoji emoji-id="5877485980901971030">📊</tg-emoji>',
+            "quota": '<tg-emoji emoji-id="6311858554944888333">⌚️</tg-emoji>',
+            "verified": '<tg-emoji emoji-id="5958376256788502078">⭐️</tg-emoji>',
+            "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
+            "reply": "↳",
         },
         "neon": {
             "search": "💠",
-            "error": "🟥",
-            "warn": "🟨",
-            "description": "🧬",
-            "command": "🛠",
-            "dependency": "🧩",
+            "error": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
+            "warn": '<tg-emoji emoji-id="5881702736843511327">⚠️</tg-emoji>',
+            "description": '<tg-emoji emoji-id="6008090211181923982">📝</tg-emoji>',
+            "command": '<tg-emoji emoji-id="5877260593903177342">⚙</tg-emoji>',
+            "dependency": '<tg-emoji emoji-id="5325732612084351248">📦</tg-emoji>',
             "module": "🚀",
-            "modules_list": "🗂",
-            "shield": "🛡",
-            "safe": "✅",
-            "unsafe": "❌",
-            "stats": "📊",
-            "quota": "⏳",
+            "modules_list": '<tg-emoji emoji-id="5875462364110787088">🗂</tg-emoji>',
+            "shield": '<tg-emoji emoji-id="5926783847453692661">🛡</tg-emoji>',
+            "safe": '<tg-emoji emoji-id="5776375003280838798">✅</tg-emoji>',
+            "unsafe": '<tg-emoji emoji-id="5778527486270770928">❌</tg-emoji>',
+            "stats": '<tg-emoji emoji-id="5877485980901971030">📊</tg-emoji>',
+            "quota": '<tg-emoji emoji-id="6311858554944888333">⌚️</tg-emoji>',
+            "verified": '<tg-emoji emoji-id="5958376256788502078">⭐️</tg-emoji>',
+            "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
+            "reply": "↳",
         },
     }
 
     def __init__(self) -> None:
         self.config = loader.ModuleConfig(
-            loader.ConfigValue("api_base", VECTOR_API_BASE, lambda: self.strings("docbase"), validator=loader.validators.Link()),
             loader.ConfigValue("theme", "default", lambda: self.strings("doctheme"), validator=loader.validators.Choice(["default", "neon"])),
-            loader.ConfigValue("limit", 10, lambda: self.strings("doclimit"), validator=loader.validators.Integer(minimum=1, maximum=25)),
+            loader.ConfigValue("limit", 30, lambda: self.strings("doclimit"), validator=loader.validators.Integer(minimum=1, maximum=100)),
         )
 
     async def client_ready(self, client: "herokutl.TelegramClient", database: "loader.Database") -> None:
+        logger.info("Vector module client_ready started")
         self.client = client
         self.database = database
         self.api = VectorAPI(self)
@@ -756,10 +996,13 @@ class Vector(loader.Module):
         self.ui = VectorUI(self)
         self.bot = getattr(getattr(self, "inline", None), "bot", None) or getattr(getattr(self, "inline", None), "_bot", None)
         self._security_cache: Dict[str, Dict[str, Any]] = {}
+        logger.info("Vector module client_ready finished: api_base=%s theme=%s limit=%s", VECTOR_API_BASE, self.config["theme"], self.config["limit"])
 
     async def on_unload(self) -> None:
+        logger.info("Vector module unload started")
         if hasattr(self, "api"):
             await self.api.close()
+        logger.info("Vector module unload finished")
 
     async def answer(self, target: Any, text: str = "", alert: bool = False) -> None:
         try:
@@ -874,20 +1117,39 @@ class Vector(loader.Module):
         return False
 
     async def navigate(self, callback: Any, index: int, modules: List[Dict[str, Any]], query: str = "") -> None:
+        logger.info("Vector UI navigate: index=%s total=%s query=%r", index, len(modules), query)
         await self.answer(callback)
         if 0 <= index < len(modules):
             data = modules[index]
             await self.edit(callback, self.ui.format(data, index + 1, len(modules)), self.ui.buttons(data, index, modules, query), data.get("banner"))
 
     async def show(self, callback: Any, index: int, modules: List[Dict[str, Any]], query: str) -> None:
+        logger.info("Vector UI show list: index=%s total=%s query=%r", index, len(modules), query)
         await self.answer(callback)
         await self.edit(callback, f"{self.ui.emoji('modules_list')} <b>{self.strings['list']}</b>", self.ui.pagination(modules, query, 0, index))
 
+    async def toggle_actions(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str, expanded: bool) -> None:
+        logger.info("Vector UI toggle actions: module=%s index=%s expanded=%s", module_name, index, expanded)
+        await self.answer(callback)
+        if modules and 0 <= index < len(modules):
+            data = modules[index]
+        else:
+            data = {"name": module_name, "source_url": self.api.source_url(module_name), "likes": 0, "dislikes": 0}
+
+        await self.edit(
+            callback,
+            self.ui.format(data, index + 1, len(modules or [data])),
+            self.ui.buttons(data, index, modules, query, expanded=expanded),
+            data.get("banner"),
+        )
+
     async def page(self, callback: Any, current: int, modules: List[Dict[str, Any]], query: str, index: int) -> None:
+        logger.info("Vector UI page: page=%s current_index=%s total=%s query=%r", current, index, len(modules), query)
         await self.answer(callback)
         await self.edit(callback, f"{self.ui.emoji('modules_list')} <b>{self.strings['list']}</b>", self.ui.pagination(modules, query, current, index))
 
     async def rate(self, callback: Any, module_name: str, action: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+        logger.info("Vector rate flow started: module=%s action=%s index=%s query=%r", module_name, action, index, query)
         token = await self.auth.ensure()
         user_id = self.auth.user_id(token or "")
         if not token or not user_id:
@@ -895,6 +1157,7 @@ class Vector(loader.Module):
 
         response = await self.api.rate(user_id, module_name, action, token)
         if not response or not response.get("ok"):
+            logger.warning("Vector rate initial API call failed or not ok: module=%s action=%s response=%s", module_name, action, _log_preview(response))
             token = await self.auth.ensure(force=True)
             user_id = self.auth.user_id(token or "")
             response = await self.api.rate(user_id, module_name, action, token) if token and user_id else None
@@ -911,14 +1174,17 @@ class Vector(loader.Module):
 
         await self.edit(callback, self.ui.format(data, index + 1, len(modules or [data])), self.ui.buttons(data, index, modules, query), data.get("banner"))
         state = response.get("rating", {}).get("state")
+        logger.info("Vector rate flow finished: module=%s action=%s state=%s refreshed=%s", module_name, action, state, bool(fresh))
         await self.answer(callback, self.strings["rated_removed" if state == "removed" else "rated_set"], True)
 
     async def install(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+        logger.info("Vector install flow started: module=%s index=%s query=%r", module_name, index, query)
         token = await self.auth.ensure()
         if not token:
             return await self.answer(callback, self.strings["auth_error"], True)
 
         state, dependencies = await self.installer.execute(self, module_name, token)
+        logger.info("Vector install flow result: module=%s state=%s dependencies=%s", module_name, state, dependencies)
         if state == "success":
             await self.answer(callback, self.strings["success"], True)
         elif state == "dependency":
@@ -945,6 +1211,7 @@ class Vector(loader.Module):
             return 0
 
     async def security_check(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+        logger.info("Vector security check flow started: module=%s index=%s query=%r", module_name, index, query)
         checked_buttons = self._security_buttons(module_name, index, modules, query, checked=True)
         cached = self._security_cached(module_name)
         if cached:
@@ -971,10 +1238,12 @@ class Vector(loader.Module):
 
         self._cache_security(module_name, data)
         checked = bool(data.get("checked") and isinstance(data.get("check"), dict))
+        logger.info("Vector security check flow finished: module=%s checked=%s status=%s", module_name, checked, status)
         buttons = self._security_buttons(module_name, index, modules, query, checked=checked)
         await self.edit(callback, self.ui.format_security(module_name, data), buttons)
 
     async def security_run(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+        logger.info("Vector security run flow started: module=%s index=%s query=%r", module_name, index, query)
         buttons = self._security_buttons(module_name, index, modules, query, checked=False)
         await self.edit(callback, f"{self.ui.emoji('search')} <b>{self.strings['security_running']}</b>", buttons)
 
@@ -993,6 +1262,7 @@ class Vector(loader.Module):
             return await self.edit(callback, f"{self.ui.emoji('error')} <b>{self.strings['security_fetch_error']}</b>", buttons)
 
         self._cache_security(module_name, data)
+        logger.info("Vector security run flow finished: module=%s status=%s", module_name, status)
         await self.edit(callback, self.ui.format_security(module_name, data), self._security_buttons(module_name, index, modules, query, checked=True))
 
     def _security_buttons(self, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str, *, checked: bool) -> List[List[Dict[str, Any]]]:
@@ -1006,36 +1276,77 @@ class Vector(loader.Module):
             buttons.append([{"text": self.strings["security_run_btn"], "callback": self.security_run, "args": (module_name, index, modules, query)}])
         return buttons
 
+    def _comment_meta(self, comment: Dict[str, Any]) -> str:
+        meta = []
+        username = str(comment.get("author_username") or "").strip().lstrip("@")
+        if username:
+            meta.append(f"@{utils.escape_html(username)}")
+
+        created_at = str(comment.get("created_at") or "").replace("T", " ").replace("Z", "").strip()
+        if created_at:
+            meta.append(utils.escape_html(created_at[:16]))
+
+        return f" <i>{' · '.join(meta)}</i>" if meta else ""
+
+    def _comment_author(self, comment: Dict[str, Any]) -> str:
+        author = utils.escape_html(str(comment.get("author_name") or comment.get("author_username") or "Unknown"))
+        edit_hint = " ✏️" if comment.get("can_edit", False) else ""
+        return f"<b>{author}</b>{edit_hint}{self._comment_meta(comment)}"
+
     def _format_comments(self, comments: List[Dict[str, Any]], module_name: str) -> str:
         """Render comment thread as HTML for Telegram message."""
+        title = self.strings["comments_title"].format(emoji=self.ui.emoji("comments"), name=utils.escape_html(module_name))
+        header = (
+            f"{title}\n"
+            f"<b>{self.strings['comments_live']}</b>\n"
+            f"<i>{self.strings['comments_count'].format(count=len(comments))}</i>"
+        )
         if not comments:
-            return self.strings["comments_empty"]
-        lines = []
-        top = [c for c in comments if not c.get("parent_id")]
+            return f"{header}\n\n{self.strings['comments_empty']}"
+
+        lines = [header]
+        top = []
         replies_map: Dict[str, List[Dict[str, Any]]] = {}
         for c in comments:
+            cid = str(c.get("id", ""))
+            nested_replies = c.get("replies") if isinstance(c.get("replies"), list) else []
+            if nested_replies:
+                replies_map.setdefault(cid, []).extend(reply for reply in nested_replies if isinstance(reply, dict))
+
             pid = c.get("parent_id")
             if pid:
                 replies_map.setdefault(str(pid), []).append(c)
+            else:
+                top.append(c)
 
-        for c in top[:15]:
+        shown = 0
+        for c in top[:12]:
             cid = str(c.get("id", ""))
-            author = utils.escape_html(str(c.get("author_name") or c.get("author_username") or "Unknown"))
-            username = c.get("author_username")
-            author_link = f'<a href="https://t.me/{username}">{author}</a>' if username else author
             body = utils.escape_html(str(c.get("body", "")))
-            can_edit = c.get("can_edit", False)
-            edit_hint = " ✏️" if can_edit else ""
-            lines.append(f"👤 <b>{author_link}</b>{edit_hint}\n{body}")
-            for r in replies_map.get(cid, [])[:3]:
-                r_author = utils.escape_html(str(r.get("author_name") or r.get("author_username") or "Unknown"))
-                r_username = r.get("author_username")
-                r_link = f'<a href="https://t.me/{r_username}">{r_author}</a>' if r_username else r_author
+            lines.append(
+                "╭─ "
+                f"{self._comment_author(c)}\n"
+                "╰─\n"
+                f"<blockquote>{body}</blockquote>"
+            )
+            shown += 1
+
+            replies = replies_map.get(cid, [])[:4]
+            for r in replies:
                 r_body = utils.escape_html(str(r.get("body", "")))
-                lines.append(f"  ↳ <b>{r_link}</b>: {r_body}")
+                lines.append(
+                    f"  {self.ui.emoji('reply')} {self._comment_author(r)}\n"
+                    f"<blockquote>{r_body}</blockquote>"
+                )
+                shown += 1
+
+            hidden_replies = len(replies_map.get(cid, [])) - len(replies)
+            if hidden_replies > 0:
+                lines.append(f"  <i>...и ещё {hidden_replies} ответов на сайте.</i>")
+
         total = len(comments)
-        if total > 15:
-            lines.append(f"<i>...и ещё {total - 15} комментариев на сайте.</i>")
+        if total > shown:
+            lines.append(f"<i>...и ещё {total - shown} комментариев на сайте.</i>")
         return "\n\n".join(lines)
 
     def _comments_buttons(self, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str) -> List[List[Dict[str, Any]]]:
@@ -1048,13 +1359,19 @@ class Vector(loader.Module):
         ]
 
     async def comments(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+        logger.info("Vector comments flow started: module=%s index=%s query=%r", module_name, index, query)
         await self.answer(callback)
         token = await self.auth.ensure()
         raw = await self.api.comments_get(module_name, token=token)
         if raw is None:
+            logger.warning("Vector comments flow failed: module=%s api returned None", module_name)
             return await self.answer(callback, self.strings["comments_fetch_error"], True)
-        text = f"{self.strings['comments_title'].format(name=utils.escape_html(module_name))}\n\n{self._format_comments(raw, module_name)}"
-        await self.edit(callback, text, self._comments_buttons(module_name, index, modules, query))
+        logger.info("Vector comments flow loaded: module=%s count=%s", module_name, len(raw))
+        data = modules[index] if modules and 0 <= index < len(modules) else {}
+        preview = data.get("banner") or self.api.source_url(module_name)
+        text = self._format_comments(raw, module_name)
+        await self.edit(callback, text, self._comments_buttons(module_name, index, modules, query), preview)
+        logger.info("Vector comments flow finished: module=%s", module_name)
 
     @loader.inline_handler(
         ru_doc="(запрос) - поиск модулей в Vector.",
@@ -1062,27 +1379,29 @@ class Vector(loader.Module):
     )
     async def vector(self, event: "loader.InlineCall") -> Union[Dict[str, str], None]:
         query = event.args
+        logger.info("Vector inline search started: query=%r", query)
         if not query:
+            logger.info("Vector inline search stopped: empty query")
             return {
                 "title": self.strings["prompt"],
                 "description": self.strings["hint"],
                 "message": f"{self.ui.emoji('error')} <b>{self.strings['noquery'].format(prefix=f'<code>@{self.inline.bot_username} ')}</code></b>",
             }
         if len(query) > 120:
+            logger.info("Vector inline search stopped: query too long len=%s", len(query))
             return {
                 "title": self.strings["toolong"],
                 "description": self.strings["retry"],
                 "message": f"{self.ui.emoji('warn')} <b>{self.strings['toolong']}</b>",
             }
 
-        token = await self.auth.ensure()
-        if not token:
-            token = await self.auth.ensure(force=True)
-        if not token:
+        modules = await self.api.search_with_reauth(query, int(self.config["limit"]))
+        logger.info("Vector inline search API modules: query=%r status=%s count=%s", query, self.api.last_status, len(modules))
+        if self.api.last_status == 401:
+            logger.warning("Vector inline search stopped after auth retry: query=%r body=%s", query, _log_preview(self.api.last_error_body))
             return {"title": self.strings["auth_error"], "description": self.strings["retry"], "message": self.strings["auth_error"]}
-
-        modules = await self.api.search(query, int(self.config["limit"]), token)
         if not modules:
+            logger.warning("Vector inline search no modules found after API call: query=%r limit=%s api_base=%s", query, self.config["limit"], self.api.base)
             return {
                 "title": self.strings["retry"],
                 "description": self.strings["hint"],
@@ -1106,6 +1425,7 @@ class Vector(loader.Module):
                 ),
                 reply_markup=markup,
             ))
+        logger.info("Vector inline search answered: query=%r results=%s", query, len(results))
         await event.inline_query.answer(results, cache_time=0)
 
     @loader.command(
@@ -1115,23 +1435,27 @@ class Vector(loader.Module):
     async def vectorcmd(self, message: Message) -> Any:
         """(query) - search modules in Vector."""
         query = utils.get_args_raw(message)
+        logger.info("Vector command search started: query=%r", query)
         if not query:
+            logger.info("Vector command search stopped: empty query")
             return await utils.answer(message, f"{self.ui.emoji('error')} <b>{self.strings['noquery'].format(prefix=f'<code>{self.get_prefix()}')}</code></b>")
         if len(query) > 120:
+            logger.info("Vector command search stopped: query too long len=%s", len(query))
             return await utils.answer(message, f"{self.ui.emoji('warn')} <b>{self.strings['toolong']}</b>")
 
         message = await utils.answer(message, f"{self.ui.emoji('search')} <b>{self.strings['search'].format(query=f'<code>{utils.escape_html(query)}</code>')}</b>")
-        token = await self.auth.ensure()
-        if not token:
-            token = await self.auth.ensure(force=True)
-        if not token:
+        modules = await self.api.search_with_reauth(query, int(self.config["limit"]))
+        logger.info("Vector command search API modules: query=%r status=%s count=%s", query, self.api.last_status, len(modules))
+        if self.api.last_status == 401:
+            logger.warning("Vector command search stopped after auth retry: query=%r body=%s", query, _log_preview(self.api.last_error_body))
             return await utils.answer(message, f"{self.ui.emoji('error')} <b>{self.strings['auth_error']}</b>")
-
-        modules = await self.api.search(query, int(self.config["limit"]), token)
         if not modules:
+            logger.warning("Vector command search no modules found after API call: query=%r limit=%s api_base=%s", query, self.config["limit"], self.api.base)
             return await utils.answer(message, f"{self.ui.emoji('error')} <b>{self.strings['notfound'].format(query=f'<code>{utils.escape_html(query)}</code>')}</b>")
 
         data = modules[0]
+        logger.info("Vector command search rendering first module: query=%r module=%s", query, data.get("name"))
         buttons = self.ui.buttons(data, 0, modules, query)
         form = await self.inline.form("ㅤ", message, reply_markup=buttons, silent=True)
         await self.edit(form, self.ui.format(data, 1, len(modules)), buttons, data.get("banner"))
+        logger.info("Vector command search finished: query=%r first_module=%s total=%s", query, data.get("name"), len(modules))
