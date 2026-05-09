@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (1, 0, 0)
+__version__ = (1, 1, 0)
 
 import asyncio
 import ast
@@ -24,6 +24,7 @@ import base64
 import hashlib
 import importlib
 import json
+import logging
 import re
 import sys
 import time
@@ -34,11 +35,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import quote, unquote, urljoin
 
 import aiohttp
-from aiogram.types import CallbackQuery, ChosenInlineResult, InlineQueryResultArticle, InputTextMessageContent, LinkPreviewOptions, Message as AiogramMessage
 from herokutl.tl.functions.contacts import UnblockRequest
 from herokutl.types import Message
 
 from .. import loader, utils
+from ..inline.types import InlineQueryResultArticle, InputTextMessageContent
 from ..types import CoreOverwriteError
 
 
@@ -46,6 +47,7 @@ VECTOR_API_BASE = "https://vector-three-sooty.vercel.app"
 VECTOR_TOKEN_PREFIX = "vector-token-v1"
 VECTOR_TOKEN_SALT = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
 JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
+logger = logging.getLogger(__name__)
 
 
 class VectorAPI:
@@ -75,6 +77,8 @@ class VectorAPI:
         params: Optional[Dict[str, Any]] = None,
         json_payload: Optional[Dict[str, Any]] = None,
         raw: bool = False,
+        with_status: bool = False,
+        timeout: int = 15,
     ) -> Union[Dict[str, Any], bytes, None]:
         session = await self.connect()
         url = urljoin(f"{self.base}/", path.lstrip("/"))
@@ -89,14 +93,18 @@ class VectorAPI:
                 params=params,
                 json=json_payload,
                 headers=headers,
-                timeout=aiohttp.ClientTimeout(total=15),
+                timeout=aiohttp.ClientTimeout(total=timeout),
             ) as response:
                 if response.status < 200 or response.status >= 300:
-                    return None
+                    return {"_status": response.status} if with_status else None
                 if raw:
                     return await response.read()
-                return await response.json(content_type=None)
+                data = await response.json(content_type=None)
+                if with_status and isinstance(data, dict):
+                    data.setdefault("_status", response.status)
+                return data
         except Exception:
+            logger.debug("Vector API request failed: %s %s", method, path, exc_info=True)
             return None
 
     async def bot_username(self) -> Optional[str]:
@@ -149,6 +157,25 @@ class VectorAPI:
 
     async def ratings_get(self, module_name: str, token: Optional[str] = None) -> Dict[str, Any]:
         data = await self.request("GET", f"/api/modules/{quote(module_name, safe='')}/ratings", token=token)
+        return data if isinstance(data, dict) else {}
+
+    async def security_status(self, module_name: str, token: str) -> Dict[str, Any]:
+        data = await self.request(
+            "GET",
+            f"/api/modules/{quote(module_name, safe='')}/security-check",
+            token=token,
+            with_status=True,
+        )
+        return data if isinstance(data, dict) else {}
+
+    async def security_run(self, module_name: str, token: str) -> Dict[str, Any]:
+        data = await self.request(
+            "POST",
+            f"/api/modules/{quote(module_name, safe='')}/security-check",
+            token=token,
+            with_status=True,
+            timeout=120,
+        )
         return data if isinstance(data, dict) else {}
 
     async def download(self, module_name: str, token: str) -> Optional[str]:
@@ -244,21 +271,60 @@ class VectorAuth:
         first_name = getattr(me, "first_name", None) or ""
         last_name = getattr(me, "last_name", None) or ""
         nickname = " ".join(part for part in (first_name, last_name) if part).strip() or username or telegram_id
-        command = self.payload_command(telegram_id, username, nickname)
 
         with suppress(Exception):
             await client(UnblockRequest(bot_username))
 
-        try:
-            async with client.conversation(bot_username, timeout=8, exclusive=False) as conv:
-                outgoing = await conv.send_message(command)
-                response = await conv.get_response()
-                token = self.extract_token(getattr(response, "raw_text", "") or getattr(response, "text", ""))
-                with suppress(Exception):
-                    await outgoing.delete()
+        for attempt in range(2):
+            bucket = int(time.time() // 10) - attempt
+            cmd = self.payload_command(telegram_id, username, nickname, bucket=bucket)
+            try:
+                async with client.conversation(bot_username, timeout=15, exclusive=False) as conv:
+                    outgoing = await conv.send_message(cmd)
+                    try:
+                        response = await asyncio.wait_for(conv.get_response(), timeout=14)
+                        token = self.extract_token(getattr(response, "raw_text", "") or getattr(response, "text", ""))
+                        with suppress(Exception):
+                            await outgoing.delete()
+                        if token:
+                            return token
+                    except asyncio.TimeoutError:
+                        with suppress(Exception):
+                            await outgoing.delete()
+            except Exception:
+                pass
+
+        for attempt in range(2):
+            bucket = int(time.time() // 10) - attempt
+            cmd = self.payload_command(telegram_id, username, nickname, bucket=bucket)
+            try:
+                outgoing = await client.send_message(bot_username, cmd)
+            except Exception:
+                continue
+
+            deadline = time.time() + 20
+            token = None
+            while time.time() < deadline:
+                await asyncio.sleep(1.5)
+                try:
+                    async for msg in client.iter_messages(bot_username, limit=3):
+                        if msg.out:
+                            continue
+                        candidate = self.extract_token(getattr(msg, "raw_text", "") or getattr(msg, "text", ""))
+                        if candidate:
+                            token = candidate
+                            break
+                except Exception:
+                    pass
+                if token:
+                    break
+
+            with suppress(Exception):
+                await outgoing.delete()
+            if token:
                 return token
-        except Exception:
-            return None
+
+        return None
 
     def extract_token(self, text: str) -> Optional[str]:
         match = JWT_RE.search(text or "")
@@ -439,6 +505,71 @@ class VectorUI:
             rows.append(row)
         return f"\n\n{self.emoji('dependency')} <b>{self.owner.strings['dependencies']}:</b>\n<blockquote expandable>{chr(10).join(rows)}</blockquote>"
 
+    def security_icon(self, verdict: str) -> str:
+        if verdict == "safe":
+            return self.emoji("safe")
+        if verdict == "unsafe":
+            return self.emoji("unsafe")
+        return self.emoji("shield")
+
+    def security_verdict_label(self, verdict: str) -> str:
+        try:
+            labels = self.owner.strings["security_verdicts"]
+        except Exception:
+            labels = {}
+        if isinstance(labels, dict):
+            return str(labels.get(verdict) or labels.get("unknown") or verdict)
+        return verdict or "unknown"
+
+    def format_security(self, module_name: str, data: Dict[str, Any]) -> str:
+        check = data.get("check") if isinstance(data.get("check"), dict) else None
+        if isinstance(data.get("quota"), dict):
+            quota = data.get("quota")
+        elif check and isinstance(check.get("quota"), dict):
+            quota = check.get("quota")
+        else:
+            quota = None
+        if not check:
+            left = quota.get("remaining") if isinstance(quota, dict) else "?"
+            limit = quota.get("limit") if isinstance(quota, dict) else "?"
+            return (
+                f"{self.emoji('shield')} <b>{self.owner.strings['security_title'].format(name=utils.escape_html(module_name))}</b>\n\n"
+                f"{self.emoji('warn')} {self.owner.strings['security_unchecked']}\n"
+                f"{self.emoji('quota')} <i>{self.owner.strings['security_quota'].format(remaining=left, limit=limit)}</i>"
+            )
+
+        verdict = str(check.get("verdict") or "unknown")
+        label = utils.escape_html(str(check.get("label") or self.security_verdict_label(verdict)))
+        confidence = int(check.get("confidence") or 0)
+        summary = utils.escape_html(str(check.get("summary") or self.owner.strings["security_no_summary"]))
+        details = check.get("details") if isinstance(check.get("details"), dict) else {}
+        static = details.get("static") if isinstance(details.get("static"), dict) else {}
+        findings = static.get("findings") if isinstance(static.get("findings"), dict) else {}
+        critical = findings.get("critical") if isinstance(findings.get("critical"), list) else []
+        warning = findings.get("warning") if isinstance(findings.get("warning"), list) else []
+        info = findings.get("info") if isinstance(findings.get("info"), list) else []
+        risk = utils.escape_html(str(static.get("risk") or "unknown"))
+        score = utils.escape_html(str(static.get("score") if static.get("score") is not None else "?"))
+
+        lines = [
+            f"{self.security_icon(verdict)} <b>{self.owner.strings['security_title'].format(name=utils.escape_html(module_name))}</b>",
+            "",
+            f"{self.emoji('shield')} <b>{self.owner.strings['security_verdict']}:</b> <code>{label}</code> (<code>{confidence}%</code>)",
+            f"{self.emoji('stats')} <b>{self.owner.strings['security_static']}:</b> risk <code>{risk}</code>, score <code>{score}</code>",
+            f"{self.emoji('description')} <b>{self.owner.strings['security_summary']}:</b>\n<blockquote expandable>{summary}</blockquote>",
+        ]
+
+        compact = []
+        for title, values in ((self.owner.strings["security_critical"], critical), (self.owner.strings["security_warning"], warning), (self.owner.strings["security_info"], info)):
+            if values:
+                compact.append(f"<b>{title}</b>: " + ", ".join(utils.escape_html(str(item.get("title") or "?")) for item in values[:3] if isinstance(item, dict)))
+        if compact:
+            lines.append(f"{self.emoji('search')} <b>{self.owner.strings['security_findings']}:</b>\n<blockquote expandable>{chr(10).join(compact)}</blockquote>")
+
+        if isinstance(quota, dict):
+            lines.append(f"{self.emoji('quota')} <i>{self.owner.strings['security_quota'].format(remaining=quota.get('remaining', '?'), limit=quota.get('limit', '?'))}</i>")
+        return "\n".join(lines)
+
     def buttons(self, data: Dict[str, Any], index: int, modules: Optional[List[Dict[str, Any]]], query: str) -> List[List[Dict[str, Any]]]:
         name = str(data.get("name") or "")
         buttons = [
@@ -451,6 +582,9 @@ class VectorUI:
                 {"text": f"👍 {data.get('likes', 0)}", "callback": self.owner.rate, "args": (name, "like", index, modules, query)},
                 {"text": f"👎 {data.get('dislikes', 0)}", "callback": self.owner.rate, "args": (name, "dislike", index, modules, query)},
                 {"text": self.owner.strings["comments_btn"], "callback": self.owner.comments, "args": (name, index, modules, query)},
+            ],
+            [
+                {"text": self.owner.strings["security_check_btn"], "callback": self.owner.security_check, "args": (name, index, modules, query)},
             ],
         ]
         if modules and len(modules) > 1:
@@ -524,6 +658,26 @@ class Vector(loader.Module):
         "docbase": "Vector API base URL.",
         "doctheme": "Theme for emojis.",
         "doclimit": "Maximum amount of search results.",
+        "security_check_btn": "🛡 Security check",
+        "security_title": "Module check — {name}",
+        "security_checking": "Checking module status via Vector API...",
+        "security_running": "Running security check via Vector API...",
+        "security_run_btn": "Run check",
+        "security_cached": "Using cached security result.",
+        "security_verdict": "Verdict",
+        "security_static": "Static analysis",
+        "security_summary": "Summary",
+        "security_findings": "Signals",
+        "security_critical": "critical",
+        "security_warning": "warnings",
+        "security_info": "info",
+        "security_unchecked": "Module is not checked yet. You can start a new check; it will spend one daily limit slot.",
+        "security_no_summary": "No readable summary.",
+        "security_quota": "Checks left today: {remaining}/{limit}",
+        "security_limit": "Daily check limit is exhausted.",
+        "security_fetch_error": "Failed to get module security status.",
+        "edit_error": "Failed to update the inline message.",
+        "security_verdicts": {"safe": "safe", "suspicious": "suspicious", "unsafe": "unsafe", "unknown": "unknown"},
         "comments_btn": "💬",
         "comments_title": "💬 <b>Comments — {name}</b>",
         "comments_empty": "No comments yet. Be the first!",
@@ -567,6 +721,26 @@ class Vector(loader.Module):
         "docbase": "Базовый URL Vector API.",
         "doctheme": "Тема эмодзи.",
         "doclimit": "Максимальное количество результатов поиска.",
+        "security_check_btn": "🛡 Проверка безопасности",
+        "security_title": "Проверка модуля — {name}",
+        "security_checking": "Проверяю статус безопасности через Vector API...",
+        "security_running": "Запускаю проверку безопасности через Vector API...",
+        "security_run_btn": "Запустить проверку",
+        "security_cached": "Показываю кэшированный результат проверки.",
+        "security_verdict": "Вердикт",
+        "security_static": "Статический анализ",
+        "security_summary": "Итог",
+        "security_findings": "Сигналы",
+        "security_critical": "критичные",
+        "security_warning": "предупреждения",
+        "security_info": "инфо",
+        "security_unchecked": "Модуль ещё не проверен. Можно запустить проверку, она спишет один слот дневного лимита.",
+        "security_no_summary": "Нет читаемого описания результата.",
+        "security_quota": "Проверок сегодня осталось: {remaining}/{limit}",
+        "security_limit": "Лимит проверок на сегодня исчерпан.",
+        "security_fetch_error": "Не удалось получить статус проверки модуля.",
+        "edit_error": "Не удалось обновить inline-сообщение.",
+        "security_verdicts": {"safe": "безопасен", "suspicious": "подозрителен", "unsafe": "небезопасен", "unknown": "неизвестно"},
         "comments_btn": "💬",
         "comments_title": "💬 <b>Комментарии — {name}</b>",
         "comments_empty": "Комментариев пока нет. Будьте первым!",
@@ -587,6 +761,11 @@ class Vector(loader.Module):
             "dependency": '<tg-emoji emoji-id="5325732612084351248">📦</tg-emoji>',
             "module": '<tg-emoji emoji-id="5924720918826848520">📦</tg-emoji>',
             "modules_list": '<tg-emoji emoji-id="5883973610606956186">🗂</tg-emoji>',
+            "shield": '<tg-emoji emoji-id="5465665476971471368">🛡</tg-emoji>',
+            "safe": '<tg-emoji emoji-id="5368324170671202286">✅</tg-emoji>',
+            "unsafe": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
+            "stats": '<tg-emoji emoji-id="5373035852124832363">📊</tg-emoji>',
+            "quota": '<tg-emoji emoji-id="5431531874098153769">⏳</tg-emoji>',
         },
         "neon": {
             "search": "💠",
@@ -597,6 +776,11 @@ class Vector(loader.Module):
             "dependency": "🧩",
             "module": "🚀",
             "modules_list": "🗂",
+            "shield": "🛡",
+            "safe": "✅",
+            "unsafe": "❌",
+            "stats": "📊",
+            "quota": "⏳",
         },
     }
 
@@ -615,50 +799,64 @@ class Vector(loader.Module):
         self.installer = VectorInstaller()
         self.ui = VectorUI(self)
         self.bot = getattr(getattr(self, "inline", None), "bot", None) or getattr(getattr(self, "inline", None), "_bot", None)
+        self._security_cache: Dict[str, Dict[str, Any]] = {}
 
     async def on_unload(self) -> None:
         if hasattr(self, "api"):
             await self.api.close()
 
     async def answer(self, target: Any, text: str = "", alert: bool = False) -> None:
-        with suppress(Exception):
-            await target.answer(text, show_alert=alert)
-
-    async def edit(self, target: Union[str, ChosenInlineResult, CallbackQuery, AiogramMessage, Message], text: str, buttons: List[List[Dict[str, Any]]], banner: Optional[str] = None) -> None:
-        options = LinkPreviewOptions(is_disabled=not bool(banner), url=banner, prefer_large_media=True, show_above_text=True) if banner else LinkPreviewOptions(is_disabled=True)
-        markup = None
-        with suppress(Exception):
-            markup = self.inline.generate_markup(buttons)
         try:
-            inline_message_id = target if isinstance(target, str) else getattr(target, "inline_message_id", None)
-            if self.bot and inline_message_id:
-                await self.bot.edit_message_text(
-                    text=text,
-                    inline_message_id=inline_message_id,
-                    reply_markup=markup,
-                    link_preview_options=options,
-                    parse_mode="HTML",
-                )
-                return
-            await target.edit(text, reply_markup=buttons, link_preview=banner, parse_mode="HTML")
+            await target.answer(text, show_alert=alert)
         except Exception:
-            pass
+            logger.debug("Unable to answer inline callback", exc_info=True)
 
-    async def navigate(self, callback: Union[CallbackQuery, ChosenInlineResult], index: int, modules: List[Dict[str, Any]], query: str = "") -> None:
+    def _safe_inline_text(self, text: str) -> str:
+        # Heroku/aiogram can reject some Bot API HTML constructs during inline edits
+        # while the same text is accepted in normal messages. Keep a conservative
+        # fallback that preserves the result instead of replacing it with an error.
+        safe = re.sub(r"</?tg-emoji[^>]*>", "", text)
+        safe = safe.replace("<blockquote expandable>", "<blockquote>")
+        safe = re.sub(r"</?(?:blockquote|b|i|code|a)(?:\s+[^>]*)?>", "", safe)
+        safe = re.sub(r"<[^>]+>", "", safe)
+        return utils.escape_html(safe)[:3900]
+
+    async def edit(self, target: Any, text: str, buttons: List[List[Dict[str, Any]]], banner: Optional[str] = None) -> bool:
+        # Heroku's InlineCall.edit treats `photo=` as media replacement. Module banners
+        # are external preview images and Telegram may reject them as DOCUMENT_INVALID,
+        # so Vector keeps inline updates text-only and never edits the message media.
+        for candidate in (text, self._safe_inline_text(text)):
+            try:
+                if hasattr(target, "edit"):
+                    ok = await target.edit(candidate, reply_markup=buttons, disable_web_page_preview=True)
+                    if ok is not False:
+                        return True
+
+                result = await utils.answer(target, candidate, reply_markup=buttons, link_preview=False)
+                if result is not None:
+                    return True
+            except Exception:
+                logger.warning("Unable to edit Vector inline message; retrying with safe text", exc_info=True)
+
+        with suppress(Exception):
+            await self.answer(target, self.strings["edit_error"], True)
+        return False
+
+    async def navigate(self, callback: Any, index: int, modules: List[Dict[str, Any]], query: str = "") -> None:
         await self.answer(callback)
         if 0 <= index < len(modules):
             data = modules[index]
             await self.edit(callback, self.ui.format(data, index + 1, len(modules)), self.ui.buttons(data, index, modules, query), data.get("banner"))
 
-    async def show(self, callback: Union[CallbackQuery, ChosenInlineResult], index: int, modules: List[Dict[str, Any]], query: str) -> None:
+    async def show(self, callback: Any, index: int, modules: List[Dict[str, Any]], query: str) -> None:
         await self.answer(callback)
         await self.edit(callback, f"{self.ui.emoji('modules_list')} <b>{self.strings['list']}</b>", self.ui.pagination(modules, query, 0, index))
 
-    async def page(self, callback: Union[CallbackQuery, ChosenInlineResult], current: int, modules: List[Dict[str, Any]], query: str, index: int) -> None:
+    async def page(self, callback: Any, current: int, modules: List[Dict[str, Any]], query: str, index: int) -> None:
         await self.answer(callback)
         await self.edit(callback, f"{self.ui.emoji('modules_list')} <b>{self.strings['list']}</b>", self.ui.pagination(modules, query, current, index))
 
-    async def rate(self, callback: Union[CallbackQuery, ChosenInlineResult, AiogramMessage, Message], module_name: str, action: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+    async def rate(self, callback: Any, module_name: str, action: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
         token = await self.auth.ensure()
         user_id = self.auth.user_id(token or "")
         if not token or not user_id:
@@ -684,7 +882,7 @@ class Vector(loader.Module):
         state = response.get("rating", {}).get("state")
         await self.answer(callback, self.strings["rated_removed" if state == "removed" else "rated_set"], True)
 
-    async def install(self, callback: Union[CallbackQuery, ChosenInlineResult], module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+    async def install(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
         token = await self.auth.ensure()
         if not token:
             return await self.answer(callback, self.strings["auth_error"], True)
@@ -699,6 +897,83 @@ class Vector(loader.Module):
             await self.answer(callback, self.strings["overwrite"], True)
         else:
             await self.answer(callback, self.strings["error"], True)
+
+    def _cache_security(self, module_name: str, data: Dict[str, Any]) -> None:
+        check = data.get("check") if isinstance(data.get("check"), dict) else None
+        if check:
+            self._security_cache[module_name] = data
+
+    def _security_cached(self, module_name: str) -> Optional[Dict[str, Any]]:
+        data = self._security_cache.get(module_name)
+        return data if isinstance(data, dict) and isinstance(data.get("check"), dict) else None
+
+    def _security_status_code(self, data: Dict[str, Any]) -> int:
+        try:
+            return int(data.get("_status") or 0)
+        except Exception:
+            return 0
+
+    async def security_check(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+        checked_buttons = self._security_buttons(module_name, index, modules, query, checked=True)
+        cached = self._security_cached(module_name)
+        if cached:
+            return await self.edit(
+                callback,
+                f"{self.ui.emoji('safe')} <i>{self.strings['security_cached']}</i>\n\n{self.ui.format_security(module_name, cached)}",
+                checked_buttons,
+            )
+
+        loading_buttons = self._security_buttons(module_name, index, modules, query, checked=True)
+        await self.edit(callback, f"{self.ui.emoji('search')} <b>{self.strings['security_checking']}</b>", loading_buttons)
+
+        token = await self.auth.ensure()
+        if not token:
+            token = await self.auth.ensure(force=True)
+        if not token:
+            return await self.edit(callback, f"{self.ui.emoji('error')} <b>{self.strings['auth_error']}</b>", loading_buttons)
+
+        data = await self.api.security_status(module_name, token)
+        status = self._security_status_code(data)
+        if not data or status >= 400:
+            logger.warning("Vector security status failed for %s with status=%s data=%r", module_name, status, data)
+            return await self.edit(callback, f"{self.ui.emoji('error')} <b>{self.strings['security_fetch_error']}</b>", loading_buttons)
+
+        self._cache_security(module_name, data)
+        checked = bool(data.get("checked") and isinstance(data.get("check"), dict))
+        buttons = self._security_buttons(module_name, index, modules, query, checked=checked)
+        await self.edit(callback, self.ui.format_security(module_name, data), buttons)
+
+    async def security_run(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+        buttons = self._security_buttons(module_name, index, modules, query, checked=False)
+        await self.edit(callback, f"{self.ui.emoji('search')} <b>{self.strings['security_running']}</b>", buttons)
+
+        token = await self.auth.ensure()
+        if not token:
+            token = await self.auth.ensure(force=True)
+        if not token:
+            return await self.edit(callback, f"{self.ui.emoji('error')} <b>{self.strings['auth_error']}</b>", buttons)
+
+        data = await self.api.security_run(module_name, token)
+        status = self._security_status_code(data)
+        if status == 429:
+            return await self.edit(callback, f"{self.ui.emoji('warn')} <b>{self.strings['security_limit']}</b>", buttons)
+        if not data or status >= 400:
+            logger.warning("Vector security run failed for %s with status=%s data=%r", module_name, status, data)
+            return await self.edit(callback, f"{self.ui.emoji('error')} <b>{self.strings['security_fetch_error']}</b>", buttons)
+
+        self._cache_security(module_name, data)
+        await self.edit(callback, self.ui.format_security(module_name, data), self._security_buttons(module_name, index, modules, query, checked=True))
+
+    def _security_buttons(self, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str, *, checked: bool) -> List[List[Dict[str, Any]]]:
+        buttons = [
+            [
+                {"text": self.strings["comments_back"], "callback": self.navigate, "args": (index, modules or [], query)},
+                {"text": self.strings["page"], "url": self.api.source_url(module_name)},
+            ],
+        ]
+        if not checked:
+            buttons.append([{"text": self.strings["security_run_btn"], "callback": self.security_run, "args": (module_name, index, modules, query)}])
+        return buttons
 
     def _format_comments(self, comments: List[Dict[str, Any]], module_name: str) -> str:
         """Render comment thread as HTML for Telegram message."""
@@ -741,7 +1016,7 @@ class Vector(loader.Module):
             ],
         ]
 
-    async def comments(self, callback: Union[CallbackQuery, ChosenInlineResult], module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+    async def comments(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
         await self.answer(callback)
         token = await self.auth.ensure()
         raw = await self.api.comments_get(module_name, token=token)
@@ -770,6 +1045,8 @@ class Vector(loader.Module):
             }
 
         token = await self.auth.ensure()
+        if not token:
+            token = await self.auth.ensure(force=True)
         if not token:
             return {"title": self.strings["auth_error"], "description": self.strings["retry"], "message": self.strings["auth_error"]}
 
@@ -810,6 +1087,8 @@ class Vector(loader.Module):
 
         message = await utils.answer(message, f"{self.ui.emoji('search')} <b>{self.strings['search'].format(query=f'<code>{utils.escape_html(query)}</code>')}</b>")
         token = await self.auth.ensure()
+        if not token:
+            token = await self.auth.ensure(force=True)
         if not token:
             return await utils.answer(message, f"{self.ui.emoji('error')} <b>{self.strings['auth_error']}</b>")
 
