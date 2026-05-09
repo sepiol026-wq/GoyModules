@@ -16,21 +16,18 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (1, 1, 0)
+__version__ = (1, 1, 1)
 
 import asyncio
 import ast
 import base64
 import hashlib
-import importlib
 import json
 import logging
 import re
-import sys
 import time
 import uuid
 from contextlib import suppress
-from importlib.machinery import ModuleSpec
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import quote, unquote, urljoin
 
@@ -332,121 +329,80 @@ class VectorAuth:
 
 
 class VectorInstaller:
-    async def execute(self, plugin: "Vector", module_name: str, token: str) -> Tuple[str, List[str]]:
-        code = await plugin.api.download(module_name, token)
-        if not code:
-            return "error", []
+    def _loader_module(self, plugin: "Vector") -> Optional[loader.Module]:
+        lookup = getattr(plugin, "lookup", None) or getattr(plugin.allmodules, "lookup", None)
+        if not callable(lookup):
+            return None
 
-        for step in range(5):
-            state = await self.load(plugin, code, plugin.api.download_url(module_name), step)
-            if state == "success":
-                if getattr(plugin, "fully_loaded", True):
-                    with suppress(Exception):
-                        plugin.update_modules_in_db()
-                return "success", []
-            if state == "overwrite":
-                return "overwrite", []
-            if isinstance(state, list):
-                return "dependency", state
-            if state == "error":
-                return "error", []
-            await asyncio.sleep(0.5)
+        module = lookup("loader")
+        return module if module and callable(getattr(module, "load_module", None)) else None
 
-        return "dependency", []
-
-    async def _install_requirements(self, plugin: "Vector", dependencies: List[str]) -> bool:
-        installer = (
-            getattr(plugin.allmodules, "install_requirements", None)
-            or getattr(plugin, "install_requirements", None)
-        )
-        if callable(installer):
-            return bool(await installer(dependencies))
-        proc = await asyncio.create_subprocess_exec(
-            sys.executable, "-m", "pip", "install", "--upgrade", *dependencies,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-        return (await proc.wait()) == 0
-
-    async def _install_packages(self, plugin: "Vector", packages: List[str]) -> bool:
-        installer = (
-            getattr(plugin.allmodules, "install_packages", None)
-            or getattr(plugin, "install_packages", None)
-        )
-        if callable(installer):
-            return bool(await installer(packages))
-        return False
-
-    async def load(self, plugin: "Vector", code: str, origin: str, step: int) -> Union[str, List[str]]:
-        if step == 0:
-            dependencies = self.requirements(getattr(loader, "VALID_PIP_PACKAGES", None), code)
-            if dependencies:
-                if not await self._install_requirements(plugin, dependencies):
-                    return dependencies
-                importlib.invalidate_caches()
-                return "retry"
-
-            packages = self.requirements(getattr(loader, "VALID_APT_PACKAGES", None), code)
-            if packages:
-                if not await self._install_packages(plugin, packages):
-                    return packages
-                importlib.invalidate_caches()
-                return "retry"
-
-        identifier = self.class_name(code)
-        module_name = f"heroku.modules.{identifier}"
-        instance = None
-
-        try:
-            spec = ModuleSpec(module_name, loader.StringLoader(code, f"<external {module_name}>"), origin=origin)
-            instance = await plugin.allmodules.register_module(spec, module_name, origin, save_fs=False)
-            plugin.allmodules.send_config_one(instance)
-            await plugin.allmodules.send_ready_one(instance, no_self_unload=True, from_dlmod=False)
-            return "success"
-        except ImportError as exception:
-            package = {"sklearn": "scikit-learn", "pil": "Pillow", "herokutl": "Heroku-TL-New"}.get(
-                str(exception.name).lower(), exception.name
-            )
-            dependencies = [package] if package else []
-            if not dependencies or not await self._install_requirements(plugin, dependencies):
-                return dependencies
-            importlib.invalidate_caches()
-            return "retry"
-        except CoreOverwriteError:
-            return "overwrite"
-        except Exception:
-            return "error"
-        finally:
-            if instance and sys.exc_info()[0] is not None:
-                with suppress(Exception):
-                    await plugin.allmodules.unload_module(instance.__class__.__name__)
-                with suppress(Exception):
-                    plugin.allmodules.modules.remove(instance)
-
-    def requirements(self, pattern: Any, code: str) -> List[str]:
-        if not pattern:
-            return []
-        try:
-            match = pattern.search(code)
-            raw = match[1] if match else ""
-            return [item for item in (part.strip().rstrip(",") for part in raw.split()) if item and not item.startswith(("-", "_", "."))]
-        except Exception:
-            return []
-
-    def class_name(self, code: str) -> str:
+    def _class_name(self, code: str) -> Optional[str]:
         try:
             tree = ast.parse(code)
             for node in tree.body:
                 if not isinstance(node, ast.ClassDef):
                     continue
+
                 for base in node.bases:
-                    if isinstance(base, ast.Attribute) and getattr(base.value, "id", None) == "loader" and base.attr == "Module":
-                        return node.name
-                    if isinstance(base, ast.Name) and base.id == "Module":
+                    if (
+                        isinstance(base, ast.Attribute)
+                        and getattr(base.value, "id", None) == "loader"
+                        and base.attr == "Module"
+                    ) or (isinstance(base, ast.Name) and base.id == "Module"):
                         return node.name
         except Exception:
-            pass
-        return "__vector_extmod_" + uuid.uuid4().hex
+            logger.debug("Unable to parse Vector module class name", exc_info=True)
+
+        return None
+
+    def _module_loaded(self, plugin: "Vector", class_name: Optional[str], code: str) -> bool:
+        lookup = getattr(plugin, "lookup", None) or getattr(plugin.allmodules, "lookup", None)
+        if class_name and callable(lookup):
+            module = lookup(class_name)
+            if module:
+                return True
+
+        with suppress(Exception):
+            for module in getattr(plugin.allmodules, "modules", []):
+                if class_name and module.__class__.__name__ == class_name:
+                    return True
+
+                source = getattr(module, "__source__", None)
+                if isinstance(source, str) and source.strip() == code.strip():
+                    return True
+
+        return False
+
+    async def execute(self, plugin: "Vector", module_name: str, token: str) -> Tuple[str, List[str]]:
+        code = await plugin.api.download(module_name, token)
+        if not code:
+            return "error", []
+
+        loader_module = self._loader_module(plugin)
+        if loader_module is None:
+            logger.error("Heroku built-in loader module is unavailable; Vector cannot install %s", module_name)
+            return "error", []
+
+        class_name = self._class_name(code)
+        origin = plugin.api.download_url(module_name)
+
+        try:
+            await loader_module.load_module(code, None, origin=origin, save_fs=True)
+        except CoreOverwriteError:
+            return "overwrite", []
+        except Exception:
+            logger.exception("Heroku built-in loader failed to install %s", module_name)
+            return "error", []
+
+        if self._module_loaded(plugin, class_name, code):
+            if getattr(plugin, "fully_loaded", True):
+                with suppress(Exception):
+                    plugin.update_modules_in_db()
+            return "success", []
+
+        logger.error("Heroku built-in loader finished without loading %s", module_name)
+        return "error", []
 
 
 class VectorUI:
@@ -755,17 +711,17 @@ class Vector(loader.Module):
         "default": {
             "search": '<tg-emoji emoji-id="5447459604524971717">🔎</tg-emoji>',
             "error": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
-            "warn": '<tg-emoji emoji-id="5881702736843511327">⚠️</tg-emoji>',
+            "warn": "⚠️",
             "description": '<tg-emoji emoji-id="6008090211181923982">📝</tg-emoji>',
             "command": '<tg-emoji emoji-id="5877260593903177342">⚙</tg-emoji>',
             "dependency": '<tg-emoji emoji-id="5325732612084351248">📦</tg-emoji>',
             "module": '<tg-emoji emoji-id="5924720918826848520">📦</tg-emoji>',
             "modules_list": '<tg-emoji emoji-id="5883973610606956186">🗂</tg-emoji>',
-            "shield": '<tg-emoji emoji-id="5465665476971471368">🛡</tg-emoji>',
-            "safe": '<tg-emoji emoji-id="5368324170671202286">✅</tg-emoji>',
-            "unsafe": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
-            "stats": '<tg-emoji emoji-id="5373035852124832363">📊</tg-emoji>',
-            "quota": '<tg-emoji emoji-id="5431531874098153769">⏳</tg-emoji>',
+            "shield": "🛡",
+            "safe": "✅",
+            "unsafe": "❌",
+            "stats": "📊",
+            "quota": "⏳",
         },
         "neon": {
             "search": "💠",
@@ -791,7 +747,7 @@ class Vector(loader.Module):
             loader.ConfigValue("limit", 10, lambda: self.strings("doclimit"), validator=loader.validators.Integer(minimum=1, maximum=25)),
         )
 
-    async def client_ready(self, client: "telethon.TelegramClient", database: "loader.Database") -> None:
+    async def client_ready(self, client: "herokutl.TelegramClient", database: "loader.Database") -> None:
         self.client = client
         self.database = database
         self.api = VectorAPI(self)
@@ -812,27 +768,102 @@ class Vector(loader.Module):
             logger.debug("Unable to answer inline callback", exc_info=True)
 
     def _safe_inline_text(self, text: str) -> str:
-        # Heroku/aiogram can reject some Bot API HTML constructs during inline edits
-        # while the same text is accepted in normal messages. Keep a conservative
-        # fallback that preserves the result instead of replacing it with an error.
-        safe = re.sub(r"</?tg-emoji[^>]*>", "", text)
-        safe = safe.replace("<blockquote expandable>", "<blockquote>")
-        safe = re.sub(r"</?(?:blockquote|b|i|code|a)(?:\s+[^>]*)?>", "", safe)
-        safe = re.sub(r"<[^>]+>", "", safe)
-        return utils.escape_html(safe)[:3900]
+        safe = text.replace("<blockquote expandable>", "<blockquote>")
+        allowed = {"a", "b", "blockquote", "code", "i", "tg-emoji"}
+
+        def keep_supported_tag(match: re.Match) -> str:
+            return match.group(0) if match.group(1).lower() in allowed else ""
+
+        safe = re.sub(r"</?([a-zA-Z][\w-]*)(?:\s+[^>]*)?>", keep_supported_tag, safe)
+        return safe[:3900]
+
+    def _preview_url(self, url: Optional[str]) -> str:
+        url = str(url or "").strip()
+        return url if url.startswith(("http://", "https://")) else ""
+
+    def _with_preview_link(self, text: str, url: Optional[str]) -> str:
+        preview_url = self._preview_url(url)
+        if not preview_url or preview_url in text:
+            return text
+
+        escaped = utils.escape_html(preview_url).replace('"', "&quot;")
+        return f'<a href="{escaped}">\u200b</a>\n{text}'
+
+    def _preview_options(self, url: Optional[str]) -> Dict[str, Any]:
+        preview_url = self._preview_url(url)
+        if not preview_url:
+            return {}
+
+        return {
+            "url": preview_url,
+            "prefer_large_media": True,
+            "show_above_text": True,
+        }
+
+    def _is_inline_target(self, target: Any) -> bool:
+        return any(hasattr(target, attr) for attr in ("inline_message_id", "unit_id", "inline_manager"))
+
+    async def _edit_inline_with_preview(
+        self,
+        target: Any,
+        text: str,
+        buttons: List[List[Dict[str, Any]]],
+        preview_url: str,
+    ) -> bool:
+        manager = getattr(target, "inline_manager", None)
+        if not manager or not preview_url:
+            return False
+
+        unit_id = getattr(target, "unit_id", None)
+        with suppress(Exception):
+            if unit_id in getattr(target, "_units", {}):
+                target._units[unit_id]["buttons"] = buttons
+
+        inline_message_id = getattr(target, "inline_message_id", None)
+        params: Dict[str, Any] = {"inline_message_id": inline_message_id} if inline_message_id else {}
+        chat_id = getattr(target, "chat_id", None)
+        message_id = getattr(target, "message_id", None)
+        if not params and chat_id and message_id:
+            params = {"chat_id": chat_id, "message_id": message_id}
+        if not params:
+            return False
+
+        try:
+            await manager.bot.edit_message_text(
+                text,
+                **params,
+                reply_markup=manager.generate_markup(buttons),
+                link_preview_options=self._preview_options(preview_url),
+            )
+            return True
+        except Exception:
+            logger.debug("Unable to edit Vector inline preview directly", exc_info=True)
+            return False
 
     async def edit(self, target: Any, text: str, buttons: List[List[Dict[str, Any]]], banner: Optional[str] = None) -> bool:
-        # Heroku's InlineCall.edit treats `photo=` as media replacement. Module banners
-        # are external preview images and Telegram may reject them as DOCUMENT_INVALID,
-        # so Vector keeps inline updates text-only and never edits the message media.
+        preview_url = self._preview_url(banner)
         for candidate in (text, self._safe_inline_text(text)):
+            candidate = self._with_preview_link(candidate, preview_url)
             try:
+                if self._is_inline_target(target) and await self._edit_inline_with_preview(target, candidate, buttons, preview_url):
+                    return True
+
                 if hasattr(target, "edit"):
-                    ok = await target.edit(candidate, reply_markup=buttons, disable_web_page_preview=True)
+                    kwargs = {"reply_markup": buttons}
+                    if self._is_inline_target(target):
+                        kwargs["disable_web_page_preview"] = False
+                    else:
+                        kwargs["link_preview"] = True
+                    ok = await target.edit(candidate, **kwargs)
                     if ok is not False:
                         return True
 
-                result = await utils.answer(target, candidate, reply_markup=buttons, link_preview=False)
+                answer_kwargs = {"reply_markup": buttons}
+                if self._is_inline_target(target):
+                    answer_kwargs["disable_web_page_preview"] = False
+                else:
+                    answer_kwargs["link_preview"] = True
+                result = await utils.answer(target, candidate, **answer_kwargs)
                 if result is not None:
                     return True
             except Exception:
@@ -1068,7 +1099,11 @@ class Vector(loader.Module):
                 id=f"vector_{uuid.uuid4().hex[:8]}_{index}",
                 title=utils.escape_html(str(data.get("name", ""))),
                 description=utils.escape_html(description[:250] + ("..." if len(description) > 250 else "")),
-                input_message_content=InputTextMessageContent(message_text=self.ui.format(data, index + 1, len(modules)), parse_mode="HTML"),
+                input_message_content=InputTextMessageContent(
+                    message_text=self._with_preview_link(self.ui.format(data, index + 1, len(modules)), data.get("banner")),
+                    parse_mode="HTML",
+                    link_preview_options=self._preview_options(data.get("banner")) or None,
+                ),
                 reply_markup=markup,
             ))
         await event.inline_query.answer(results, cache_time=0)
