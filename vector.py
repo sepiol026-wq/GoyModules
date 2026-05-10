@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (1, 1, 2)
+__version__ = (1, 1, 3)
 
 import asyncio
 import base64
@@ -94,13 +94,15 @@ class VectorAPI:
         return VECTOR_API_BASE.rstrip("/")
 
     async def connect(self) -> aiohttp.ClientSession:
-        if self.session is None or self.session.closed:
+        ready = self.session is not None and not self.session.closed
+        if not ready:
             logger.info("Vector API: opening HTTP session base=%s", self.base)
             self.session = aiohttp.ClientSession()
         return self.session
 
     async def close(self) -> None:
-        if self.session and not self.session.closed:
+        alive = self.session and not self.session.closed
+        if alive:
             logger.info("Vector API: closing HTTP session")
             await self.session.close()
 
@@ -338,17 +340,17 @@ class VectorAPI:
         return given or f"{self.base}/modules/{quote(module_name, safe='')}/source"
 
     def normalize(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        commands = data.get("commands") if isinstance(data.get("commands"), list) else []
-        normalized_commands = []
-        for item in commands:
+        raw_commands = data.get("commands") if isinstance(data.get("commands"), list) else []
+        command_list = []
+        for item in raw_commands:
             if not isinstance(item, dict):
                 continue
-            normalized_commands.append({
+            command_list.append({
                 "name": item.get("name") or item.get("cmd") or "",
                 "description": item.get("description") or item.get("desc") or "",
             })
 
-        dependencies = data.get("dependencies") if isinstance(data.get("dependencies"), list) else []
+        deps = data.get("dependencies") if isinstance(data.get("dependencies"), list) else []
         author = str(data.get("developer") or data.get("author") or "@Unknown")
         author_key = author.strip().lower()
         official = bool(
@@ -368,8 +370,8 @@ class VectorAPI:
             "version": data.get("version") or "?.?.?",
             "author": author,
             "description": data.get("description") or "",
-            "commands": normalized_commands,
-            "dependencies": [str(item) for item in dependencies],
+            "commands": command_list,
+            "dependencies": [str(item) for item in deps],
             "official": official,
             "likes": int(data.get("likes") or 0),
             "dislikes": int(data.get("dislikes") or 0),
@@ -540,9 +542,9 @@ class VectorInstaller:
             return None
 
         module = lookup("loader")
-        ok = bool(module and callable(getattr(module, "download_and_install", None)))
-        logger.info("Vector installer loader lookup result: found=%s has_download_and_install=%s", bool(module), ok)
-        return module if ok else None
+        has_install = callable(getattr(module, "download_and_install", None))
+        logger.info("Vector installer loader lookup result: found=%s has_download_and_install=%s", bool(module), has_install)
+        return module if module and has_install else None
 
     async def execute(self, plugin: "Vector", module_name: str, token: str) -> Tuple[str, List[str]]:
         logger.info("Vector installer execute started: module=%s token=%s", module_name, "yes" if token else "no")
@@ -607,7 +609,8 @@ class VectorUI:
 
     def emoji(self, key: str) -> str:
         theme = self.owner.config["theme"]
-        return self.owner.THEMES.get(theme, self.owner.THEMES["default"]).get(key, self.owner.THEMES["default"].get(key, ""))
+        theme_map = self.owner.THEMES
+        return theme_map.get(theme, theme_map["default"]).get(key, theme_map["default"].get(key, ""))
 
     def plain_len(self, text: str) -> int:
         return len(re.sub(r"<[^>]+>", "", text))
@@ -620,10 +623,11 @@ class VectorUI:
         if version != "?.?.?":
             text += f" (<code>v{utils.escape_html(version)}</code>)"
 
-        official = bool(data.get("official"))
+        is_official = bool(data.get("official"))
+        status_key = "official_module" if is_official else "unofficial_module"
         text += (
             f"\n{self.emoji('verified')} <b>{self.owner.strings['module_status']}:</b> "
-            f"<code>{self.owner.strings['official_module' if official else 'unofficial_module']}</code>"
+            f"<code>{self.owner.strings[status_key]}</code>"
         )
         if total > 1:
             text += f"\n{self.emoji('modules_list')} <i>{self.owner.strings['counter'].format(idx=index, total=total)}</i>"
@@ -739,7 +743,7 @@ class VectorUI:
         expanded: bool = False,
     ) -> List[List[Dict[str, Any]]]:
         name = str(data.get("name") or "")
-        buttons = [
+        rows = [
             [
                 {"text": self.owner.strings["query"], "copy": query},
                 {"text": self.owner.strings["install"], "callback": self.owner.install, "args": (name, index, modules, query)},
@@ -754,48 +758,49 @@ class VectorUI:
         if modules and len(modules) > 1:
             prev_index = (index - 1) % len(modules)
             next_index = (index + 1) % len(modules)
-            buttons.append([
+            rows.append([
                 {"text": "◀️", "callback": self.owner.navigate, "args": (prev_index, modules, query)},
                 {"text": self.owner.strings["counter"].format(idx=index + 1, total=len(modules)), "callback": self.owner.show, "args": (index, modules, query)},
                 {"text": "▶️", "callback": self.owner.navigate, "args": (next_index, modules, query)},
             ])
 
-        buttons.append([
+        toggle_key = "hide_actions_btn" if expanded else "more_actions_btn"
+        rows.append([
             {
-                "text": self.owner.strings["hide_actions_btn" if expanded else "more_actions_btn"],
+                "text": self.owner.strings[toggle_key],
                 "callback": self.owner.toggle_actions,
                 "args": (name, index, modules, query, not expanded),
             },
         ])
 
         if expanded:
-            buttons.append([
+            rows.append([
                 {"text": self.owner.strings["comments_btn"], "callback": self.owner.comments, "args": (name, index, modules, query)},
                 {"text": self.owner.strings["security_check_btn"], "callback": self.owner.security_check, "args": (name, index, modules, query)},
             ])
 
-        return buttons
+        return rows
 
     def pagination(self, modules: List[Dict[str, Any]], query: str, page: int = 0, current: int = 0) -> List[List[Dict[str, Any]]]:
-        buttons = []
+        rows = []
         start = page * 8
         end = min(start + 8, len(modules))
-        for index in range(start, end):
-            module = modules[index]
-            buttons.append([{
-                "text": f"{index + 1}. {module.get('name', 'Unknown')} by {module.get('author', '@Unknown')}",
+        for i in range(start, end):
+            module = modules[i]
+            rows.append([{
+                "text": f"{i + 1}. {module.get('name', 'Unknown')} by {module.get('author', '@Unknown')}",
                 "callback": self.owner.navigate,
-                "args": (index, modules, query),
+                "args": (i, modules, query),
             }])
-        navigation = []
+        nav = []
         if page > 0:
-            navigation.append({"text": "◀️", "callback": self.owner.page, "args": (page - 1, modules, query, current)})
+            nav.append({"text": "◀️", "callback": self.owner.page, "args": (page - 1, modules, query, current)})
         if page < (len(modules) + 7) // 8 - 1:
-            navigation.append({"text": "▶️", "callback": self.owner.page, "args": (page + 1, modules, query, current)})
-        if navigation:
-            buttons.append(navigation)
-        buttons.append([{"text": "✖️", "callback": self.owner.navigate, "args": (current, modules, query)}])
-        return buttons
+            nav.append({"text": "▶️", "callback": self.owner.page, "args": (page + 1, modules, query, current)})
+        if nav:
+            rows.append(nav)
+        rows.append([{"text": "✖️", "callback": self.owner.navigate, "args": (current, modules, query)}])
+        return rows
 
 
 @loader.tds
@@ -870,6 +875,12 @@ class Vector(loader.Module):
         "comment_post_error": "✘ Failed to post comment.",
         "comments_back": "◀️ Back",
         "comments_write": "🌐 Website",
+        "comments_type_btn": "✏️ Type",
+        "comment_prompt": "Send your comment as a reply to this message.\n\nMin 2 characters, max 1800.",
+        "comment_sending": "Posting comment...",
+        "comment_too_short": "✘ Comment is too short (min 2 characters).",
+        "comment_too_long": "✘ Comment is too long (max 1800 characters).",
+        "comment_cancel": "Cancelled.",
     }
 
     strings_ru = {
@@ -939,6 +950,12 @@ class Vector(loader.Module):
         "comment_post_error": "✘ Не удалось опубликовать комментарий.",
         "comments_back": "◀️ Назад",
         "comments_write": "🌐 Сайт",
+        "comments_type_btn": "✏️ Написать",
+        "comment_prompt": "Отправьте ваш комментарий ответом на это сообщение.\n\nМинимум 2 символа, максимум 1800.",
+        "comment_sending": "Публикую комментарий...",
+        "comment_too_short": "✘ Комментарий слишком короткий (минимум 2 символа).",
+        "comment_too_long": "✘ Комментарий слишком длинный (максимум 1800 символов).",
+        "comment_cancel": "Отменено.",
     }
 
     THEMES = {
@@ -994,7 +1011,8 @@ class Vector(loader.Module):
         self.auth = VectorAuth(self)
         self.installer = VectorInstaller()
         self.ui = VectorUI(self)
-        self.bot = getattr(getattr(self, "inline", None), "bot", None) or getattr(getattr(self, "inline", None), "_bot", None)
+        inline = getattr(self, "inline", None)
+        self.bot = getattr(inline, "bot", None) or getattr(inline, "_bot", None)
         self._security_cache: Dict[str, Dict[str, Any]] = {}
         logger.info("Vector module client_ready finished: api_base=%s theme=%s limit=%s", VECTOR_API_BASE, self.config["theme"], self.config["limit"])
 
@@ -1014,10 +1032,10 @@ class Vector(loader.Module):
         safe = text.replace("<blockquote expandable>", "<blockquote>")
         allowed = {"a", "b", "blockquote", "code", "i", "tg-emoji"}
 
-        def keep_supported_tag(match: re.Match) -> str:
+        def _strip_unsupported(match: re.Match) -> str:
             return match.group(0) if match.group(1).lower() in allowed else ""
 
-        safe = re.sub(r"</?([a-zA-Z][\w-]*)(?:\s+[^>]*)?>", keep_supported_tag, safe)
+        safe = re.sub(r"</?([a-zA-Z][\w-]*)(?:\s+[^>]*)?>", _strip_unsupported, safe)
         return safe[:3900]
 
     def _preview_url(self, url: Optional[str]) -> str:
@@ -1028,7 +1046,6 @@ class Vector(loader.Module):
         preview_url = self._preview_url(url)
         if not preview_url or preview_url in text:
             return text
-
         escaped = utils.escape_html(preview_url).replace('"', "&quot;")
         return f'<a href="{escaped}">\u200b</a>\n{text}'
 
@@ -1036,7 +1053,6 @@ class Vector(loader.Module):
         preview_url = self._preview_url(url)
         if not preview_url:
             return {}
-
         return {
             "url": preview_url,
             "prefer_large_media": True,
@@ -1266,15 +1282,15 @@ class Vector(loader.Module):
         await self.edit(callback, self.ui.format_security(module_name, data), self._security_buttons(module_name, index, modules, query, checked=True))
 
     def _security_buttons(self, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str, *, checked: bool) -> List[List[Dict[str, Any]]]:
-        buttons = [
+        rows = [
             [
                 {"text": self.strings["comments_back"], "callback": self.navigate, "args": (index, modules or [], query)},
                 {"text": self.strings["page"], "url": self.api.source_url(module_name)},
             ],
         ]
         if not checked:
-            buttons.append([{"text": self.strings["security_run_btn"], "callback": self.security_run, "args": (module_name, index, modules, query)}])
-        return buttons
+            rows.append([{"text": self.strings["security_run_btn"], "callback": self.security_run, "args": (module_name, index, modules, query)}])
+        return rows
 
     def _comment_meta(self, comment: Dict[str, Any]) -> str:
         meta = []
@@ -1354,9 +1370,48 @@ class Vector(loader.Module):
         return [
             [
                 {"text": self.strings["comments_back"], "callback": self.navigate, "args": (index, modules or [], query)},
+                {
+                    "text": self.strings["comments_type_btn"],
+                    "input": self.strings["comment_prompt"],
+                    "handler": self.comment_type_input,
+                    "args": (module_name, index, modules, query),
+                },
                 {"text": self.strings["comments_write"], "url": source_url},
             ],
         ]
+
+    async def comment_type_input(self, callback: Any, data: str, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
+        logger.info("Vector comment type input received: module=%s index=%s body_len=%s", module_name, index, len(data or ""))
+        token = await self.auth.ensure()
+        if not token:
+            return await self.answer(callback, self.strings["auth_error"], True)
+
+        body = str(data or "").strip()
+        if not body:
+            return await self.answer(callback, self.strings["comment_cancel"], True)
+        if len(body) < 2:
+            return await self.answer(callback, self.strings["comment_too_short"], True)
+        if len(body) > 1800:
+            return await self.answer(callback, self.strings["comment_too_long"], True)
+
+        await self.answer(callback, self.strings["comment_sending"], True)
+        result = await self.api.comments_post(module_name, body, token)
+        if result is None:
+            logger.warning("Vector comment type post failed: module=%s", module_name)
+            return await self.answer(callback, self.strings["comment_post_error"], True)
+
+        logger.info("Vector comment type posted successfully: module=%s", module_name)
+        await self.answer(callback, self.strings["comment_posted"], True)
+
+        # Refresh the comments page automatically after posting
+        raw = await self.api.comments_get(module_name, token=token)
+        if raw is None:
+            return
+        module_data = modules[index] if modules and 0 <= index < len(modules) else {}
+        preview = module_data.get("banner") or self.api.source_url(module_name)
+        text = self._format_comments(raw, module_name)
+        await self.edit(callback, text, self._comments_buttons(module_name, index, modules, query), preview)
+        logger.info("Vector comment type comments refreshed: module=%s count=%s", module_name, len(raw))
 
     async def comments(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
         logger.info("Vector comments flow started: module=%s index=%s query=%r", module_name, index, query)
