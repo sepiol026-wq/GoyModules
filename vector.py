@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (1, 1, 3)
+__version__ = (2, 0, 0)
 
 import asyncio
 import base64
@@ -25,1492 +25,1311 @@ import json
 import logging
 import re
 import time
-import uuid
 from contextlib import suppress
-from typing import Any, Dict, List, Optional, Tuple, Union
-from urllib.parse import quote, unquote, urljoin
+from typing import Any, Dict, List, Optional
+from urllib.parse import quote, urljoin
 
 import aiohttp
 from herokutl.tl.functions.contacts import UnblockRequest
 from herokutl.types import Message
 
 from .. import loader, utils
-from ..inline.types import InlineQueryResultArticle, InputTextMessageContent
 
+log = logging.getLogger("VectorMonolith")
+log.setLevel(logging.INFO)
 
-VECTOR_API_BASE = "https://vector-three-sooty.vercel.app"
-VECTOR_TOKEN_PREFIX = "vector-token-v1"
-VECTOR_TOKEN_SALT = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
-VECTOR_OFFICIAL_DEVELOPERS = {"@goymodules", "@samsepi0l_ovf"}
-JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-SENSITIVE_LOG_KEY_RE = re.compile(r"(?:token|authorization|jwt|secret|session|password|cookie)", re.I)
-
-
-def _safe_log_value(value: Any, key: str = "") -> Any:
-    if key and SENSITIVE_LOG_KEY_RE.search(key):
-        return "<redacted>"
-
-    if isinstance(value, str):
-        redacted = JWT_RE.sub("<jwt-redacted>", value)
-        return redacted if len(redacted) <= 500 else f"{redacted[:500]}...<truncated:{len(redacted)}>"
-
-    if isinstance(value, bytes):
-        return f"<bytes:{len(value)}>"
-
-    if isinstance(value, dict):
-        return {str(k): _safe_log_value(v, str(k)) for k, v in list(value.items())[:40]}
-
-    if isinstance(value, (list, tuple, set)):
-        items = list(value)
-        safe_items = [_safe_log_value(item) for item in items[:20]]
-        if len(items) > 20:
-            safe_items.append(f"<truncated_items:{len(items) - 20}>")
-        return safe_items
-
-    return value
-
-
-def _log_preview(value: Any) -> str:
-    try:
-        rendered = json.dumps(_safe_log_value(value), ensure_ascii=False, default=str)
-    except Exception:
-        rendered = repr(_safe_log_value(value))
-
-    return rendered if len(rendered) <= 2500 else f"{rendered[:2500]}...<truncated:{len(rendered)}>"
-
-
-class VectorAPI:
-    def __init__(self, owner: "Vector") -> None:
-        self.owner = owner
-        self.session: Optional[aiohttp.ClientSession] = None
-        self.last_status: int = 0
-        self.last_error_body: str = ""
-
-    @property
-    def base(self) -> str:
-        return VECTOR_API_BASE.rstrip("/")
-
-    async def connect(self) -> aiohttp.ClientSession:
-        ready = self.session is not None and not self.session.closed
-        if not ready:
-            logger.info("Vector API: opening HTTP session base=%s", self.base)
-            self.session = aiohttp.ClientSession()
-        return self.session
-
-    async def close(self) -> None:
-        alive = self.session and not self.session.closed
-        if alive:
-            logger.info("Vector API: closing HTTP session")
-            await self.session.close()
-
-    async def request(
-        self,
-        method: str,
-        path: str,
-        *,
-        token: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
-        json_payload: Optional[Dict[str, Any]] = None,
-        raw: bool = False,
-        with_status: bool = False,
-        timeout: int = 15,
-    ) -> Union[Dict[str, Any], bytes, None]:
-        session = await self.connect()
-        url = urljoin(f"{self.base}/", path.lstrip("/"))
-        headers = {"User-Agent": "VectorHerokuModule/1.0"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-
-        self.last_status = 0
-        self.last_error_body = ""
-        logger.info(
-            "Vector API request: method=%s path=%s params=%s json=%s token=%s raw=%s timeout=%s",
-            method,
-            path,
-            _log_preview(params or {}),
-            _log_preview(json_payload or {}),
-            "yes" if token else "no",
-            raw,
-            timeout,
-        )
-
-        try:
-            async with session.request(
-                method,
-                url,
-                params=params,
-                json=json_payload,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=timeout),
-            ) as response:
-                self.last_status = int(response.status)
-                logger.info("Vector API response status: method=%s path=%s status=%s", method, path, response.status)
-                if response.status < 200 or response.status >= 300:
-                    error_body = await response.text()
-                    self.last_error_body = error_body
-                    logger.warning(
-                        "Vector API non-2xx response: method=%s path=%s status=%s body=%s",
-                        method,
-                        path,
-                        response.status,
-                        _log_preview(error_body),
-                    )
-                    return {"_status": response.status, "_body": error_body} if with_status else None
-                if raw:
-                    body = await response.read()
-                    logger.info("Vector API raw response: method=%s path=%s bytes=%s", method, path, len(body))
-                    return body
-                data = await response.json(content_type=None)
-                if with_status and isinstance(data, dict):
-                    data.setdefault("_status", response.status)
-                logger.info("Vector API JSON response: method=%s path=%s data=%s", method, path, _log_preview(data))
-                return data
-        except Exception:
-            logger.exception("Vector API request failed: %s %s", method, path)
-            return None
-
-    async def bot_username(self) -> Optional[str]:
-        logger.info("Vector API bot username lookup started")
-        data = await self.request("GET", "/api/tg-bot")
-        logger.info("Vector API bot username payload: %s", _log_preview(data))
-        username = data.get("username") if isinstance(data, dict) else None
-        if isinstance(username, str) and username.strip():
-            normalized = username.strip().lstrip("@")
-            logger.info("Vector API bot username resolved: @%s", normalized)
-            return normalized
-        logger.warning("Vector API bot username missing or invalid: %s", _log_preview(data))
-        return None
-
-    async def search(self, query: str, limit: int, token: str) -> List[Dict[str, Any]]:
-        params = {"q": query, "limit": str(limit)}
-        logger.warning("Vector API search started: url=%s/api/search params=%s token=%s", self.base, _log_preview(params), "yes" if token else "no")
-        data = await self.request("GET", "/api/search", token=token, params=params)
-        logger.warning("Vector API search raw response: query=%r type=%s payload=%s", query, type(data).__name__, _log_preview(data))
-
-        if isinstance(data, dict):
-            results = data.get("results", [])
-            logger.warning(
-                "Vector API search parsed dict response: query=%r keys=%s results_type=%s",
-                query,
-                list(data.keys())[:20],
-                type(results).__name__,
-            )
-        elif isinstance(data, list):
-            results = data
-            logger.warning("Vector API search parsed list response: query=%r items=%s", query, len(results))
-        else:
-            logger.warning("Vector API search unsupported payload: query=%r type=%s payload=%s", query, type(data).__name__, _log_preview(data))
-            return []
-
-        if not isinstance(results, list):
-            logger.warning("Vector API search results is not a list: query=%r results=%s", query, _log_preview(results))
-            return []
-
-        normalized = [self.normalize(item) for item in results if isinstance(item, dict)]
-        logger.warning(
-            "Vector API search normalized response: query=%r raw_count=%s normalized_count=%s names=%s",
-            query,
-            len(results),
-            len(normalized),
-            [item.get("name") for item in normalized[:10]],
-        )
-        return normalized
-
-    async def search_with_reauth(self, query: str, limit: int) -> List[Dict[str, Any]]:
-        token = await self.owner.auth.ensure()
-        if not token:
-            token = await self.owner.auth.ensure(force=True)
-        if not token:
-            logger.warning("Vector API search_with_reauth stopped: auth failed before request query=%r", query)
-            return []
-
-        modules = await self.search(query, limit, token)
-        if self.last_status == 401:
-            logger.warning(
-                "Vector API search got 401, dropping cached token and retrying once: query=%r body=%s",
-                query,
-                _log_preview(self.last_error_body),
-            )
-            self.owner.auth.drop_cached("search returned 401")
-            token = await self.owner.auth.ensure(force=True)
-            if not token:
-                logger.warning("Vector API search retry stopped: auth refresh failed query=%r", query)
-                return []
-            modules = await self.search(query, limit, token)
-            logger.warning("Vector API search retry finished: query=%r status=%s count=%s", query, self.last_status, len(modules))
-
-        return modules
-
-    async def rate(self, user_id: str, module_name: str, action: str, token: str) -> Optional[Dict[str, Any]]:
-        logger.info("Vector API rate started: user_id=%s module=%s action=%s", user_id, module_name, action)
-        data = await self.request(
-            "POST",
-            f"/api/rate/{quote(user_id, safe='')}/{quote(module_name, safe='')}/{action}",
-            token=token,
-        )
-        logger.info("Vector API rate returned: module=%s action=%s payload=%s", module_name, action, _log_preview(data))
-        return data if isinstance(data, dict) else None
-
-    async def comments_get(self, module_name: str, token: Optional[str] = None) -> List[Dict[str, Any]]:
-        logger.info("Vector API comments get started: module=%s", module_name)
-        data = await self.request("GET", f"/api/modules/{quote(module_name, safe='')}/comments", token=token)
-        logger.info("Vector API comments get returned: module=%s payload=%s", module_name, _log_preview(data))
-        if not isinstance(data, dict):
-            return []
-        comments = [c for c in data.get("comments", []) if isinstance(c, dict)]
-        logger.info("Vector API comments normalized: module=%s count=%s", module_name, len(comments))
-        return comments
-
-    async def comments_post(self, module_name: str, body: str, token: str, parent_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        logger.info("Vector API comment post started: module=%s parent_id=%s body_len=%s", module_name, parent_id, len(body))
-        payload: Dict[str, Any] = {"body": body}
-        if parent_id:
-            payload["parent_id"] = parent_id
-        data = await self.request("POST", f"/api/modules/{quote(module_name, safe='')}/comments", token=token, json_payload=payload)
-        logger.info("Vector API comment post returned: module=%s payload=%s", module_name, _log_preview(data))
-        return data if isinstance(data, dict) else None
-
-    async def comment_edit(self, module_name: str, comment_id: str, body: str, token: str) -> Optional[Dict[str, Any]]:
-        logger.info("Vector API comment edit started: module=%s comment_id=%s body_len=%s", module_name, comment_id, len(body))
-        data = await self.request(
-            "PATCH",
-            f"/api/modules/{quote(module_name, safe='')}/comments/{quote(comment_id, safe='')}",
-            token=token,
-            json_payload={"body": body},
-        )
-        logger.info("Vector API comment edit returned: module=%s comment_id=%s payload=%s", module_name, comment_id, _log_preview(data))
-        return data if isinstance(data, dict) else None
-
-    async def comment_delete(self, module_name: str, comment_id: str, token: str) -> Optional[Dict[str, Any]]:
-        logger.info("Vector API comment delete started: module=%s comment_id=%s", module_name, comment_id)
-        data = await self.request(
-            "DELETE",
-            f"/api/modules/{quote(module_name, safe='')}/comments/{quote(comment_id, safe='')}",
-            token=token,
-        )
-        logger.info("Vector API comment delete returned: module=%s comment_id=%s payload=%s", module_name, comment_id, _log_preview(data))
-        return data if isinstance(data, dict) else None
-
-    async def ratings_get(self, module_name: str, token: Optional[str] = None) -> Dict[str, Any]:
-        logger.info("Vector API ratings get started: module=%s", module_name)
-        data = await self.request("GET", f"/api/modules/{quote(module_name, safe='')}/ratings", token=token)
-        logger.info("Vector API ratings get returned: module=%s payload=%s", module_name, _log_preview(data))
-        return data if isinstance(data, dict) else {}
-
-    async def security_status(self, module_name: str, token: str) -> Dict[str, Any]:
-        logger.info("Vector API security status started: module=%s", module_name)
-        data = await self.request(
-            "GET",
-            f"/api/modules/{quote(module_name, safe='')}/security-check",
-            token=token,
-            with_status=True,
-        )
-        logger.info("Vector API security status returned: module=%s payload=%s", module_name, _log_preview(data))
-        return data if isinstance(data, dict) else {}
-
-    async def security_run(self, module_name: str, token: str) -> Dict[str, Any]:
-        logger.info("Vector API security run started: module=%s", module_name)
-        data = await self.request(
-            "POST",
-            f"/api/modules/{quote(module_name, safe='')}/security-check",
-            token=token,
-            with_status=True,
-            timeout=120,
-        )
-        logger.info("Vector API security run returned: module=%s payload=%s", module_name, _log_preview(data))
-        return data if isinstance(data, dict) else {}
-
-    async def download(self, module_name: str, token: str) -> Optional[str]:
-        logger.info("Vector API download started: module=%s", module_name)
-        data = await self.request("GET", f"/api/modules/{quote(module_name, safe='')}/download", token=token, raw=True)
-        if not isinstance(data, (bytes, bytearray)):
-            logger.warning("Vector API download failed: module=%s payload_type=%s", module_name, type(data).__name__)
-            return None
-        code = bytes(data).decode("utf-8", errors="replace")
-        logger.info("Vector API download decoded: module=%s bytes=%s chars=%s", module_name, len(data), len(code))
-        return code
-
-    def download_url(self, module_name: str) -> str:
-        return f"{self.base}/api/modules/{quote(module_name, safe='')}/download"
-
-    def source_url(self, module_name: str, given: str = "") -> str:
-        return given or f"{self.base}/modules/{quote(module_name, safe='')}/source"
-
-    def normalize(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        raw_commands = data.get("commands") if isinstance(data.get("commands"), list) else []
-        command_list = []
-        for item in raw_commands:
-            if not isinstance(item, dict):
-                continue
-            command_list.append({
-                "name": item.get("name") or item.get("cmd") or "",
-                "description": item.get("description") or item.get("desc") or "",
-            })
-
-        deps = data.get("dependencies") if isinstance(data.get("dependencies"), list) else []
-        author = str(data.get("developer") or data.get("author") or "@Unknown")
-        author_key = author.strip().lower()
-        official = bool(
-            data.get("official")
-            or data.get("is_official")
-            or data.get("verified")
-            or data.get("is_verified")
-            or data.get("telegram_verified")
-            or data.get("official_developer")
-            or data.get("is_official_developer")
-            or author_key in VECTOR_OFFICIAL_DEVELOPERS
-        )
-        name = str(data.get("name") or data.get("class_name") or "Unknown")
-        return {
-            "name": name,
-            "class_name": data.get("class_name") or name,
-            "version": data.get("version") or "?.?.?",
-            "author": author,
-            "description": data.get("description") or "",
-            "commands": command_list,
-            "dependencies": [str(item) for item in deps],
-            "official": official,
-            "likes": int(data.get("likes") or 0),
-            "dislikes": int(data.get("dislikes") or 0),
-            "banner": data.get("banner"),
-            "source_url": self.source_url(name, str(data.get("source_url") or "")),
-            "download_url": self.download_url(name),
-        }
-
-
-class VectorAuth:
-    def __init__(self, owner: "Vector") -> None:
-        self.owner = owner
-
-    def payload_command(self, telegram_id: str, username: str, nickname: str, bucket: Optional[int] = None) -> str:
-        bucket = int(time.time() // 10) if bucket is None else bucket
-        payload = f"{VECTOR_TOKEN_PREFIX}|{telegram_id}|{bucket}|{username}|{nickname}|{VECTOR_TOKEN_SALT}"
-        return "/" + hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
-
-    def decode_payload(self, token: str) -> Dict[str, Any]:
-        try:
-            payload = token.split(".")[1]
-            payload += "=" * (-len(payload) % 4)
-            return json.loads(base64.urlsafe_b64decode(payload.encode()).decode())
-        except Exception:
-            return {}
-
-    def token_alive(self, token: Optional[str]) -> bool:
-        if not token:
-            return False
-        payload = self.decode_payload(token)
-        exp = payload.get("exp")
-        if not isinstance(exp, (int, float)):
-            return False
-        return exp - time.time() > 60
-
-    def user_id(self, token: str) -> Optional[str]:
-        sub = self.decode_payload(token).get("sub")
-        return str(sub) if sub else None
-
-    def drop_cached(self, reason: str = "") -> None:
-        logger.warning("Vector auth dropping cached token: reason=%s", reason or "not specified")
-        with suppress(Exception):
-            self.owner.set("auth_token", None)
-
-    async def ensure(self, force: bool = False) -> Optional[str]:
-        logger.info("Vector auth ensure started: force=%s", force)
-        if force:
-            self.drop_cached("forced refresh")
-        cached = self.owner.get("auth_token", None)
-        cached_alive = self.token_alive(cached)
-        logger.info("Vector auth cache state: has_cached=%s alive=%s", bool(cached), cached_alive)
-        if not force and cached_alive:
-            logger.info("Vector auth ensure using cached token: payload=%s", _log_preview(self.decode_payload(cached or "")))
-            return cached
-
-        token = await self.obtain()
-        if token:
-            logger.info("Vector auth ensure obtained token: payload=%s", _log_preview(self.decode_payload(token)))
-            self.owner.set("auth_token", token)
-        else:
-            logger.warning("Vector auth ensure failed to obtain token")
-        return token
-
-    async def obtain(self) -> Optional[str]:
-        logger.info("Vector auth obtain started")
-        bot_username = await self.owner.api.bot_username()
-        if not bot_username:
-            logger.warning("Vector auth obtain stopped: bot username is unavailable")
-            return None
-
-        client = self.owner.client
-        me = await client.get_me()
-        telegram_id = str(getattr(me, "id", ""))
-        username = getattr(me, "username", None) or ""
-        first_name = getattr(me, "first_name", None) or ""
-        last_name = getattr(me, "last_name", None) or ""
-        nickname = " ".join(part for part in (first_name, last_name) if part).strip() or username or telegram_id
-        logger.info("Vector auth identity prepared: telegram_id=%s username=%s nickname_len=%s bot=@%s", telegram_id, username or "<empty>", len(nickname), bot_username)
-
-        with suppress(Exception):
-            logger.info("Vector auth attempting to unblock bot: @%s", bot_username)
-            await client(UnblockRequest(bot_username))
-            logger.info("Vector auth bot unblock request sent: @%s", bot_username)
-
-        for attempt in range(2):
-            bucket = int(time.time() // 10) - attempt
-            cmd = self.payload_command(telegram_id, username, nickname, bucket=bucket)
-            logger.info("Vector auth conversation attempt started: attempt=%s bucket=%s command_hash=%s", attempt + 1, bucket, cmd[:10])
-            try:
-                async with client.conversation(bot_username, timeout=15, exclusive=False) as conv:
-                    outgoing = await conv.send_message(cmd)
-                    logger.info("Vector auth conversation command sent: attempt=%s", attempt + 1)
-                    try:
-                        response = await asyncio.wait_for(conv.get_response(), timeout=14)
-                        response_text = getattr(response, "raw_text", "") or getattr(response, "text", "")
-                        logger.info("Vector auth conversation response received: attempt=%s text=%s", attempt + 1, _log_preview(response_text))
-                        token = self.extract_token(response_text)
-                        with suppress(Exception):
-                            await outgoing.delete()
-                            logger.info("Vector auth conversation command deleted: attempt=%s", attempt + 1)
-                        if token:
-                            logger.info("Vector auth conversation token extracted: attempt=%s payload=%s", attempt + 1, _log_preview(self.decode_payload(token)))
-                            return token
-                        logger.warning("Vector auth conversation response did not contain token: attempt=%s", attempt + 1)
-                    except asyncio.TimeoutError:
-                        logger.warning("Vector auth conversation timed out: attempt=%s", attempt + 1)
-                        with suppress(Exception):
-                            await outgoing.delete()
-            except Exception:
-                logger.exception("Vector auth conversation attempt failed: attempt=%s", attempt + 1)
-
-        for attempt in range(2):
-            bucket = int(time.time() // 10) - attempt
-            cmd = self.payload_command(telegram_id, username, nickname, bucket=bucket)
-            logger.info("Vector auth polling attempt started: attempt=%s bucket=%s command_hash=%s", attempt + 1, bucket, cmd[:10])
-            try:
-                outgoing = await client.send_message(bot_username, cmd)
-                logger.info("Vector auth polling command sent: attempt=%s", attempt + 1)
-            except Exception:
-                logger.exception("Vector auth polling command send failed: attempt=%s", attempt + 1)
-                continue
-
-            deadline = time.time() + 20
-            token = None
-            while time.time() < deadline:
-                await asyncio.sleep(1.5)
-                try:
-                    async for msg in client.iter_messages(bot_username, limit=3):
-                        if msg.out:
-                            continue
-                        msg_text = getattr(msg, "raw_text", "") or getattr(msg, "text", "")
-                        logger.info("Vector auth polling message seen: attempt=%s text=%s", attempt + 1, _log_preview(msg_text))
-                        candidate = self.extract_token(msg_text)
-                        if candidate:
-                            token = candidate
-                            break
-                except Exception:
-                    logger.exception("Vector auth polling iter_messages failed: attempt=%s", attempt + 1)
-                if token:
-                    break
-
-            with suppress(Exception):
-                await outgoing.delete()
-                logger.info("Vector auth polling command deleted: attempt=%s", attempt + 1)
-            if token:
-                logger.info("Vector auth polling token extracted: attempt=%s payload=%s", attempt + 1, _log_preview(self.decode_payload(token)))
-                return token
-
-            logger.warning("Vector auth polling attempt finished without token: attempt=%s", attempt + 1)
-
-        logger.warning("Vector auth obtain failed after all attempts")
-        return None
-
-    def extract_token(self, text: str) -> Optional[str]:
-        match = JWT_RE.search(text or "")
-        return match.group(0) if match else None
-
-
-class VectorInstaller:
-    MODULE_LOADING_FAILED = 0
-    MODULE_LOADING_SUCCESS = 1
-
-    def _loader_module(self, plugin: "Vector") -> Optional[loader.Module]:
-        logger.info("Vector installer loader lookup started")
-        lookup = getattr(plugin, "lookup", None) or getattr(plugin.allmodules, "lookup", None)
-        if not callable(lookup):
-            logger.error("Vector installer loader lookup failed: lookup is not callable")
-            return None
-
-        module = lookup("loader")
-        has_install = callable(getattr(module, "download_and_install", None))
-        logger.info("Vector installer loader lookup result: found=%s has_download_and_install=%s", bool(module), has_install)
-        return module if module and has_install else None
-
-    async def execute(self, plugin: "Vector", module_name: str, token: str) -> Tuple[str, List[str]]:
-        logger.info("Vector installer execute started: module=%s token=%s", module_name, "yes" if token else "no")
-        loader_module = self._loader_module(plugin)
-        if loader_module is None:
-            logger.error("Heroku built-in loader module is unavailable; Vector cannot install %s", module_name)
-            return "error", []
-
-        code = await plugin.api.download(module_name, token)
-        if not code:
-            logger.error("Vector installer stopped: download returned empty code for %s", module_name)
-            return "error", []
-        logger.info("Vector installer downloaded code: module=%s chars=%s", module_name, len(code))
-
-        origin = plugin.api.download_url(module_name)
-        logger.info("Vector installer origin prepared: module=%s origin=%s", module_name, origin)
-        storage = getattr(loader_module, "_storage", None)
-        original_fetch = getattr(storage, "fetch", None)
-        if not callable(original_fetch):
-            logger.error("Heroku module storage is unavailable; Vector cannot install %s", module_name)
-            return "error", []
-
-        async def vector_fetch(url: str, auth: Optional[str] = None) -> str:
-            logger.info("Vector installer storage fetch called: url=%s auth=%s", url, "yes" if auth else "no")
-            if url == origin:
-                logger.info("Vector installer storage fetch served Vector code from memory: module=%s chars=%s", module_name, len(code))
-                return code
-            logger.info("Vector installer storage fetch delegated to original fetch: url=%s", url)
-            return await original_fetch(url, auth=auth)
-
-        try:
-            logger.info("Vector installer patching Heroku storage fetch: module=%s", module_name)
-            storage.fetch = vector_fetch
-            result = await loader_module.download_and_install(origin)
-            logger.info("Vector installer download_and_install returned: module=%s result=%r", module_name, result)
-        except Exception:
-            logger.exception("Heroku built-in loader failed to install %s", module_name)
-            return "error", []
-        finally:
-            with suppress(Exception):
-                storage.fetch = original_fetch
-                logger.info("Vector installer restored Heroku storage fetch: module=%s", module_name)
-
-        if result == self.MODULE_LOADING_SUCCESS:
-            if getattr(plugin, "fully_loaded", True):
-                with suppress(Exception):
-                    logger.info("Vector installer updating modules DB: module=%s", module_name)
-                    plugin.update_modules_in_db()
-            logger.info("Vector installer finished successfully: module=%s", module_name)
-            return "success", []
-
-        if result == self.MODULE_LOADING_FAILED:
-            logger.error("Heroku built-in loader failed to install %s", module_name)
-        else:
-            logger.error("Heroku built-in loader returned %r while installing %s", result, module_name)
-        return "error", []
-
-
-class VectorUI:
-    def __init__(self, owner: "Vector") -> None:
-        self.owner = owner
-
-    def emoji(self, key: str) -> str:
-        theme = self.owner.config["theme"]
-        theme_map = self.owner.THEMES
-        return theme_map.get(theme, theme_map["default"]).get(key, theme_map["default"].get(key, ""))
-
-    def plain_len(self, text: str) -> int:
-        return len(re.sub(r"<[^>]+>", "", text))
-
-    def format(self, data: Dict[str, Any], index: int = 1, total: int = 1) -> str:
-        name = utils.escape_html(str(data.get("name", "Unknown")))
-        author = utils.escape_html(str(data.get("author", "@Unknown")))
-        version = str(data.get("version") or "?.?.?")
-        text = f"{self.emoji('module')} <code>{name}</code> <b>{self.owner.strings['author']}</b> <code>{author}</code>"
-        if version != "?.?.?":
-            text += f" (<code>v{utils.escape_html(version)}</code>)"
-
-        is_official = bool(data.get("official"))
-        status_key = "official_module" if is_official else "unofficial_module"
-        text += (
-            f"\n{self.emoji('verified')} <b>{self.owner.strings['module_status']}:</b> "
-            f"<code>{self.owner.strings[status_key]}</code>"
-        )
-        if total > 1:
-            text += f"\n{self.emoji('modules_list')} <i>{self.owner.strings['counter'].format(idx=index, total=total)}</i>"
-
-        description = data.get("description")
-        if description:
-            text += f"\n\n{self.emoji('description')} <b>{self.owner.strings['description']}:</b>\n<blockquote expandable>{utils.escape_html(str(description))}</blockquote>"
-
-        text += self.render_commands(data.get("commands", []), 3700 - self.plain_len(text))
-        text += self.render_dependencies(data.get("dependencies", []), 3700 - self.plain_len(text))
-        return text
-
-    def render_commands(self, commands: List[Dict[str, Any]], limit: int) -> str:
-        if not commands:
-            return ""
-        rows = []
-        for index, item in enumerate(commands):
-            name = utils.escape_html(str(item.get("name") or ""))
-            description = utils.escape_html(str(item.get("description") or "")).split("\n")[0]
-            row = f"<code>{self.owner.get_prefix()}{name}</code> {description}".strip()
-            extra = f"<i>{self.owner.strings['morecommands'].format(remaining=len(commands) - index)}</i>"
-            if self.plain_len("\n".join(rows + [row, extra])) > limit and index > 0:
-                rows.append(extra)
-                break
-            rows.append(row)
-        return f"\n\n{self.emoji('command')} <b>{self.owner.strings['commands']}:</b>\n<blockquote expandable>{chr(10).join(rows)}</blockquote>"
-
-    def render_dependencies(self, dependencies: List[str], limit: int) -> str:
-        if not dependencies:
-            return ""
-        rows = []
-        for index, dependency in enumerate(dependencies):
-            row = f"<code>{utils.escape_html(dependency)}</code>"
-            extra = f"<i>{self.owner.strings['moredeps'].format(remaining=len(dependencies) - index)}</i>"
-            if self.plain_len("\n".join(rows + [row, extra])) > limit and index > 0:
-                rows.append(extra)
-                break
-            rows.append(row)
-        return f"\n\n{self.emoji('dependency')} <b>{self.owner.strings['dependencies']}:</b>\n<blockquote expandable>{chr(10).join(rows)}</blockquote>"
-
-    def security_icon(self, verdict: str) -> str:
-        if verdict == "safe":
-            return self.emoji("safe")
-        if verdict == "unsafe":
-            return self.emoji("unsafe")
-        return self.emoji("shield")
-
-    def security_verdict_label(self, verdict: str) -> str:
-        try:
-            labels = self.owner.strings["security_verdicts"]
-        except Exception:
-            labels = {}
-        if isinstance(labels, dict):
-            return str(labels.get(verdict) or labels.get("unknown") or verdict)
-        return verdict or "unknown"
-
-    def format_security(self, module_name: str, data: Dict[str, Any]) -> str:
-        check = data.get("check") if isinstance(data.get("check"), dict) else None
-        if isinstance(data.get("quota"), dict):
-            quota = data.get("quota")
-        elif check and isinstance(check.get("quota"), dict):
-            quota = check.get("quota")
-        else:
-            quota = None
-        if not check:
-            left = quota.get("remaining") if isinstance(quota, dict) else "?"
-            limit = quota.get("limit") if isinstance(quota, dict) else "?"
-            return (
-                f"{self.emoji('shield')} <b>{self.owner.strings['security_title'].format(name=utils.escape_html(module_name))}</b>\n\n"
-                f"{self.emoji('warn')} {self.owner.strings['security_unchecked']}\n"
-                f"{self.emoji('quota')} <i>{self.owner.strings['security_quota'].format(remaining=left, limit=limit)}</i>"
-            )
-
-        verdict = str(check.get("verdict") or "unknown")
-        label = utils.escape_html(str(check.get("label") or self.security_verdict_label(verdict)))
-        confidence = int(check.get("confidence") or 0)
-        summary = utils.escape_html(str(check.get("summary") or self.owner.strings["security_no_summary"]))
-        details = check.get("details") if isinstance(check.get("details"), dict) else {}
-        static = details.get("static") if isinstance(details.get("static"), dict) else {}
-        findings = static.get("findings") if isinstance(static.get("findings"), dict) else {}
-        critical = findings.get("critical") if isinstance(findings.get("critical"), list) else []
-        warning = findings.get("warning") if isinstance(findings.get("warning"), list) else []
-        info = findings.get("info") if isinstance(findings.get("info"), list) else []
-        risk = utils.escape_html(str(static.get("risk") or "unknown"))
-        score = utils.escape_html(str(static.get("score") if static.get("score") is not None else "?"))
-
-        lines = [
-            f"{self.security_icon(verdict)} <b>{self.owner.strings['security_title'].format(name=utils.escape_html(module_name))}</b>",
-            "",
-            f"{self.emoji('shield')} <b>{self.owner.strings['security_verdict']}:</b> <code>{label}</code> (<code>{confidence}%</code>)",
-            f"{self.emoji('stats')} <b>{self.owner.strings['security_static']}:</b> risk <code>{risk}</code>, score <code>{score}</code>",
-            f"{self.emoji('description')} <b>{self.owner.strings['security_summary']}:</b>\n<blockquote expandable>{summary}</blockquote>",
-        ]
-
-        compact = []
-        for title, values in ((self.owner.strings["security_critical"], critical), (self.owner.strings["security_warning"], warning), (self.owner.strings["security_info"], info)):
-            if values:
-                compact.append(f"<b>{title}</b>: " + ", ".join(utils.escape_html(str(item.get("title") or "?")) for item in values[:3] if isinstance(item, dict)))
-        if compact:
-            lines.append(f"{self.emoji('search')} <b>{self.owner.strings['security_findings']}:</b>\n<blockquote expandable>{chr(10).join(compact)}</blockquote>")
-
-        if isinstance(quota, dict):
-            lines.append(f"{self.emoji('quota')} <i>{self.owner.strings['security_quota'].format(remaining=quota.get('remaining', '?'), limit=quota.get('limit', '?'))}</i>")
-        return "\n".join(lines)
-
-    def buttons(
-        self,
-        data: Dict[str, Any],
-        index: int,
-        modules: Optional[List[Dict[str, Any]]],
-        query: str,
-        *,
-        expanded: bool = False,
-    ) -> List[List[Dict[str, Any]]]:
-        name = str(data.get("name") or "")
-        rows = [
-            [
-                {"text": self.owner.strings["query"], "copy": query},
-                {"text": self.owner.strings["install"], "callback": self.owner.install, "args": (name, index, modules, query)},
-                {"text": self.owner.strings["page"], "url": data.get("source_url")},
-            ],
-            [
-                {"text": f"👍 {data.get('likes', 0)}", "callback": self.owner.rate, "args": (name, "like", index, modules, query)},
-                {"text": f"👎 {data.get('dislikes', 0)}", "callback": self.owner.rate, "args": (name, "dislike", index, modules, query)},
-            ],
-        ]
-
-        if modules and len(modules) > 1:
-            prev_index = (index - 1) % len(modules)
-            next_index = (index + 1) % len(modules)
-            rows.append([
-                {"text": "◀️", "callback": self.owner.navigate, "args": (prev_index, modules, query)},
-                {"text": self.owner.strings["counter"].format(idx=index + 1, total=len(modules)), "callback": self.owner.show, "args": (index, modules, query)},
-                {"text": "▶️", "callback": self.owner.navigate, "args": (next_index, modules, query)},
-            ])
-
-        toggle_key = "hide_actions_btn" if expanded else "more_actions_btn"
-        rows.append([
-            {
-                "text": self.owner.strings[toggle_key],
-                "callback": self.owner.toggle_actions,
-                "args": (name, index, modules, query, not expanded),
-            },
-        ])
-
-        if expanded:
-            rows.append([
-                {"text": self.owner.strings["comments_btn"], "callback": self.owner.comments, "args": (name, index, modules, query)},
-                {"text": self.owner.strings["security_check_btn"], "callback": self.owner.security_check, "args": (name, index, modules, query)},
-            ])
-
-        return rows
-
-    def pagination(self, modules: List[Dict[str, Any]], query: str, page: int = 0, current: int = 0) -> List[List[Dict[str, Any]]]:
-        rows = []
-        start = page * 8
-        end = min(start + 8, len(modules))
-        for i in range(start, end):
-            module = modules[i]
-            rows.append([{
-                "text": f"{i + 1}. {module.get('name', 'Unknown')} by {module.get('author', '@Unknown')}",
-                "callback": self.owner.navigate,
-                "args": (i, modules, query),
-            }])
-        nav = []
-        if page > 0:
-            nav.append({"text": "◀️", "callback": self.owner.page, "args": (page - 1, modules, query, current)})
-        if page < (len(modules) + 7) // 8 - 1:
-            nav.append({"text": "▶️", "callback": self.owner.page, "args": (page + 1, modules, query, current)})
-        if nav:
-            rows.append(nav)
-        rows.append([{"text": "✖️", "callback": self.owner.navigate, "args": (current, modules, query)}])
-        return rows
-
+API_ROOT = "https://vector-three-sooty.vercel.app"
+JWT_REGEX = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
+AUTH_SALT = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
+OFFICIAL_CREATORS = {"@goymodules", "@samsepi0l_ovf"}
 
 @loader.tds
 class Vector(loader.Module):
-    """Search modules in Vector: https://vector-three-sooty.vercel.app/"""
+    """Vector module registry browser for Heroku."""
 
     strings = {
         "name": "Vector",
-        "_cls_doc": "Vector module search for Heroku Userbot. https://vector-three-sooty.vercel.app",
-        "author": "by",
-        "description": "Description",
-        "commands": "Commands",
-        "dependencies": "Dependencies",
-        "module_status": "Status",
-        "official_module": "official",
-        "unofficial_module": "unofficial",
-        "morecommands": "...and {remaining} more commands.",
-        "moredeps": "...and {remaining} more dependencies.",
-        "list": "All found modules:",
-        "search": "Searching for {query}...",
-        "noquery": "You didn't enter a search query, example: {prefix}vector your query",
-        "notfound": "Nothing found for query {query}.",
-        "toolong": "Your query is too big, please try reducing it to 120 characters.",
-        "auth_error": "Vector authorization failed. Try again a little later.",
-        "added": "✔ Rating submitted!",
-        "changed": "✔ Rating has been changed!",
-        "deleted": "✔ Rating deleted!",
-        "prompt": "Enter a query to search.",
-        "hint": "Name, command, description, author.",
-        "retry": "Try another query.",
-        "query": "Query",
-        "install": "Install",
-        "counter": "{idx}/{total}",
-        "page": "Page",
-        "success": "✔ Module successfully installed!",
-        "error": "✘ Error, perhaps the module is broken!",
-        "overwrite": "✘ Error, module tried to overwrite built-in module!",
-        "dependency": "✘ Dependencies installation error! {deps}",
-        "rated_set": "✔ Rating has been set!",
-        "rated_removed": "✔ Rating has been removed!",
-        "doctheme": "Theme for emojis.",
-        "doclimit": "Maximum amount of search results.",
-        "security_check_btn": "🛡 Security check",
-        "security_title": "Module check — {name}",
-        "security_checking": "Checking module status via Vector API...",
-        "security_running": "Running security check via Vector API...",
-        "security_run_btn": "Run check",
-        "security_cached": "Using cached security result.",
-        "security_verdict": "Verdict",
-        "security_static": "Static analysis",
-        "security_summary": "Summary",
-        "security_findings": "Signals",
-        "security_critical": "critical",
-        "security_warning": "warnings",
-        "security_info": "info",
-        "security_unchecked": "Module is not checked yet. You can start a new check; it will spend one daily limit slot.",
-        "security_no_summary": "No readable summary.",
-        "security_quota": "Checks left today: {remaining}/{limit}",
-        "security_limit": "Daily check limit is exhausted.",
-        "security_fetch_error": "Failed to get module security status.",
-        "edit_error": "Failed to update the inline message.",
-        "security_verdicts": {"safe": "safe", "suspicious": "suspicious", "unsafe": "unsafe", "unknown": "unknown"},
-        "more_actions_btn": "⬇️ More",
-        "hide_actions_btn": "⬆️ Hide",
-        "comments_btn": "💬 Comments",
-        "comments_title": "{emoji} <b>Comments — {name}</b>",
-        "comments_live": "Live module discussion",
-        "comments_count": "{count} comments and replies",
-        "comments_empty": "No comments yet. Be the first!",
-        "comments_fetch_error": "Failed to load comments.",
-        "comment_posted": "✔ Comment posted!",
-        "comment_post_error": "✘ Failed to post comment.",
-        "comments_back": "◀️ Back",
-        "comments_write": "🌐 Website",
-        "comments_type_btn": "✏️ Type",
-        "comment_prompt": "Send your comment as a reply to this message.\n\nMin 2 characters, max 1800.",
-        "comment_sending": "Posting comment...",
-        "comment_too_short": "✘ Comment is too short (min 2 characters).",
-        "comment_too_long": "✘ Comment is too long (max 1800 characters).",
-        "comment_cancel": "Cancelled.",
+        "_cls_doc": "Vector module registry browser for Heroku.",
+        "v_dev_lbl": "Author:",
+        "v_dev_str": "Dev:",
+        "v_dev_ofc": "official",
+        "v_dev_unofc": "unofficial",
+        "v_info": "Info:",
+        "v_cmds": "Usage:",
+        "v_reqs": "Libs:",
+        "v_hid_cmd": "+ {rem} hidden cmds.",
+        "v_hid_req": "+ {rem} hidden libs.",
+        "v_res_hdr": "Found Items:",
+        "v_err_empty": "Specify query: {p}vector <text>",
+        "v_err_404": "No records for: {q}",
+        "v_err_len": "Query length is limited to 120 chars.",
+        "v_err_api": "Access denied by Vector Server.",
+        "v_fb_add": "Rated successfully!",
+        "v_fb_rm": "Rating cleared!",
+        "v_btn_copy": "📋 Copy Query",
+        "v_btn_dl": "Install",
+        "v_page": "[{idx}/{total}]",
+        "v_btn_code": "📄 Source",
+        "v_dl_ok": "Module installed successfully!",
+        "v_dl_err": "Installation failed!",
+        "v_lim_cfg": "Search output limits.",
+        "v_btn_sec": "🛡 Security Scan",
+        "v_aud_hdr": "Code Audit: {name}",
+        "v_aud_req": "Connecting to Security API...",
+        "v_aud_proc": "Processing AST tree...",
+        "v_btn_aud_run": "Start Scan",
+        "v_aud_mem": "Loaded from session cache.",
+        "v_aud_lvl": "Threat Level",
+        "v_aud_stat": "Scanner Data",
+        "v_aud_out": "Summary",
+        "v_aud_sigs": "Triggers",
+        "v_sig_crit": "Critical",
+        "v_sig_warn": "Warnings",
+        "v_sig_info": "Notices",
+        "v_aud_none": "Not scanned yet. Takes 1 API slot.",
+        "v_aud_no_txt": "No summary generated.",
+        "v_aud_left": "Slots left: {remaining}/{limit}",
+        "v_aud_zero": "Daily audit limit depleted.",
+        "v_aud_err": "Scanner server is down.",
+        "v_err_gui": "Interface rendering error.",
+        "v_btn_exp": "🔽 Expand",
+        "v_btn_col": "🔼 Collapse",
+        "v_btn_talk": "💬 Discussion",
+        "v_talk_hdr": "{emoji} <b>Thread: {name}</b>",
+        "v_talk_desc": "Community reviews",
+        "v_talk_num": "Posts: {count}",
+        "v_talk_0": "Thread is empty. Be the first!",
+        "v_talk_err": "Could not connect to thread.",
+        "v_rep_ok": "Posted!",
+        "v_rep_err": "Request failed.",
+        "v_btn_bck": "⬅️ Back",
+        "v_btn_site": "🌐 Web View",
+        "v_btn_wrt": "✍️ Post Reply",
+        "v_rep_ask": "Reply to post message.\n2-1800 chars.",
+        "v_rep_snt": "Uploading...",
+        "v_rep_min": "Text is too short.",
+        "v_rep_max": "Limit exceeded.",
+        "v_rep_cncl": "Cancelled.",
+        "v_loading_ui": "Searching Vector database...",
+        "v_more_replies": "...and {count} more replies on the site.",
+        "v_more_comments": "...and more comments on the site.",
+        "v_upd_req": "Updating Vector...",
+        "v_upd_ok": "Vector updated successfully!",
+        "v_upd_err": "Update failed!",
     }
 
     strings_ru = {
-        "_cls_doc": "Поиск модулей Vector для Heroku Userbot. https://vector-three-sooty.vercel.app",
-        "author": "от",
-        "description": "Описание",
-        "commands": "Команды",
-        "dependencies": "Зависимости",
-        "module_status": "Статус",
-        "official_module": "официальный",
-        "unofficial_module": "неофициальный",
-        "morecommands": "...и еще {remaining} команд.",
-        "moredeps": "...и еще {remaining} зависимостей.",
-        "list": "Все найденные модули:",
-        "search": "Поиск по запросу {query}...",
-        "noquery": "Вы не ввели запрос для поиска, пример: {prefix}vector ваш запрос",
-        "notfound": "Ничего не найдено по запросу {query}.",
-        "toolong": "Ваш запрос слишком большой, пожалуйста, сократите его до 120 символов.",
-        "auth_error": "Не удалось авторизоваться в Vector. Попробуйте чуть позже.",
-        "added": "✔ Оценка добавлена!",
-        "changed": "✔ Оценка изменена!",
-        "deleted": "✔ Оценка удалена!",
-        "prompt": "Введите запрос для поиска.",
-        "hint": "Название, команда, описание, автор.",
-        "retry": "Попробуйте другой запрос.",
-        "query": "Запрос",
-        "install": "Установить",
-        "counter": "{idx}/{total}",
-        "page": "Страница",
-        "success": "✔ Модуль успешно установлен!",
-        "error": "✘ Ошибка, возможно, модуль сломан!",
-        "overwrite": "✘ Ошибка, модуль попытался перезаписать встроенный модуль!",
-        "dependency": "✘ Ошибка установки зависимостей! {deps}",
-        "rated_set": "✔ Оценка поставлена!",
-        "rated_removed": "✔ Оценка убрана!",
-        "doctheme": "Тема эмодзи.",
-        "doclimit": "Максимальное количество результатов поиска.",
-        "security_check_btn": "🛡 Проверка безопасности",
-        "security_title": "Проверка модуля — {name}",
-        "security_checking": "Проверяю статус безопасности через Vector API...",
-        "security_running": "Запускаю проверку безопасности через Vector API...",
-        "security_run_btn": "Запустить проверку",
-        "security_cached": "Показываю кэшированный результат проверки.",
-        "security_verdict": "Вердикт",
-        "security_static": "Статический анализ",
-        "security_summary": "Итог",
-        "security_findings": "Сигналы",
-        "security_critical": "критичные",
-        "security_warning": "предупреждения",
-        "security_info": "инфо",
-        "security_unchecked": "Модуль ещё не проверен. Можно запустить проверку, она спишет один слот дневного лимита.",
-        "security_no_summary": "Нет читаемого описания результата.",
-        "security_quota": "Проверок сегодня осталось: {remaining}/{limit}",
-        "security_limit": "Лимит проверок на сегодня исчерпан.",
-        "security_fetch_error": "Не удалось получить статус проверки модуля.",
-        "edit_error": "Не удалось обновить inline-сообщение.",
-        "security_verdicts": {"safe": "безопасен", "suspicious": "подозрителен", "unsafe": "небезопасен", "unknown": "неизвестно"},
-        "more_actions_btn": "⬇️ Ещё",
-        "hide_actions_btn": "⬆️ Скрыть",
-        "comments_btn": "💬 Комментарии",
-        "comments_title": "{emoji} <b>Комментарии — {name}</b>",
-        "comments_live": "Живое обсуждение модуля",
-        "comments_count": "{count} отзывов и ответов",
-        "comments_empty": "Комментариев пока нет. Будьте первым!",
-        "comments_fetch_error": "Не удалось загрузить комментарии.",
-        "comment_posted": "✔ Комментарий опубликован!",
-        "comment_post_error": "✘ Не удалось опубликовать комментарий.",
-        "comments_back": "◀️ Назад",
-        "comments_write": "🌐 Сайт",
-        "comments_type_btn": "✏️ Написать",
-        "comment_prompt": "Отправьте ваш комментарий ответом на это сообщение.\n\nМинимум 2 символа, максимум 1800.",
-        "comment_sending": "Публикую комментарий...",
-        "comment_too_short": "✘ Комментарий слишком короткий (минимум 2 символа).",
-        "comment_too_long": "✘ Комментарий слишком длинный (максимум 1800 символов).",
-        "comment_cancel": "Отменено.",
+        "_cls_doc": "Обозреватель реестра модулей Vector для Heroku.",
+        "v_dev_lbl": "Автор:",
+        "v_dev_str": "Разраб:",
+        "v_dev_ofc": "офиц",
+        "v_dev_unofc": "неофиц",
+        "v_info": "Инфо:",
+        "v_cmds": "Использование:",
+        "v_reqs": "Библиотеки:",
+        "v_hid_cmd": "+ скрыто команд: {rem}.",
+        "v_hid_req": "+ скрыто либ: {rem}.",
+        "v_res_hdr": "Найденные модули:",
+        "v_err_empty": "Укажите запрос: {p}vector <текст>",
+        "v_err_404": "Нет записей по запросу: {q}",
+        "v_err_len": "Длина запроса ограничена 120 символами.",
+        "v_err_api": "Отказ в доступе от сервера Vector.",
+        "v_fb_add": "Оценка добавлена!",
+        "v_fb_rm": "Оценка удалена!",
+        "v_btn_copy": "📋 Копировать запрос",
+        "v_btn_dl": "Установить",
+        "v_page": "[{idx}/{total}]",
+        "v_btn_code": "📄 Исходник",
+        "v_dl_ok": "Модуль успешно установлен!",
+        "v_dl_err": "Ошибка установки!",
+        "v_lim_cfg": "Лимиты вывода поиска.",
+        "v_btn_sec": "🛡 Проверка кода",
+        "v_aud_hdr": "Аудит кода: {name}",
+        "v_aud_req": "Соединение с Security API...",
+        "v_aud_proc": "Анализ AST дерева...",
+        "v_btn_aud_run": "Запустить скан",
+        "v_aud_mem": "Загружено из кэша сессии.",
+        "v_aud_lvl": "Уровень угрозы",
+        "v_aud_stat": "Данные сканера",
+        "v_aud_out": "Итог",
+        "v_aud_sigs": "Триггеры",
+        "v_sig_crit": "Критично",
+        "v_sig_warn": "Внимание",
+        "v_sig_info": "Уведомления",
+        "v_aud_none": "Еще не проверен. Расходует 1 слот API.",
+        "v_aud_no_txt": "Описание не сгенерировано.",
+        "v_aud_left": "Остаток слотов: {remaining}/{limit}",
+        "v_aud_zero": "Суточный лимит проверок исчерпан.",
+        "v_aud_err": "Сервер сканирования недоступен.",
+        "v_err_gui": "Сбой рендеринга интерфейса.",
+        "v_btn_exp": "🔽 Развернуть",
+        "v_btn_col": "🔼 Свернуть",
+        "v_btn_talk": "💬 Обсуждение",
+        "v_talk_hdr": "{emoji} <b>Тред: {name}</b>",
+        "v_talk_desc": "Отзывы комьюнити",
+        "v_talk_num": "Постов: {count}",
+        "v_talk_0": "Тред пуст. Будьте первым!",
+        "v_talk_err": "Нет связи с тредом.",
+        "v_rep_ok": "Опубликовано!",
+        "v_rep_err": "Сбой запроса.",
+        "v_btn_bck": "⬅️ Назад",
+        "v_btn_site": "🌐 На сайт",
+        "v_btn_wrt": "✍️ Написать",
+        "v_rep_ask": "Отправьте текст ответом.\nОт 2 до 1800 символов.",
+        "v_rep_snt": "Выгрузка...",
+        "v_rep_min": "Текст слишком короткий.",
+        "v_rep_max": "Превышен лимит длины.",
+        "v_rep_cncl": "Отменено.",
+        "v_loading_ui": "Ищем по базе Vector...",
+        "v_more_replies": "...и ещё {count} ответов на сайте.",
+        "v_more_comments": "...и ещё комментарии на сайте.",
+        "v_upd_req": "Обновляем Vector...",
+        "v_upd_ok": "Vector успешно обновлен!",
+        "v_upd_err": "Ошибка обновления!",
     }
 
-    THEMES = {
-        "default": {
-            "search": '<tg-emoji emoji-id="5447459604524971717">🔎</tg-emoji>',
-            "error": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
-            "warn": '<tg-emoji emoji-id="5881702736843511327">⚠️</tg-emoji>',
-            "description": '<tg-emoji emoji-id="6008090211181923982">📝</tg-emoji>',
-            "command": '<tg-emoji emoji-id="5877260593903177342">⚙</tg-emoji>',
-            "dependency": '<tg-emoji emoji-id="5325732612084351248">📦</tg-emoji>',
-            "module": '<tg-emoji emoji-id="5924720918826848520">📦</tg-emoji>',
-            "modules_list": '<tg-emoji emoji-id="5883973610606956186">🗂</tg-emoji>',
-            "shield": '<tg-emoji emoji-id="5926783847453692661">🛡</tg-emoji>',
-            "safe": '<tg-emoji emoji-id="5776375003280838798">✅</tg-emoji>',
-            "unsafe": '<tg-emoji emoji-id="5778527486270770928">❌</tg-emoji>',
-            "stats": '<tg-emoji emoji-id="5877485980901971030">📊</tg-emoji>',
-            "quota": '<tg-emoji emoji-id="6311858554944888333">⌚️</tg-emoji>',
-            "verified": '<tg-emoji emoji-id="5958376256788502078">⭐️</tg-emoji>',
-            "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
-            "reply": "↳",
-        },
-        "neon": {
-            "search": "💠",
-            "error": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
-            "warn": '<tg-emoji emoji-id="5881702736843511327">⚠️</tg-emoji>',
-            "description": '<tg-emoji emoji-id="6008090211181923982">📝</tg-emoji>',
-            "command": '<tg-emoji emoji-id="5877260593903177342">⚙</tg-emoji>',
-            "dependency": '<tg-emoji emoji-id="5325732612084351248">📦</tg-emoji>',
-            "module": "🚀",
-            "modules_list": '<tg-emoji emoji-id="5875462364110787088">🗂</tg-emoji>',
-            "shield": '<tg-emoji emoji-id="5926783847453692661">🛡</tg-emoji>',
-            "safe": '<tg-emoji emoji-id="5776375003280838798">✅</tg-emoji>',
-            "unsafe": '<tg-emoji emoji-id="5778527486270770928">❌</tg-emoji>',
-            "stats": '<tg-emoji emoji-id="5877485980901971030">📊</tg-emoji>',
-            "quota": '<tg-emoji emoji-id="6311858554944888333">⌚️</tg-emoji>',
-            "verified": '<tg-emoji emoji-id="5958376256788502078">⭐️</tg-emoji>',
-            "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
-            "reply": "↳",
-        },
+    strings_jp = {
+        "_cls_doc": "Heroku用Vectorモジュールレジストリブラウザ。",
+        "v_dev_lbl": "作成者:",
+        "v_dev_str": "開発:",
+        "v_dev_ofc": "公式",
+        "v_dev_unofc": "非公式",
+        "v_info": "情報:",
+        "v_cmds": "使い方:",
+        "v_reqs": "ライブラリ:",
+        "v_hid_cmd": "+ 非表示コマンド: {rem}。",
+        "v_hid_req": "+ 非表示ライブラリ: {rem}。",
+        "v_res_hdr": "見つかったモジュール:",
+        "v_err_empty": "クエリを指定してください: {p}vector <テキスト>",
+        "v_err_404": "次のクエリの記録はありません: {q}",
+        "v_err_len": "クエリの長さは120文字に制限されています。",
+        "v_err_api": "Vectorサーバーによりアクセスが拒否されました。",
+        "v_fb_add": "評価が追加されました！",
+        "v_fb_rm": "評価がクリアされました！",
+        "v_btn_copy": "📋 クエリをコピー",
+        "v_btn_dl": "インストール",
+        "v_page": "[{idx}/{total}]",
+        "v_btn_code": "📄 ソース",
+        "v_dl_ok": "モジュールが正常にインストールされました！",
+        "v_dl_err": "インストールに失敗しました！",
+        "v_lim_cfg": "検索出力制限。",
+        "v_btn_sec": "🛡 セキュリティスキャン",
+        "v_aud_hdr": "コード監査: {name}",
+        "v_aud_req": "セキュリティAPIに接続中...",
+        "v_aud_proc": "ASTツリーを処理中...",
+        "v_btn_aud_run": "スキャン開始",
+        "v_aud_mem": "セッションキャッシュからロードされました。",
+        "v_aud_lvl": "脅威レベル",
+        "v_aud_stat": "スキャナデータ",
+        "v_aud_out": "概要",
+        "v_aud_sigs": "トリガー",
+        "v_sig_crit": "クリティカル",
+        "v_sig_warn": "警告",
+        "v_sig_info": "通知",
+        "v_aud_none": "まだスキャンされていません。1つのAPIスロットを消費します。",
+        "v_aud_no_txt": "概要は生成されていません。",
+        "v_aud_left": "残りスロット: {remaining}/{limit}",
+        "v_aud_zero": "1日の監査制限に達しました。",
+        "v_aud_err": "スキャナサーバーがダウンしています。",
+        "v_err_gui": "インターフェースのレンダリングエラー。",
+        "v_btn_exp": "🔽 展開",
+        "v_btn_col": "🔼 折りたたむ",
+        "v_btn_talk": "💬 ディスカッション",
+        "v_talk_hdr": "{emoji} <b>スレッド: {name}</b>",
+        "v_talk_desc": "コミュニティレビュー",
+        "v_talk_num": "投稿数: {count}",
+        "v_talk_0": "スレッドは空です。最初の投稿をしましょう！",
+        "v_talk_err": "スレッドに接続できませんでした。",
+        "v_rep_ok": "投稿されました！",
+        "v_rep_err": "リクエストに失敗しました。",
+        "v_btn_bck": "⬅️ 戻る",
+        "v_btn_site": "🌐 Webビュー",
+        "v_btn_wrt": "✍️ 返信を書く",
+        "v_rep_ask": "メッセージに返信してください。\n2〜1800文字。",
+        "v_rep_snt": "アップロード中...",
+        "v_rep_min": "テキストが短すぎます。",
+        "v_rep_max": "制限を超過しました。",
+        "v_rep_cncl": "キャンセルされました。",
+        "v_loading_ui": "Vectorデータベースを検索中...",
+        "v_more_replies": "...サイトにはさらに{count}件の返信があります。",
+        "v_more_comments": "...サイトにはさらにコメントがあります。",
+        "v_upd_req": "Vectorを更新中...",
+        "v_upd_ok": "Vectorが正常に更新されました！",
+        "v_upd_err": "更新に失敗しました！",
+    }
+
+    strings_uk = {
+        "_cls_doc": "Оглядач реєстру модулів Vector для Heroku.",
+        "v_dev_lbl": "Автор:",
+        "v_dev_str": "Розроб:",
+        "v_dev_ofc": "офіц",
+        "v_dev_unofc": "неофіц",
+        "v_info": "Інфо:",
+        "v_cmds": "Використання:",
+        "v_reqs": "Бібліотеки:",
+        "v_hid_cmd": "+ приховано команд: {rem}.",
+        "v_hid_req": "+ приховано ліб: {rem}.",
+        "v_res_hdr": "Знайдені модулі:",
+        "v_err_empty": "Вкажіть запит: {p}vector <текст>",
+        "v_err_404": "Немає записів за запитом: {q}",
+        "v_err_len": "Довжина запиту обмежена 120 символами.",
+        "v_err_api": "Відмова в доступі від сервера Vector.",
+        "v_fb_add": "Оцінка додана!",
+        "v_fb_rm": "Оцінка видалена!",
+        "v_btn_copy": "📋 Копіювати запит",
+        "v_btn_dl": "Встановити",
+        "v_page": "[{idx}/{total}]",
+        "v_btn_code": "📄 Вихідний код",
+        "v_dl_ok": "Модуль успішно встановлено!",
+        "v_dl_err": "Помилка встановлення!",
+        "v_lim_cfg": "Ліміти виводу пошуку.",
+        "v_btn_sec": "🛡 Перевірка коду",
+        "v_aud_hdr": "Аудит коду: {name}",
+        "v_aud_req": "З'єднання з Security API...",
+        "v_aud_proc": "Аналіз AST дерева...",
+        "v_btn_aud_run": "Запустити скан",
+        "v_aud_mem": "Завантажено з кешу сесії.",
+        "v_aud_lvl": "Рівень загрози",
+        "v_aud_stat": "Дані сканера",
+        "v_aud_out": "Підсумок",
+        "v_aud_sigs": "Тригери",
+        "v_sig_crit": "Критично",
+        "v_sig_warn": "Увага",
+        "v_sig_info": "Сповіщення",
+        "v_aud_none": "Ще не перевірено. Витрачає 1 слот API.",
+        "v_aud_no_txt": "Опис не згенеровано.",
+        "v_aud_left": "Залишок слотів: {remaining}/{limit}",
+        "v_aud_zero": "Добовий ліміт перевірок вичерпано.",
+        "v_aud_err": "Сервер сканування недоступний.",
+        "v_err_gui": "Збій рендерингу інтерфейсу.",
+        "v_btn_exp": "🔽 Розгорнути",
+        "v_btn_col": "🔼 Згорнути",
+        "v_btn_talk": "💬 Обговорення",
+        "v_talk_hdr": "{emoji} <b>Тред: {name}</b>",
+        "v_talk_desc": "Відгуки спільноти",
+        "v_talk_num": "Постів: {count}",
+        "v_talk_0": "Тред порожній. Будьте першим!",
+        "v_talk_err": "Немає зв'язку з тредом.",
+        "v_rep_ok": "Опубліковано!",
+        "v_rep_err": "Збій запиту.",
+        "v_btn_bck": "⬅️ Назад",
+        "v_btn_site": "🌐 На сайт",
+        "v_btn_wrt": "✍️ Написати",
+        "v_rep_ask": "Відправте текст відповіддю.\nВід 2 до 1800 символов.",
+        "v_rep_snt": "Вивантаження...",
+        "v_rep_min": "Текст занадто короткий.",
+        "v_rep_max": "Перевищено ліміт довжини.",
+        "v_rep_cncl": "Скасовано.",
+        "v_loading_ui": "Шукаємо по базі Vector...",
+        "v_more_replies": "...і ще {count} відповідей на сайті.",
+        "v_more_comments": "...і ще коментарі на сайті.",
+        "v_upd_req": "Оновлюємо Vector...",
+        "v_upd_ok": "Vector успішно оновлено!",
+        "v_upd_err": "Помилка оновлення!",
+    }
+
+    strings_de = {
+        "_cls_doc": "Vector-Modul-Registry-Browser für Heroku.",
+        "v_dev_lbl": "Autor:",
+        "v_dev_str": "Entwickler:",
+        "v_dev_ofc": "offiziell",
+        "v_dev_unofc": "inoffiziell",
+        "v_info": "Info:",
+        "v_cmds": "Verwendung:",
+        "v_reqs": "Bibliotheken:",
+        "v_hid_cmd": "+ {rem} versteckte Befehle.",
+        "v_hid_req": "+ {rem} versteckte Bibliotheken.",
+        "v_res_hdr": "Gefundene Elemente:",
+        "v_err_empty": "Suchbegriff eingeben: {p}vector <text>",
+        "v_err_404": "Keine Einträge für: {q}",
+        "v_err_len": "Abfragelänge ist auf 120 Zeichen begrenzt.",
+        "v_err_api": "Zugriff durch Vector-Server verweigert.",
+        "v_fb_add": "Erfolgreich bewertet!",
+        "v_fb_rm": "Bewertung gelöscht!",
+        "v_btn_copy": "📋 Abfrage kopieren",
+        "v_btn_dl": "Installieren",
+        "v_page": "[{idx}/{total}]",
+        "v_btn_code": "📄 Quellcode",
+        "v_dl_ok": "Modul erfolgreich installiert!",
+        "v_dl_err": "Installation fehlgeschlagen!",
+        "v_lim_cfg": "Suchausgabe-Limits.",
+        "v_btn_sec": "🛡 Sicherheits-Scan",
+        "v_aud_hdr": "Code-Audit: {name}",
+        "v_aud_req": "Verbindung zur Security-API...",
+        "v_aud_proc": "Verarbeite AST-Baum...",
+        "v_btn_aud_run": "Scan starten",
+        "v_aud_mem": "Aus dem Session-Cache geladen.",
+        "v_aud_lvl": "Bedrohungsstufe",
+        "v_aud_stat": "Scanner-Daten",
+        "v_aud_out": "Zusammenfassung",
+        "v_aud_sigs": "Auslöser",
+        "v_sig_crit": "Kritisch",
+        "v_sig_warn": "Warnungen",
+        "v_sig_info": "Hinweise",
+        "v_aud_none": "Noch nicht gescannt. Verbraucht 1 API-Slot.",
+        "v_aud_no_txt": "Keine Zusammenfassung generiert.",
+        "v_aud_left": "Verbleibende Slots: {remaining}/{limit}",
+        "v_aud_zero": "Tägliches Audit-Limit aufgebraucht.",
+        "v_aud_err": "Scanner-Server ist offline.",
+        "v_err_gui": "Fehler beim Rendern der Benutzeroberfläche.",
+        "v_btn_exp": "🔽 Erweitern",
+        "v_btn_col": "🔼 Zuklappen",
+        "v_btn_talk": "💬 Diskussion",
+        "v_talk_hdr": "{emoji} <b>Thread: {name}</b>",
+        "v_talk_desc": "Community-Bewertungen",
+        "v_talk_num": "Beiträge: {count}",
+        "v_talk_0": "Der Thread ist leer. Sei der Erste!",
+        "v_talk_err": "Keine Verbindung zum Thread.",
+        "v_rep_ok": "Gepostet!",
+        "v_rep_err": "Anfrage fehlgeschlagen.",
+        "v_btn_bck": "⬅️ Zurück",
+        "v_btn_site": "🌐 Web-Ansicht",
+        "v_btn_wrt": "✍️ Antworten",
+        "v_rep_ask": "Auf Beitrag antworten.\n2-1800 Zeichen.",
+        "v_rep_snt": "Wird hochgeladen...",
+        "v_rep_min": "Text ist zu kurz.",
+        "v_rep_max": "Limit überschritten.",
+        "v_rep_cncl": "Abgebrochen.",
+        "v_loading_ui": "Durchsuche Vector-Datenbank...",
+        "v_more_replies": "...und {count} weitere Antworten auf der Seite.",
+        "v_more_comments": "...und weitere Kommentare auf der Seite.",
+        "v_upd_req": "Vector wird aktualisiert...",
+        "v_upd_ok": "Vector erfolgreich aktualisiert!",
+        "v_upd_err": "Aktualisierung fehlgeschlagen!",
+    }
+
+    strings_neofit = {
+        "_cls_doc": "Vector loot registry scouter for Heroku.",
+        "v_dev_lbl": "Captain:",
+        "v_dev_str": "Crew:",
+        "v_dev_ofc": "trusted",
+        "v_dev_unofc": "rogue",
+        "v_info": "Scroll:",
+        "v_cmds": "Orders:",
+        "v_reqs": "Tools:",
+        "v_hid_cmd": "+ {rem} hidden orders.",
+        "v_hid_req": "+ {rem} hidden tools.",
+        "v_res_hdr": "Loot Found:",
+        "v_err_empty": "Ye forgot the map: {p}vector <text>",
+        "v_err_404": "Dead end fer: {q}",
+        "v_err_len": "Too long, mate. Keep it under 120.",
+        "v_err_api": "Access denied by the Admiral.",
+        "v_fb_add": "Mark placed!",
+        "v_fb_rm": "Mark washed away!",
+        "v_btn_copy": "📋 Snatch Map",
+        "v_btn_dl": "🏴‍☠️ Plunder",
+        "v_page": "[{idx}/{total}]",
+        "v_btn_code": "📄 Blueprints",
+        "v_dl_ok": "Loot stashed safely!",
+        "v_dl_err": "Plunder failed!",
+        "v_lim_cfg": "Spyglass range.",
+        "v_btn_sec": "🛡 Spy on Code",
+        "v_aud_hdr": "Spyglass: {name}",
+        "v_aud_req": "Knocking on the Admiral's door...",
+        "v_aud_proc": "Reading the stars...",
+        "v_btn_aud_run": "Spy Now",
+        "v_aud_mem": "Fetched from the captain's log.",
+        "v_aud_lvl": "Danger Level",
+        "v_aud_stat": "Spy Data",
+        "v_aud_out": "Captain's Summary",
+        "v_aud_sigs": "Red Flags",
+        "v_sig_crit": "Mutiny",
+        "v_sig_warn": "Storms",
+        "v_sig_info": "Winds",
+        "v_aud_none": "Not spied yet. Costs 1 gold coin.",
+        "v_aud_no_txt": "No ink on the paper.",
+        "v_aud_left": "Coins left: {remaining}/{limit}",
+        "v_aud_zero": "Out of gold fer today.",
+        "v_aud_err": "The Admiral's drunk.",
+        "v_err_gui": "Map got wet.",
+        "v_btn_exp": "🔽 Unroll",
+        "v_btn_col": "🔼 Roll up",
+        "v_btn_talk": "💬 Tavern Talk",
+        "v_talk_hdr": "{emoji} <b>Tavern: {name}</b>",
+        "v_talk_desc": "Pirates' gossip",
+        "v_talk_num": "Shouts: {count}",
+        "v_talk_0": "Tavern's quiet. Yell somethin'!",
+        "v_talk_err": "Tavern's closed.",
+        "v_rep_ok": "Ye yelled!",
+        "v_rep_err": "Voice lost.",
+        "v_btn_bck": "⬅️ Retreat",
+        "v_btn_site": "🌐 Sail Web",
+        "v_btn_wrt": "✍️ Yell Back",
+        "v_rep_ask": "Reply to yell.\n2-1800 letters.",
+        "v_rep_snt": "Sending crow...",
+        "v_rep_min": "Too quiet.",
+        "v_rep_max": "Too loud.",
+        "v_rep_cncl": "Nevermind.",
+        "v_loading_ui": "Scuttling through Vector...",
+        "v_more_replies": "...and {count} more yells at the tavern.",
+        "v_more_comments": "...and more gossip at the tavern.",
+        "v_upd_req": "Patching the spyglass...",
+        "v_upd_ok": "Spyglass upgraded!",
+        "v_upd_err": "Patch washed away!",
+    }
+
+    strings_tiktok = {
+        "_cls_doc": "Темка для поиска софтов Vector под Heroku.",
+        "v_dev_lbl": "Кодер:",
+        "v_dev_str": "Чел:",
+        "v_dev_ofc": "база",
+        "v_dev_unofc": "ноунэйм",
+        "v_info": "Суета:",
+        "v_cmds": "Команды:",
+        "v_reqs": "Либы:",
+        "v_hid_cmd": "+ заныкано команд: {rem}.",
+        "v_hid_req": "+ заныкано либ: {rem}.",
+        "v_res_hdr": "Нашлись темки:",
+        "v_err_empty": "Алё, где текст? Пиши: {p}vector <текст>",
+        "v_err_404": "Ничего не нашлось по: {q}",
+        "v_err_len": "Кринж, бро, слишком длинно (до 120 символов).",
+        "v_err_api": "Сервак Vector послал лесом.",
+        "v_fb_add": "Лайк влеплен!",
+        "v_fb_rm": "Лайк отменен!",
+        "v_btn_copy": "📋 Стянуть текст",
+        "v_btn_dl": "Поставить",
+        "v_page": "[{idx}/{total}]",
+        "v_btn_code": "📄 Сурсы",
+        "v_dl_ok": "Софт заинжекчен, красава!",
+        "v_dl_err": "Упс, кринжанул при установке!",
+        "v_lim_cfg": "Сколько темок выводить.",
+        "v_btn_sec": "🛡 Чекнуть на ратник",
+        "v_aud_hdr": "Прожарка кода: {name}",
+        "v_aud_req": "Долбимся в API защиты...",
+        "v_aud_proc": "Читаем макароны...",
+        "v_btn_aud_run": "Чекнуть",
+        "v_aud_mem": "Стянуто из кэша, бро.",
+        "v_aud_lvl": "Степень кринжа",
+        "v_aud_stat": "Инфа",
+        "v_aud_out": "Короче",
+        "v_aud_sigs": "Редфлаги",
+        "v_sig_crit": "Гг вп",
+        "v_sig_warn": "Аккуратнее",
+        "v_sig_info": "Просто инфа",
+        "v_aud_none": "Ещё не чекали. Жрёт 1 попытку API.",
+        "v_aud_no_txt": "Не родили описание.",
+        "v_aud_left": "Осталось попыток: {remaining}/{limit}",
+        "v_aud_zero": "Лилит на сегодня всё.",
+        "v_aud_err": "Сервак чекера упал.",
+        "v_err_gui": "Интерфейс словил шизу.",
+        "v_btn_exp": "🔽 Открыть",
+        "v_btn_col": "🔼 Спрятать",
+        "v_btn_talk": "💬 Курилка",
+        "v_talk_hdr": "{emoji} <b>Курилка: {name}</b>",
+        "v_talk_desc": "Чё пишут люди",
+        "v_talk_num": "Смс: {count}",
+        "v_talk_0": "Тут пусто. Будь гигачадом, напиши первым!",
+        "v_talk_err": "Связи с курилкой нет.",
+        "v_rep_ok": "Улетело!",
+        "v_rep_err": "Фейл.",
+        "v_btn_bck": "⬅️ Назад",
+        "v_btn_site": "🌐 На сайтик",
+        "v_btn_wrt": "✍️ Высрать",
+        "v_rep_ask": "Реплай на сообщение.\nОт 2 до 1800 символов.",
+        "v_rep_snt": "Пушим...",
+        "v_rep_min": "Чет мало букав.",
+        "v_rep_max": "Чет дохрена букав.",
+        "v_rep_cncl": "Забили.",
+        "v_loading_ui": "Вбиваем в базу Vector...",
+        "v_more_replies": "...и ещё {count} коментов там.",
+        "v_more_comments": "...и ещё спам на сайте.",
+        "v_upd_req": "Качаем обнову на темку...",
+        "v_upd_ok": "Обнова залетела, имба!",
+        "v_upd_err": "Кринж, не обновилось!",
+    }
+
+    strings_leet = {
+        "_cls_doc": "V3c70r m0dul3 r3g157ry br0ws3r f0r H3r0ku.",
+        "v_dev_lbl": "C0d3r:",
+        "v_dev_str": "D3v:",
+        "v_dev_ofc": "0ff1c14l",
+        "v_dev_unofc": "un0ff1c14l",
+        "v_info": "1nf0:",
+        "v_cmds": "U54g3:",
+        "v_reqs": "L1b5:",
+        "v_hid_cmd": "+ {rem} h1dd3n cmd5.",
+        "v_hid_req": "+ {rem} h1dd3n l1b5.",
+        "v_res_hdr": "F0und 173m5:",
+        "v_err_empty": "N33d qu3ry: {p}vector <73x7>",
+        "v_err_404": "N0 r3c0rd5 f0r: {q}",
+        "v_err_len": "Qu3ry 700 l0ng (120 ch4r5 m4x).",
+        "v_err_api": "4cc355 d3n13d by V3c70r 53rv3r.",
+        "v_fb_add": "R473d 5ucc355fully!",
+        "v_fb_rm": "R471ng cl34r3d!",
+        "v_btn_copy": "📋 C0py Qu3ry",
+        "v_btn_dl": "1n574ll",
+        "v_page": "[{idx}/{total}]",
+        "v_btn_code": "📄 50urc3",
+        "v_dl_ok": "M0dul3 1n574ll3d!",
+        "v_dl_err": "1n574ll f41l3d!",
+        "v_lim_cfg": "534rch l1m175.",
+        "v_btn_sec": "🛡 53cur17y 5c4n",
+        "v_aud_hdr": "C0d3 4ud17: {name}",
+        "v_aud_req": "C0nn3c71ng 70 53cur17y 4P1...",
+        "v_aud_proc": "Pr0c3551ng 457 7r33...",
+        "v_btn_aud_run": "574r7 5c4n",
+        "v_aud_mem": "L04d3d fr0m c4ch3.",
+        "v_aud_lvl": "7hr347 L3v3l",
+        "v_aud_stat": "5c4nn3r D474",
+        "v_aud_out": "5umm4ry",
+        "v_aud_sigs": "7r1gg3r5",
+        "v_sig_crit": "Cr171c4l",
+        "v_sig_warn": "W4rn1ng5",
+        "v_sig_info": "N071c35",
+        "v_aud_none": "N07 5c4nn3d y37.",
+        "v_aud_no_txt": "N0 5umm4ry.",
+        "v_aud_left": "5l075 l3f7: {remaining}/{limit}",
+        "v_aud_zero": "4ud17 l1m17 d3pl373d.",
+        "v_aud_err": "5c4nn3r 53rv3r d0wn.",
+        "v_err_gui": "GU1 3rr0r.",
+        "v_btn_exp": "🔽 3xp4nd",
+        "v_btn_col": "🔼 C0ll4p53",
+        "v_btn_talk": "💬 D15cu5510n",
+        "v_talk_hdr": "{emoji} <b>7hr34d: {name}</b>",
+        "v_talk_desc": "C0mmun17y r3v13w5",
+        "v_talk_num": "P0575: {count}",
+        "v_talk_0": "7hr34d 15 3mp7y!",
+        "v_talk_err": "C4n'7 c0nn3c7.",
+        "v_rep_ok": "P0573d!",
+        "v_rep_err": "R3qu357 f41l3d.",
+        "v_btn_bck": "⬅️ B4ck",
+        "v_btn_site": "🌐 W3b V13w",
+        "v_btn_wrt": "✍️ P057 R3ply",
+        "v_rep_ask": "R3ply 70 p057 m3554g3.\n2-1800 ch4r5.",
+        "v_rep_snt": "Upl04d1ng...",
+        "v_rep_min": "700 5h0r7.",
+        "v_rep_max": "L1m17 3xc33d3d.",
+        "v_rep_cncl": "C4nc3ll3d.",
+        "v_loading_ui": "534rch1ng V3c70r d474b453...",
+        "v_more_replies": "...4nd {count} m0r3 r3pl135 0n 5173.",
+        "v_more_comments": "...4nd m0r3 c0mm3n75 0n 5173.",
+        "v_upd_req": "Upd471ng V3c70r...",
+        "v_upd_ok": "V3c70r upd473d!",
+        "v_upd_err": "Upd473 f41l3d!",
+    }
+
+    strings_uwu = {
+        "_cls_doc": "Vectow moduwe wegistwy bwowsew fow Hewoku owo.",
+        "v_dev_lbl": "A-Authow:",
+        "v_dev_str": "Dev:",
+        "v_dev_ofc": "officiaw",
+        "v_dev_unofc": "unofficiaw",
+        "v_info": "Info:",
+        "v_cmds": "Usage owo:",
+        "v_reqs": "Wibs:",
+        "v_hid_cmd": "+ {rem} hidden cmds.",
+        "v_hid_req": "+ {rem} hidden wibs.",
+        "v_res_hdr": "Found Items owo:",
+        "v_err_empty": "Specify quewy pwease: {p}vectow <text>",
+        "v_err_404": "N-No wecowds fow: {q} T_T",
+        "v_err_len": "Quewy is too wong (120 chaws) >_<",
+        "v_err_api": "Access denied by Vectow Sewvew qwq.",
+        "v_fb_add": "Wated successfuwwy! (≧◡≦)",
+        "v_fb_rm": "Wating cweawed! ;w;",
+        "v_btn_copy": "📋 Copy Quewy",
+        "v_btn_dl": "Instaww pwease~",
+        "v_page": "[{idx}/{total}]",
+        "v_btn_code": "📄 Souwce",
+        "v_dl_ok": "Moduwe instawwed successfuwwy! (≧◡≦)",
+        "v_dl_err": "Instawwation faiwed! ;w;",
+        "v_lim_cfg": "Seawch wimits owo.",
+        "v_btn_sec": "🛡 Secuwity Scan",
+        "v_aud_hdr": "Code Audit: {name}",
+        "v_aud_req": "Connecting to Secuwity API...",
+        "v_aud_proc": "Pwocessing AST twee...",
+        "v_btn_aud_run": "Stawt Scan~",
+        "v_aud_mem": "Woaded fwom cache uwu.",
+        "v_aud_lvl": "Thweat Wevew",
+        "v_aud_stat": "Scannew Data",
+        "v_aud_out": "Summawy",
+        "v_aud_sigs": "Twiggews",
+        "v_sig_crit": "Cwiticaw",
+        "v_sig_warn": "Wawnings",
+        "v_sig_info": "Notices",
+        "v_aud_none": "Not scanned yet owo. Takes 1 API swot.",
+        "v_aud_no_txt": "No summawy gwenerated.",
+        "v_aud_left": "Swots weft: {remaining}/{limit}",
+        "v_aud_zero": "Daiwy audit wimit depweted T_T.",
+        "v_aud_err": "Scannew sewvew is down qwq.",
+        "v_err_gui": "GUI ewwow >_<.",
+        "v_btn_exp": "🔽 Expand",
+        "v_btn_col": "🔼 Cowwapse",
+        "v_btn_talk": "💬 Discussion",
+        "v_talk_hdr": "{emoji} <b>Thwead: {name}</b>",
+        "v_talk_desc": "Community weviews",
+        "v_talk_num": "Posts: {count}",
+        "v_talk_0": "Thwead is empty. Be the fiwst! owo",
+        "v_talk_err": "Couwdn't connect to thwead.",
+        "v_rep_ok": "Posted! (≧◡≦)",
+        "v_rep_err": "Wequest faiwed T_T.",
+        "v_btn_bck": "⬅️ Back",
+        "v_btn_site": "🌐 Web View",
+        "v_btn_wrt": "✍️ Post Wepwy",
+        "v_rep_ask": "Wepwy to post.\n2-1800 chaws uwu.",
+        "v_rep_snt": "Upwoading...",
+        "v_rep_min": "Text is too showt.",
+        "v_rep_max": "Wimit exceeded.",
+        "v_rep_cncl": "Cancewwed.",
+        "v_loading_ui": "Seawching Vectow database owo...",
+        "v_more_replies": "...and {count} mowe wepwies on the site uwu.",
+        "v_more_comments": "...and mowe comments on the site.",
+        "v_upd_req": "Updating Vectow pwease wait owo...",
+        "v_upd_ok": "Vectow updated yay! (≧◡≦)",
+        "v_upd_err": "Update faiwed! ;w;",
+    }
+
+    ICONS = {
+        "search": '<tg-emoji emoji-id="5447459604524971717">🔎</tg-emoji>',
+        "error": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
+        "warn": '<tg-emoji emoji-id="5881702736843511327">⚠️</tg-emoji>',
+        "description": '<tg-emoji emoji-id="6008090211181923982">📝</tg-emoji>',
+        "command": '<tg-emoji emoji-id="5877260593903177342">⚙</tg-emoji>',
+        "dependency": '<tg-emoji emoji-id="5325732612084351248">📦</tg-emoji>',
+        "module": '<tg-emoji emoji-id="5924720918826848520">📦</tg-emoji>',
+        "modules_list": '<tg-emoji emoji-id="5883973610606956186">🗂</tg-emoji>',
+        "shield": '<tg-emoji emoji-id="5926783847453692661">🛡</tg-emoji>',
+        "safe": '<tg-emoji emoji-id="5776375003280838798">✅</tg-emoji>',
+        "unsafe": '<tg-emoji emoji-id="5778527486270770928">❌</tg-emoji>',
+        "stats": '<tg-emoji emoji-id="5877485980901971030">📊</tg-emoji>',
+        "quota": '<tg-emoji emoji-id="6311858554944888333">⌚️</tg-emoji>',
+        "verified": '<tg-emoji emoji-id="5958376256788502078">⭐️</tg-emoji>',
+        "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
+        "reply": "↳",
     }
 
     def __init__(self) -> None:
         self.config = loader.ModuleConfig(
-            loader.ConfigValue("theme", "default", lambda: self.strings("doctheme"), validator=loader.validators.Choice(["default", "neon"])),
-            loader.ConfigValue("limit", 30, lambda: self.strings("doclimit"), validator=loader.validators.Integer(minimum=1, maximum=100)),
+            loader.ConfigValue(
+                "limit", 
+                30, 
+                lambda: self.strings("v_lim_cfg"), 
+                validator=loader.validators.Integer(minimum=1, maximum=100)
+            )
         )
+        self.http: Optional[aiohttp.ClientSession] = None
+        self._security_cache: Dict[str, Dict[str, Any]] = {}
+        self._last_http_code = 0
+        self.tele_bot = None
 
     async def client_ready(self, client: "herokutl.TelegramClient", database: "loader.Database") -> None:
-        logger.info("Vector module client_ready started")
         self.client = client
         self.database = database
-        self.api = VectorAPI(self)
-        self.auth = VectorAuth(self)
-        self.installer = VectorInstaller()
-        self.ui = VectorUI(self)
-        inline = getattr(self, "inline", None)
-        self.bot = getattr(inline, "bot", None) or getattr(inline, "_bot", None)
-        self._security_cache: Dict[str, Dict[str, Any]] = {}
-        logger.info("Vector module client_ready finished: api_base=%s theme=%s limit=%s", VECTOR_API_BASE, self.config["theme"], self.config["limit"])
+        self.http = aiohttp.ClientSession()
+        
+        il_manager = getattr(self, "inline", None)
+        self.tele_bot = getattr(il_manager, "bot", getattr(il_manager, "_bot", None))
+        log.info("Vector Module Monolith Started")
 
     async def on_unload(self) -> None:
-        logger.info("Vector module unload started")
-        if hasattr(self, "api"):
-            await self.api.close()
-        logger.info("Vector module unload finished")
+        if self.http and not self.http.closed:
+            await self.http.close()
 
-    async def answer(self, target: Any, text: str = "", alert: bool = False) -> None:
+    async def _net_req(self, method: str, path: str, token: str = "", params: dict = None, json_data: dict = None, as_bytes: bool = False, timeout: int = 15) -> Any:
+        if not self.http or self.http.closed:
+            self.http = aiohttp.ClientSession()
+            
+        url = urljoin(API_ROOT + "/", path.lstrip("/"))
+        headers = {"User-Agent": "VectorUserbotClient/2.0"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        self._last_http_code = 0
         try:
-            await target.answer(text, show_alert=alert)
+            async with self.http.request(method, url, params=params, json=json_data, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as r:
+                self._last_http_code = r.status
+                if r.status >= 300:
+                    return None
+                if as_bytes:
+                    return await r.read()
+                return await r.json(content_type=None)
         except Exception:
-            logger.debug("Unable to answer inline callback", exc_info=True)
+            return None
 
-    def _safe_inline_text(self, text: str) -> str:
-        safe = text.replace("<blockquote expandable>", "<blockquote>")
-        allowed = {"a", "b", "blockquote", "code", "i", "tg-emoji"}
+    def _normalize_module(self, raw: dict) -> dict:
+        cmds = []
+        for c in (raw.get("commands") or []):
+            if isinstance(c, dict):
+                cmds.append({
+                    "name": c.get("name") or c.get("cmd") or "",
+                    "description": c.get("description") or c.get("desc") or ""
+                })
 
-        def _strip_unsupported(match: re.Match) -> str:
-            return match.group(0) if match.group(1).lower() in allowed else ""
-
-        safe = re.sub(r"</?([a-zA-Z][\w-]*)(?:\s+[^>]*)?>", _strip_unsupported, safe)
-        return safe[:3900]
-
-    def _preview_url(self, url: Optional[str]) -> str:
-        url = str(url or "").strip()
-        return url if url.startswith(("http://", "https://")) else ""
-
-    def _with_preview_link(self, text: str, url: Optional[str]) -> str:
-        preview_url = self._preview_url(url)
-        if not preview_url or preview_url in text:
-            return text
-        escaped = utils.escape_html(preview_url).replace('"', "&quot;")
-        return f'<a href="{escaped}">\u200b</a>\n{text}'
-
-    def _preview_options(self, url: Optional[str]) -> Dict[str, Any]:
-        preview_url = self._preview_url(url)
-        if not preview_url:
-            return {}
+        dev = str(raw.get("developer") or raw.get("author") or "@Unknown")
+        clean_dev = dev.strip().lower().lstrip('@')
+        is_official = bool(
+            raw.get("official") 
+            or raw.get("is_official") 
+            or raw.get("verified") 
+            or raw.get("is_verified") 
+            or raw.get("telegram_verified") 
+            or raw.get("official_developer") 
+            or raw.get("is_official_developer") 
+            or clean_dev in {"goymodules", "samsepi0l_ovf"}
+        )
+        name = str(raw.get("name") or raw.get("class_name") or "Unknown")
+        
         return {
-            "url": preview_url,
-            "prefer_large_media": True,
-            "show_above_text": True,
+            "name": name,
+            "version": raw.get("version") or "?.?.?",
+            "author": dev,
+            "description": raw.get("description") or "",
+            "commands": cmds,
+            "dependencies": [str(d) for d in (raw.get("dependencies") or [])],
+            "official": is_official,
+            "likes": int(raw.get("likes") or 0),
+            "dislikes": int(raw.get("dislikes") or 0),
+            "banner": raw.get("banner"),
+            "source_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(name, safe='')}/source",
+            "dl_url": f"{API_ROOT}/api/modules/{quote(name, safe='')}/download",
         }
 
-    def _is_inline_target(self, target: Any) -> bool:
-        return any(hasattr(target, attr) for attr in ("inline_message_id", "unit_id", "inline_manager"))
-
-    async def _edit_inline_with_preview(
-        self,
-        target: Any,
-        text: str,
-        buttons: List[List[Dict[str, Any]]],
-        preview_url: str,
-    ) -> bool:
-        manager = getattr(target, "inline_manager", None)
-        if not manager or not preview_url:
-            return False
-
-        unit_id = getattr(target, "unit_id", None)
-        with suppress(Exception):
-            if unit_id in getattr(target, "_units", {}):
-                target._units[unit_id]["buttons"] = buttons
-
-        inline_message_id = getattr(target, "inline_message_id", None)
-        params: Dict[str, Any] = {"inline_message_id": inline_message_id} if inline_message_id else {}
-        chat_id = getattr(target, "chat_id", None)
-        message_id = getattr(target, "message_id", None)
-        if not params and chat_id and message_id:
-            params = {"chat_id": chat_id, "message_id": message_id}
-        if not params:
-            return False
-
+    def _parse_jwt(self, token: str) -> dict:
         try:
-            await manager.bot.edit_message_text(
-                text,
-                **params,
-                reply_markup=manager.generate_markup(buttons),
-                link_preview_options=self._preview_options(preview_url),
-            )
-            return True
+            b64_part = token.split(".")[1]
+            b64_part += "=" * (-len(b64_part) % 4)
+            return json.loads(base64.urlsafe_b64decode(b64_part.encode()).decode())
         except Exception:
-            logger.debug("Unable to edit Vector inline preview directly", exc_info=True)
-            return False
+            return {}
 
-    async def edit(self, target: Any, text: str, buttons: List[List[Dict[str, Any]]], banner: Optional[str] = None) -> bool:
-        preview_url = self._preview_url(banner)
-        for candidate in (text, self._safe_inline_text(text)):
-            candidate = self._with_preview_link(candidate, preview_url)
-            try:
-                if self._is_inline_target(target) and await self._edit_inline_with_preview(target, candidate, buttons, preview_url):
-                    return True
-
-                if hasattr(target, "edit"):
-                    kwargs = {"reply_markup": buttons}
-                    if self._is_inline_target(target):
-                        kwargs["disable_web_page_preview"] = False
-                    else:
-                        kwargs["link_preview"] = True
-                    ok = await target.edit(candidate, **kwargs)
-                    if ok is not False:
-                        return True
-
-                answer_kwargs = {"reply_markup": buttons}
-                if self._is_inline_target(target):
-                    answer_kwargs["disable_web_page_preview"] = False
-                else:
-                    answer_kwargs["link_preview"] = True
-                result = await utils.answer(target, candidate, **answer_kwargs)
-                if result is not None:
-                    return True
-            except Exception:
-                logger.warning("Unable to edit Vector inline message; retrying with safe text", exc_info=True)
-
-        with suppress(Exception):
-            await self.answer(target, self.strings["edit_error"], True)
-        return False
-
-    async def navigate(self, callback: Any, index: int, modules: List[Dict[str, Any]], query: str = "") -> None:
-        logger.info("Vector UI navigate: index=%s total=%s query=%r", index, len(modules), query)
-        await self.answer(callback)
-        if 0 <= index < len(modules):
-            data = modules[index]
-            await self.edit(callback, self.ui.format(data, index + 1, len(modules)), self.ui.buttons(data, index, modules, query), data.get("banner"))
-
-    async def show(self, callback: Any, index: int, modules: List[Dict[str, Any]], query: str) -> None:
-        logger.info("Vector UI show list: index=%s total=%s query=%r", index, len(modules), query)
-        await self.answer(callback)
-        await self.edit(callback, f"{self.ui.emoji('modules_list')} <b>{self.strings['list']}</b>", self.ui.pagination(modules, query, 0, index))
-
-    async def toggle_actions(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str, expanded: bool) -> None:
-        logger.info("Vector UI toggle actions: module=%s index=%s expanded=%s", module_name, index, expanded)
-        await self.answer(callback)
-        if modules and 0 <= index < len(modules):
-            data = modules[index]
-        else:
-            data = {"name": module_name, "source_url": self.api.source_url(module_name), "likes": 0, "dislikes": 0}
-
-        await self.edit(
-            callback,
-            self.ui.format(data, index + 1, len(modules or [data])),
-            self.ui.buttons(data, index, modules, query, expanded=expanded),
-            data.get("banner"),
-        )
-
-    async def page(self, callback: Any, current: int, modules: List[Dict[str, Any]], query: str, index: int) -> None:
-        logger.info("Vector UI page: page=%s current_index=%s total=%s query=%r", current, index, len(modules), query)
-        await self.answer(callback)
-        await self.edit(callback, f"{self.ui.emoji('modules_list')} <b>{self.strings['list']}</b>", self.ui.pagination(modules, query, current, index))
-
-    async def rate(self, callback: Any, module_name: str, action: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
-        logger.info("Vector rate flow started: module=%s action=%s index=%s query=%r", module_name, action, index, query)
-        token = await self.auth.ensure()
-        user_id = self.auth.user_id(token or "")
-        if not token or not user_id:
-            return await self.answer(callback, self.strings["auth_error"], True)
-
-        response = await self.api.rate(user_id, module_name, action, token)
-        if not response or not response.get("ok"):
-            logger.warning("Vector rate initial API call failed or not ok: module=%s action=%s response=%s", module_name, action, _log_preview(response))
-            token = await self.auth.ensure(force=True)
-            user_id = self.auth.user_id(token or "")
-            response = await self.api.rate(user_id, module_name, action, token) if token and user_id else None
-        if not response or not response.get("ok"):
-            return await self.answer(callback, self.strings["error"], True)
-
-        refreshed = await self.api.search(query or module_name, int(self.config["limit"]), token)
-        fresh = next((item for item in refreshed if item.get("name") == module_name), None)
-        if modules and index < len(modules) and fresh:
-            modules[index].update(fresh)
-            data = modules[index]
-        else:
-            data = fresh or {"name": module_name, "likes": 0, "dislikes": 0, "source_url": self.api.source_url(module_name)}
-
-        await self.edit(callback, self.ui.format(data, index + 1, len(modules or [data])), self.ui.buttons(data, index, modules, query), data.get("banner"))
-        state = response.get("rating", {}).get("state")
-        logger.info("Vector rate flow finished: module=%s action=%s state=%s refreshed=%s", module_name, action, state, bool(fresh))
-        await self.answer(callback, self.strings["rated_removed" if state == "removed" else "rated_set"], True)
-
-    async def install(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
-        logger.info("Vector install flow started: module=%s index=%s query=%r", module_name, index, query)
-        token = await self.auth.ensure()
-        if not token:
-            return await self.answer(callback, self.strings["auth_error"], True)
-
-        state, dependencies = await self.installer.execute(self, module_name, token)
-        logger.info("Vector install flow result: module=%s state=%s dependencies=%s", module_name, state, dependencies)
-        if state == "success":
-            await self.answer(callback, self.strings["success"], True)
-        elif state == "dependency":
-            formatted = f"({','.join(dependencies[:5])})" if dependencies else ""
-            await self.answer(callback, self.strings["dependency"].format(deps=formatted), True)
-        elif state == "overwrite":
-            await self.answer(callback, self.strings["overwrite"], True)
-        else:
-            await self.answer(callback, self.strings["error"], True)
-
-    def _cache_security(self, module_name: str, data: Dict[str, Any]) -> None:
-        check = data.get("check") if isinstance(data.get("check"), dict) else None
-        if check:
-            self._security_cache[module_name] = data
-
-    def _security_cached(self, module_name: str) -> Optional[Dict[str, Any]]:
-        data = self._security_cache.get(module_name)
-        return data if isinstance(data, dict) and isinstance(data.get("check"), dict) else None
-
-    def _security_status_code(self, data: Dict[str, Any]) -> int:
-        try:
-            return int(data.get("_status") or 0)
-        except Exception:
-            return 0
-
-    async def security_check(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
-        logger.info("Vector security check flow started: module=%s index=%s query=%r", module_name, index, query)
-        checked_buttons = self._security_buttons(module_name, index, modules, query, checked=True)
-        cached = self._security_cached(module_name)
+    async def _get_active_token(self, force: bool = False) -> str:
+        if force:
+            self.set("auth_token", None)
+            
+        cached = self.get("auth_token")
         if cached:
-            return await self.edit(
-                callback,
-                f"{self.ui.emoji('safe')} <i>{self.strings['security_cached']}</i>\n\n{self.ui.format_security(module_name, cached)}",
-                checked_buttons,
-            )
+            payload = self._parse_jwt(cached)
+            if payload.get("exp", 0) - time.time() > 60:
+                return cached
 
-        loading_buttons = self._security_buttons(module_name, index, modules, query, checked=True)
-        await self.edit(callback, f"{self.ui.emoji('search')} <b>{self.strings['security_checking']}</b>", loading_buttons)
+        bot_info = await self._net_req("GET", "/api/tg-bot")
+        bot_username = (bot_info or {}).get("username", "").strip().lstrip("@")
+        if not bot_username:
+            return ""
 
-        token = await self.auth.ensure()
-        if not token:
-            token = await self.auth.ensure(force=True)
-        if not token:
-            return await self.edit(callback, f"{self.ui.emoji('error')} <b>{self.strings['auth_error']}</b>", loading_buttons)
+        me = await self.client.get_me()
+        uid = str(getattr(me, "id", ""))
+        uname = getattr(me, "username", "") or ""
+        fname = getattr(me, "first_name", "") or ""
+        lname = getattr(me, "last_name", "") or ""
+        dname = " ".join(filter(None, [fname, lname])).strip() or uname or uid
 
-        data = await self.api.security_status(module_name, token)
-        status = self._security_status_code(data)
-        if not data or status >= 400:
-            logger.warning("Vector security status failed for %s with status=%s data=%r", module_name, status, data)
-            return await self.edit(callback, f"{self.ui.emoji('error')} <b>{self.strings['security_fetch_error']}</b>", loading_buttons)
+        with suppress(Exception):
+            await self.client(UnblockRequest(bot_username))
 
-        self._cache_security(module_name, data)
-        checked = bool(data.get("checked") and isinstance(data.get("check"), dict))
-        logger.info("Vector security check flow finished: module=%s checked=%s status=%s", module_name, checked, status)
-        buttons = self._security_buttons(module_name, index, modules, query, checked=checked)
-        await self.edit(callback, self.ui.format_security(module_name, data), buttons)
+        new_jwt = ""
+        for attempt in range(2):
+            b_stamp = int(time.time() // 10) - attempt
+            cmd_hash = hashlib.sha256(f"vector-token-v1|{uid}|{b_stamp}|{uname}|{dname}|{AUTH_SALT}".encode()).hexdigest()[:32]
+            cmd_str = f"/{cmd_hash}"
 
-    async def security_run(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
-        logger.info("Vector security run flow started: module=%s index=%s query=%r", module_name, index, query)
-        buttons = self._security_buttons(module_name, index, modules, query, checked=False)
-        await self.edit(callback, f"{self.ui.emoji('search')} <b>{self.strings['security_running']}</b>", buttons)
+            try:
+                async with self.client.conversation(bot_username, timeout=12, exclusive=False) as conv:
+                    out_msg = await conv.send_message(cmd_str)
+                    try:
+                        resp = await asyncio.wait_for(conv.get_response(), timeout=10)
+                        txt = getattr(resp, "raw_text", getattr(resp, "text", ""))
+                        match = JWT_REGEX.search(txt)
+                        if match:
+                            new_jwt = match.group(0)
+                        with suppress(Exception): await out_msg.delete()
+                        if new_jwt: break
+                    except asyncio.TimeoutError:
+                        with suppress(Exception): await out_msg.delete()
+            except Exception:
+                pass
 
-        token = await self.auth.ensure()
-        if not token:
-            token = await self.auth.ensure(force=True)
-        if not token:
-            return await self.edit(callback, f"{self.ui.emoji('error')} <b>{self.strings['auth_error']}</b>", buttons)
+        if not new_jwt:
+            for attempt in range(2):
+                b_stamp = int(time.time() // 10) - attempt
+                cmd_hash = hashlib.sha256(f"vector-token-v1|{uid}|{b_stamp}|{uname}|{dname}|{AUTH_SALT}".encode()).hexdigest()[:32]
+                cmd_str = f"/{cmd_hash}"
+                try:
+                    out_msg = await self.client.send_message(bot_username, cmd_str)
+                except Exception:
+                    continue
+                
+                deadline = time.time() + 15
+                while time.time() < deadline:
+                    await asyncio.sleep(1.5)
+                    try:
+                        async for h_msg in self.client.iter_messages(bot_username, limit=3):
+                            if not h_msg.out:
+                                match = JWT_REGEX.search(getattr(h_msg, "text", ""))
+                                if match:
+                                    new_jwt = match.group(0)
+                                    break
+                    except Exception:
+                        pass
+                    if new_jwt: break
+                    
+                with suppress(Exception): await out_msg.delete()
+                if new_jwt: break
 
-        data = await self.api.security_run(module_name, token)
-        status = self._security_status_code(data)
-        if status == 429:
-            return await self.edit(callback, f"{self.ui.emoji('warn')} <b>{self.strings['security_limit']}</b>", buttons)
-        if not data or status >= 400:
-            logger.warning("Vector security run failed for %s with status=%s data=%r", module_name, status, data)
-            return await self.edit(callback, f"{self.ui.emoji('error')} <b>{self.strings['security_fetch_error']}</b>", buttons)
+        if new_jwt:
+            self.set("auth_token", new_jwt)
+        return new_jwt
 
-        self._cache_security(module_name, data)
-        logger.info("Vector security run flow finished: module=%s status=%s", module_name, status)
-        await self.edit(callback, self.ui.format_security(module_name, data), self._security_buttons(module_name, index, modules, query, checked=True))
+    def _build_html(self, m_data: dict, current_idx: int, total_cnt: int) -> str:
+        name = utils.escape_html(str(m_data.get("name", "Unknown")))
+        author = utils.escape_html(str(m_data.get("author", "@Unknown")))
+        ver = str(m_data.get("version", "?.?.?"))
+        
+        lines = [f"{self.ICONS['module']} <code>{name}</code> <b>{self.strings['v_dev_lbl']}</b> <code>{author}</code>"]
+        if ver != "?.?.?":
+            lines[-1] += f" (<code>v{utils.escape_html(ver)}</code>)"
+            
+        status = self.strings["v_dev_ofc"] if m_data.get("official") else self.strings["v_dev_unofc"]
+        lines.append(f"{self.ICONS['verified']} <b>{self.strings['v_dev_str']}</b> <code>{status}</code>")
+        if total_cnt > 1:
+            lines.append(f"{self.ICONS['modules_list']} <i>{self.strings['v_page'].format(idx=current_idx, total=total_cnt)}</i>")
+            
+        desc = m_data.get("description")
+        if desc:
+            lines.append(f"\n{self.ICONS['description']} <b>{self.strings['v_info']}</b>\n<blockquote expandable>{utils.escape_html(str(desc))}</blockquote>")
+            
+        doc_str = "\n".join(lines)
+        
+        cmds = m_data.get("commands", [])
+        if cmds:
+            c_lines = []
+            for i, c in enumerate(cmds):
+                cn = utils.escape_html(str(c.get("name", "")))
+                cd = utils.escape_html(str(c.get("description", ""))).split("\n")[0]
+                c_lines.append(f"<code>{self.get_prefix()}{cn}</code> {cd}")
+            doc_str += f"\n\n{self.ICONS['command']} <b>{self.strings['v_cmds']}</b>\n<blockquote expandable>{chr(10).join(c_lines)}</blockquote>"
 
-    def _security_buttons(self, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str, *, checked: bool) -> List[List[Dict[str, Any]]]:
-        rows = [
+        deps = m_data.get("dependencies", [])
+        if deps:
+            d_lines = [f"<code>{utils.escape_html(d)}</code>" for d in deps]
+            doc_str += f"\n\n{self.ICONS['dependency']} <b>{self.strings['v_reqs']}</b>\n<blockquote expandable>{chr(10).join(d_lines)}</blockquote>"
+            
+        return doc_str[:3900]
+
+    def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False) -> list:
+        m_name = str(item.get("name", ""))
+        kbd = [
             [
-                {"text": self.strings["comments_back"], "callback": self.navigate, "args": (index, modules or [], query)},
-                {"text": self.strings["page"], "url": self.api.source_url(module_name)},
+                {"text": self.strings["v_btn_copy"], "copy": search_phrase},
+                {"text": self.strings["v_btn_dl"], "callback": self.cb_install, "args": (m_name, idx, group, search_phrase)},
+                {"text": self.strings["v_btn_code"], "url": item.get("source_url")},
             ],
-        ]
-        if not checked:
-            rows.append([{"text": self.strings["security_run_btn"], "callback": self.security_run, "args": (module_name, index, modules, query)}])
-        return rows
-
-    def _comment_meta(self, comment: Dict[str, Any]) -> str:
-        meta = []
-        username = str(comment.get("author_username") or "").strip().lstrip("@")
-        if username:
-            meta.append(f"@{utils.escape_html(username)}")
-
-        created_at = str(comment.get("created_at") or "").replace("T", " ").replace("Z", "").strip()
-        if created_at:
-            meta.append(utils.escape_html(created_at[:16]))
-
-        return f" <i>{' · '.join(meta)}</i>" if meta else ""
-
-    def _comment_author(self, comment: Dict[str, Any]) -> str:
-        author = utils.escape_html(str(comment.get("author_name") or comment.get("author_username") or "Unknown"))
-        edit_hint = " ✏️" if comment.get("can_edit", False) else ""
-        return f"<b>{author}</b>{edit_hint}{self._comment_meta(comment)}"
-
-    def _format_comments(self, comments: List[Dict[str, Any]], module_name: str) -> str:
-        """Render comment thread as HTML for Telegram message."""
-        title = self.strings["comments_title"].format(emoji=self.ui.emoji("comments"), name=utils.escape_html(module_name))
-        header = (
-            f"{title}\n"
-            f"<b>{self.strings['comments_live']}</b>\n"
-            f"<i>{self.strings['comments_count'].format(count=len(comments))}</i>"
-        )
-        if not comments:
-            return f"{header}\n\n{self.strings['comments_empty']}"
-
-        lines = [header]
-        top = []
-        replies_map: Dict[str, List[Dict[str, Any]]] = {}
-        for c in comments:
-            cid = str(c.get("id", ""))
-            nested_replies = c.get("replies") if isinstance(c.get("replies"), list) else []
-            if nested_replies:
-                replies_map.setdefault(cid, []).extend(reply for reply in nested_replies if isinstance(reply, dict))
-
-            pid = c.get("parent_id")
-            if pid:
-                replies_map.setdefault(str(pid), []).append(c)
-            else:
-                top.append(c)
-
-        shown = 0
-        for c in top[:12]:
-            cid = str(c.get("id", ""))
-            body = utils.escape_html(str(c.get("body", "")))
-            lines.append(
-                "╭─ "
-                f"{self._comment_author(c)}\n"
-                "╰─\n"
-                f"<blockquote>{body}</blockquote>"
-            )
-            shown += 1
-
-            replies = replies_map.get(cid, [])[:4]
-            for r in replies:
-                r_body = utils.escape_html(str(r.get("body", "")))
-                lines.append(
-                    f"  {self.ui.emoji('reply')} {self._comment_author(r)}\n"
-                    f"<blockquote>{r_body}</blockquote>"
-                )
-                shown += 1
-
-            hidden_replies = len(replies_map.get(cid, [])) - len(replies)
-            if hidden_replies > 0:
-                lines.append(f"  <i>...и ещё {hidden_replies} ответов на сайте.</i>")
-
-        total = len(comments)
-        if total > shown:
-            lines.append(f"<i>...и ещё {total - shown} комментариев на сайте.</i>")
-        return "\n\n".join(lines)
-
-    def _comments_buttons(self, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str) -> List[List[Dict[str, Any]]]:
-        source_url = self.api.source_url(module_name)
-        return [
             [
-                {"text": self.strings["comments_back"], "callback": self.navigate, "args": (index, modules or [], query)},
-                {
-                    "text": self.strings["comments_type_btn"],
-                    "input": self.strings["comment_prompt"],
-                    "handler": self.comment_type_input,
-                    "args": (module_name, index, modules, query),
-                },
-                {"text": self.strings["comments_write"], "url": source_url},
-            ],
+                {"text": f"👍 {item.get('likes', 0)}", "callback": self.cb_rate, "args": (m_name, "like", idx, group, search_phrase)},
+                {"text": f"👎 {item.get('dislikes', 0)}", "callback": self.cb_rate, "args": (m_name, "dislike", idx, group, search_phrase)},
+            ]
         ]
+        
+        if group and len(group) > 1:
+            prev_i = (idx - 1) % len(group)
+            next_i = (idx + 1) % len(group)
+            kbd.append([
+                {"text": "◀️", "callback": self.cb_nav, "args": (prev_i, group, search_phrase)},
+                {"text": self.strings["v_page"].format(idx=idx + 1, total=len(group)), "callback": self.cb_list, "args": (idx, group, search_phrase)},
+                {"text": "▶️", "callback": self.cb_nav, "args": (next_i, group, search_phrase)},
+            ])
+            
+        kbd.append([{
+            "text": self.strings["v_btn_col" if is_expanded else "v_btn_exp"],
+            "callback": self.cb_toggle,
+            "args": (m_name, idx, group, search_phrase, not is_expanded)
+        }])
+        
+        if is_expanded:
+            kbd.append([
+                {"text": self.strings["v_btn_talk"], "callback": self.cb_comments, "args": (m_name, idx, group, search_phrase)},
+                {"text": self.strings["v_btn_sec"], "callback": self.cb_sec_check, "args": (m_name, idx, group, search_phrase)},
+            ])
+            
+        return kbd
 
-    async def comment_type_input(self, callback: Any, data: str, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
-        logger.info("Vector comment type input received: module=%s index=%s body_len=%s", module_name, index, len(data or ""))
-        token = await self.auth.ensure()
-        if not token:
-            return await self.answer(callback, self.strings["auth_error"], True)
+    async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
+        safe_url = img if img and img.startswith("http") else ""
+        final_text = f'<a href="{utils.escape_html(safe_url)}">\u200b</a>\n{text}' if safe_url else text
+        
+        try:
+            if hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
+                imgr = target.inline_manager
+                with suppress(Exception):
+                    uid = getattr(target, "unit_id", None)
+                    if uid in getattr(target, "_units", {}):
+                        target._units[uid]["buttons"] = kbd
+                        
+                kws = {}
+                if getattr(target, "inline_message_id", None):
+                    kws["inline_message_id"] = target.inline_message_id
+                elif getattr(target, "chat_id", None) and getattr(target, "message_id", None):
+                    kws["chat_id"] = target.chat_id
+                    kws["message_id"] = target.message_id
+                    
+                if kws:
+                    await imgr.bot.edit_message_text(
+                        final_text, 
+                        **kws, 
+                        reply_markup=imgr.generate_markup(kbd),
+                        link_preview_options={"url": safe_url, "prefer_large_media": True, "show_above_text": True} if safe_url else None
+                    )
+                    return
 
-        body = str(data or "").strip()
-        if not body:
-            return await self.answer(callback, self.strings["comment_cancel"], True)
-        if len(body) < 2:
-            return await self.answer(callback, self.strings["comment_too_short"], True)
-        if len(body) > 1800:
-            return await self.answer(callback, self.strings["comment_too_long"], True)
-
-        await self.answer(callback, self.strings["comment_sending"], True)
-        result = await self.api.comments_post(module_name, body, token)
-        if result is None:
-            logger.warning("Vector comment type post failed: module=%s", module_name)
-            return await self.answer(callback, self.strings["comment_post_error"], True)
-
-        logger.info("Vector comment type posted successfully: module=%s", module_name)
-        await self.answer(callback, self.strings["comment_posted"], True)
-
-        # Refresh the comments page automatically after posting
-        raw = await self.api.comments_get(module_name, token=token)
-        if raw is None:
-            return
-        module_data = modules[index] if modules and 0 <= index < len(modules) else {}
-        preview = module_data.get("banner") or self.api.source_url(module_name)
-        text = self._format_comments(raw, module_name)
-        await self.edit(callback, text, self._comments_buttons(module_name, index, modules, query), preview)
-        logger.info("Vector comment type comments refreshed: module=%s count=%s", module_name, len(raw))
-
-    async def comments(self, callback: Any, module_name: str, index: int, modules: Optional[List[Dict[str, Any]]], query: str = "") -> None:
-        logger.info("Vector comments flow started: module=%s index=%s query=%r", module_name, index, query)
-        await self.answer(callback)
-        token = await self.auth.ensure()
-        raw = await self.api.comments_get(module_name, token=token)
-        if raw is None:
-            logger.warning("Vector comments flow failed: module=%s api returned None", module_name)
-            return await self.answer(callback, self.strings["comments_fetch_error"], True)
-        logger.info("Vector comments flow loaded: module=%s count=%s", module_name, len(raw))
-        data = modules[index] if modules and 0 <= index < len(modules) else {}
-        preview = data.get("banner") or self.api.source_url(module_name)
-        text = self._format_comments(raw, module_name)
-        await self.edit(callback, text, self._comments_buttons(module_name, index, modules, query), preview)
-        logger.info("Vector comments flow finished: module=%s", module_name)
-
-    @loader.inline_handler(
-        ru_doc="(запрос) - поиск модулей в Vector.",
-        en_doc="(query) - search modules in Vector.",
-    )
-    async def vector(self, event: "loader.InlineCall") -> Union[Dict[str, str], None]:
-        query = event.args
-        logger.info("Vector inline search started: query=%r", query)
-        if not query:
-            logger.info("Vector inline search stopped: empty query")
-            return {
-                "title": self.strings["prompt"],
-                "description": self.strings["hint"],
-                "message": f"{self.ui.emoji('error')} <b>{self.strings['noquery'].format(prefix=f'<code>@{self.inline.bot_username} ')}</code></b>",
-            }
-        if len(query) > 120:
-            logger.info("Vector inline search stopped: query too long len=%s", len(query))
-            return {
-                "title": self.strings["toolong"],
-                "description": self.strings["retry"],
-                "message": f"{self.ui.emoji('warn')} <b>{self.strings['toolong']}</b>",
-            }
-
-        modules = await self.api.search_with_reauth(query, int(self.config["limit"]))
-        logger.info("Vector inline search API modules: query=%r status=%s count=%s", query, self.api.last_status, len(modules))
-        if self.api.last_status == 401:
-            logger.warning("Vector inline search stopped after auth retry: query=%r body=%s", query, _log_preview(self.api.last_error_body))
-            return {"title": self.strings["auth_error"], "description": self.strings["retry"], "message": self.strings["auth_error"]}
-        if not modules:
-            logger.warning("Vector inline search no modules found after API call: query=%r limit=%s api_base=%s", query, self.config["limit"], self.api.base)
-            return {
-                "title": self.strings["retry"],
-                "description": self.strings["hint"],
-                "message": f"{self.ui.emoji('error')} <b>{self.strings['notfound'].format(query=f'<code>{utils.escape_html(query)}</code>')}</b>",
-            }
-
-        results = []
-        for index, data in enumerate(modules[:50]):
-            description = str(data.get("description") or "")
-            markup = None
+            if hasattr(target, "edit"):
+                await target.edit(final_text, reply_markup=kbd, link_preview=True)
+                return
+                
+            await utils.answer(target, final_text, reply_markup=kbd, link_preview=True)
+        except Exception:
             with suppress(Exception):
-                markup = self.inline.generate_markup(self.ui.buttons(data, index, modules, query))
-            results.append(InlineQueryResultArticle(
-                id=f"vector_{uuid.uuid4().hex[:8]}_{index}",
-                title=utils.escape_html(str(data.get("name", ""))),
-                description=utils.escape_html(description[:250] + ("..." if len(description) > 250 else "")),
-                input_message_content=InputTextMessageContent(
-                    message_text=self._with_preview_link(self.ui.format(data, index + 1, len(modules)), data.get("banner")),
-                    parse_mode="HTML",
-                    link_preview_options=self._preview_options(data.get("banner")) or None,
-                ),
-                reply_markup=markup,
-            ))
-        logger.info("Vector inline search answered: query=%r results=%s", query, len(results))
-        await event.inline_query.answer(results, cache_time=0)
+                await target.answer(self.strings["v_err_gui"], show_alert=True)
 
     @loader.command(
-        ru_doc="(запрос) - поиск модулей в Vector.",
-        en_doc="(query) - search modules in Vector.",
+        ru_doc="<запрос> - поиск модулей в Vector.",
+        jp_doc="<クエリ> - Vectorでモジュールを検索。",
+        uk_doc="<запит> - пошук модулів у Vector.",
+        de_doc="<Abfrage> - Suche nach Modulen in Vector.",
+        neofit_doc="<query> - scout fer loot in Vector.",
+        tiktok_doc="<запрос> - чекнуть темки (модули) в Vector.",
+        leet_doc="<qu3ry> - 534rch m0dul35 1n V3c70r.",
+        uwu_doc="<quewy> - seawch moduwes in Vectow (´• ω •`)."
     )
-    async def vectorcmd(self, message: Message) -> Any:
-        """(query) - search modules in Vector."""
-        query = utils.get_args_raw(message)
-        logger.info("Vector command search started: query=%r", query)
-        if not query:
-            logger.info("Vector command search stopped: empty query")
-            return await utils.answer(message, f"{self.ui.emoji('error')} <b>{self.strings['noquery'].format(prefix=f'<code>{self.get_prefix()}')}</code></b>")
-        if len(query) > 120:
-            logger.info("Vector command search stopped: query too long len=%s", len(query))
-            return await utils.answer(message, f"{self.ui.emoji('warn')} <b>{self.strings['toolong']}</b>")
+    async def vectorcmd(self, msg: Message):
+        """<query> - search modules in Vector."""
+        q = utils.get_args_raw(msg)
+        if not q:
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}')}</code></b>")
+        if len(q) > 120:
+            return await utils.answer(msg, f"{self.ICONS['warn']} <b>{self.strings['v_err_len']}</b>")
 
-        message = await utils.answer(message, f"{self.ui.emoji('search')} <b>{self.strings['search'].format(query=f'<code>{utils.escape_html(query)}</code>')}</b>")
-        modules = await self.api.search_with_reauth(query, int(self.config["limit"]))
-        logger.info("Vector command search API modules: query=%r status=%s count=%s", query, self.api.last_status, len(modules))
-        if self.api.last_status == 401:
-            logger.warning("Vector command search stopped after auth retry: query=%r body=%s", query, _log_preview(self.api.last_error_body))
-            return await utils.answer(message, f"{self.ui.emoji('error')} <b>{self.strings['auth_error']}</b>")
-        if not modules:
-            logger.warning("Vector command search no modules found after API call: query=%r limit=%s api_base=%s", query, self.config["limit"], self.api.base)
-            return await utils.answer(message, f"{self.ui.emoji('error')} <b>{self.strings['notfound'].format(query=f'<code>{utils.escape_html(query)}</code>')}</b>")
+        form = await self.inline.form(
+            f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>",
+            msg,
+            reply_markup=[[{"text": "ㅤ", "callback": self.cb_dummy}]],
+            silent=True
+        )
+        
+        token = await self._get_active_token()
+        raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
+        
+        if self._last_http_code == 401:
+            token = await self._get_active_token(force=True)
+            raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
+            
+        m_list = []
+        if isinstance(raw_res, dict): m_list = raw_res.get("results", [])
+        elif isinstance(raw_res, list): m_list = raw_res
+        m_list = [self._normalize_module(x) for x in m_list if isinstance(x, dict)]
+        
+        if not m_list:
+            return await self._safe_edit(form, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", [])
 
-        data = modules[0]
-        logger.info("Vector command search rendering first module: query=%r module=%s", query, data.get("name"))
-        buttons = self.ui.buttons(data, 0, modules, query)
-        form = await self.inline.form("ㅤ", message, reply_markup=buttons, silent=True)
-        await self.edit(form, self.ui.format(data, 1, len(modules)), buttons, data.get("banner"))
-        logger.info("Vector command search finished: query=%r first_module=%s total=%s", query, data.get("name"), len(modules))
+        item = m_list[0]
+        kbd = self._build_kbd(item, 0, m_list, q)
+        await self._safe_edit(form, self._build_html(item, 1, len(m_list)), kbd, item.get("banner"))
+
+    @loader.command(
+        ru_doc="Обновить модуль Vector.",
+        jp_doc="Vectorモジュールを更新します。",
+        uk_doc="Оновити модуль Vector.",
+        de_doc="Vector-Modul aktualisieren.",
+        neofit_doc="Upgrade the spyglass.",
+        tiktok_doc="Обновить эту темку.",
+        leet_doc="Upd473 V3c70r m0dul3.",
+        uwu_doc="Update Vectow moduwe owo."
+    )
+    async def vecupdate(self, msg: Message):
+        """Update Vector module from the registry."""
+        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
+        
+        token = await self._get_active_token()
+        if not token:
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+
+        m_name = "Vector"
+        code = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/download", token=token, as_bytes=True)
+        if not code:
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+
+        dl_url = f"{API_ROOT}/api/modules/{quote(m_name, safe='')}/download"
+        ldr = getattr(self, "lookup", getattr(self.allmodules, "lookup", None))("loader")
+        if not ldr or not hasattr(ldr, "download_and_install"):
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+
+        storage = getattr(ldr, "_storage", None)
+        orig_fetch = getattr(storage, "fetch", None)
+        
+        async def mock_fetch(url: str, auth: str = None) -> str:
+            if url == dl_url: return code.decode("utf-8", "replace")
+            return await orig_fetch(url, auth=auth)
+            
+        try:
+            storage.fetch = mock_fetch
+            res = await ldr.download_and_install(dl_url)
+            if res == 1:
+                if getattr(self, "fully_loaded", True):
+                    with suppress(Exception): self.update_modules_in_db()
+                await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
+            else:
+                await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+        except Exception:
+            await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+        finally:
+            with suppress(Exception): storage.fetch = orig_fetch
+
+    async def cb_dummy(self, cb: Any):
+        with suppress(Exception): await cb.answer()
+
+    async def cb_nav(self, cb: Any, target_i: int, group: list, q: str):
+        with suppress(Exception): await cb.answer()
+        if 0 <= target_i < len(group):
+            item = group[target_i]
+            await self._safe_edit(cb, self._build_html(item, target_i + 1, len(group)), self._build_kbd(item, target_i, group, q), item.get("banner"))
+
+    async def cb_list(self, cb: Any, curr_i: int, group: list, q: str):
+        with suppress(Exception): await cb.answer()
+        kb = []
+        for i in range(0, min(8, len(group))):
+            m = group[i]
+            kb.append([{"text": f"{i + 1}. {m.get('name')} by {m.get('author')}", "callback": self.cb_nav, "args": (i, group, q)}])
+        if len(group) > 8:
+            kb.append([{"text": "▶️", "callback": self.cb_page, "args": (1, group, q, curr_i)}])
+        kb.append([{"text": "✖️", "callback": self.cb_nav, "args": (curr_i, group, q)}])
+        await self._safe_edit(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", kb)
+
+    async def cb_page(self, cb: Any, pg: int, group: list, q: str, orig_i: int):
+        with suppress(Exception): await cb.answer()
+        kb = []
+        start, end = pg * 8, min((pg + 1) * 8, len(group))
+        for i in range(start, end):
+            m = group[i]
+            kb.append([{"text": f"{i + 1}. {m.get('name')} by {m.get('author')}", "callback": self.cb_nav, "args": (i, group, q)}])
+        
+        nav_row = []
+        if pg > 0: nav_row.append({"text": "◀️", "callback": self.cb_page, "args": (pg - 1, group, q, orig_i)})
+        if end < len(group): nav_row.append({"text": "▶️", "callback": self.cb_page, "args": (pg + 1, group, q, orig_i)})
+        if nav_row: kb.append(nav_row)
+        kb.append([{"text": "✖️", "callback": self.cb_nav, "args": (orig_i, group, q)}])
+        await self._safe_edit(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", kb)
+
+    async def cb_toggle(self, cb: Any, m_name: str, i: int, group: list, q: str, exp: bool):
+        with suppress(Exception): await cb.answer()
+        item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{API_ROOT}/modules/{m_name}/source"}
+        await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q, exp), item.get("banner"))
+
+    async def cb_rate(self, cb: Any, m_name: str, action: str, i: int, group: list, q: str):
+        token = await self._get_active_token()
+        if not token:
+            with suppress(Exception): await cb.answer(self.strings["v_err_api"], show_alert=True)
+            return
+            
+        uid = self._parse_jwt(token).get("sub", "")
+        res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(m_name, safe='')}/{action}", token=token)
+        if not res or not res.get("ok"):
+            token = await self._get_active_token(force=True)
+            uid = self._parse_jwt(token).get("sub", "")
+            res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(m_name, safe='')}/{action}", token=token)
+            if not res or not res.get("ok"):
+                with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
+                return
+
+        fresh_search = await self._net_req("GET", "/api/search", token=token, params={"q": q or m_name, "limit": "30"})
+        fresh_items = fresh_search.get("results", []) if isinstance(fresh_search, dict) else (fresh_search if isinstance(fresh_search, list) else [])
+        fresh_item = next((self._normalize_module(x) for x in fresh_items if x.get("name") == m_name), None)
+        
+        if group and i < len(group) and fresh_item:
+            group[i].update(fresh_item)
+            item = group[i]
+        else:
+            item = fresh_item or {"name": m_name, "likes": 0, "dislikes": 0, "source_url": f"{API_ROOT}/modules/{m_name}/source"}
+            
+        await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q), item.get("banner"))
+        s_val = res.get("rating", {}).get("state")
+        with suppress(Exception): await cb.answer(self.strings["v_fb_rm" if s_val == "removed" else "v_fb_add"], show_alert=True)
+
+    async def cb_install(self, cb: Any, m_name: str, i: int, group: list, q: str):
+        token = await self._get_active_token()
+        if not token:
+            with suppress(Exception): await cb.answer(self.strings["v_err_api"], show_alert=True)
+            return
+            
+        ldr = getattr(self, "lookup", getattr(self.allmodules, "lookup", None))("loader")
+        if not ldr or not hasattr(ldr, "download_and_install"):
+            with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
+            return
+
+        code = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/download", token=token, as_bytes=True)
+        if not code:
+            with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
+            return
+
+        dl_url = f"{API_ROOT}/api/modules/{quote(m_name, safe='')}/download"
+        storage = getattr(ldr, "_storage", None)
+        orig_fetch = getattr(storage, "fetch", None)
+        
+        async def mock_fetch(url: str, auth: str = None) -> str:
+            if url == dl_url: return code.decode("utf-8", "replace")
+            return await orig_fetch(url, auth=auth)
+            
+        try:
+            storage.fetch = mock_fetch
+            res = await ldr.download_and_install(dl_url)
+            if res == 1:
+                if getattr(self, "fully_loaded", True):
+                    with suppress(Exception): self.update_modules_in_db()
+                with suppress(Exception): await cb.answer(self.strings["v_dl_ok"], show_alert=True)
+            else:
+                with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
+        except Exception:
+            with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
+        finally:
+            with suppress(Exception): storage.fetch = orig_fetch
+
+    async def cb_sec_check(self, cb: Any, m_name: str, i: int, group: list, q: str):
+        def _get_sec_kb(has_run: bool):
+            k = [[
+                {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
+                {"text": self.strings["v_btn_code"], "url": f"{API_ROOT}/modules/{m_name}/source"},
+            ]]
+            if not has_run: k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_name, i, group, q)}])
+            return k
+
+        cached = self._security_cache.get(m_name)
+        if cached and cached.get("check"):
+            return await self._safe_edit(cb, f"{self.ICONS['safe']} <i>{self.strings['v_aud_mem']}</i>\n\n{self._fmt_sec(m_name, cached)}", _get_sec_kb(True))
+
+        await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_req']}</b>", _get_sec_kb(True))
+        token = await self._get_active_token()
+        res = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/security-check", token=token)
+        
+        if not res or self._last_http_code >= 400:
+            return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", _get_sec_kb(True))
+
+        if res.get("check"): self._security_cache[m_name] = res
+        await self._safe_edit(cb, self._fmt_sec(m_name, res), _get_sec_kb(bool(res.get("checked"))))
+
+    async def cb_sec_run(self, cb: Any, m_name: str, i: int, group: list, q: str):
+        await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
+        token = await self._get_active_token()
+        res = await self._net_req("POST", f"/api/modules/{quote(m_name, safe='')}/security-check", token=token, timeout=120)
+        
+        if self._last_http_code == 429:
+            return await self._safe_edit(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
+        if not res or self._last_http_code >= 400:
+            return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
+
+        if res.get("check"): self._security_cache[m_name] = res
+        await self._safe_edit(cb, self._fmt_sec(m_name, res), [[
+            {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
+            {"text": self.strings["v_btn_code"], "url": f"{API_ROOT}/modules/{m_name}/source"},
+        ]])
+
+    def _fmt_sec(self, m_name: str, payload: dict) -> str:
+        chk = payload.get("check")
+        qta = payload.get("quota") or (chk.get("quota") if chk else None) or {}
+        if not chk:
+            return (f"{self.ICONS['shield']} <b>{self.strings['v_aud_hdr'].format(name=m_name)}</b>\n\n"
+                    f"{self.ICONS['warn']} {self.strings['v_aud_none']}\n"
+                    f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=qta.get('remaining', '?'), limit=qta.get('limit', '?'))}</i>")
+
+        v = str(chk.get("verdict", "unknown"))
+        v_icon = self.ICONS.get(v, self.ICONS['shield'])
+        static = chk.get("details", {}).get("static", {})
+        fnds = static.get("findings", {})
+        
+        lines = [
+            f"{v_icon} <b>{self.strings['v_aud_hdr'].format(name=m_name)}</b>\n",
+            f"{self.ICONS['shield']} <b>{self.strings['v_aud_lvl']}:</b> <code>{chk.get('label', v)}</code> (<code>{chk.get('confidence', 0)}%</code>)",
+            f"{self.ICONS['stats']} <b>{self.strings['v_aud_stat']}:</b> risk <code>{static.get('risk', 'unknown')}</code>, score <code>{static.get('score', '?')}</code>",
+            f"{self.ICONS['description']} <b>{self.strings['v_aud_out']}:</b>\n<blockquote expandable>{chk.get('summary', self.strings['v_aud_no_txt'])}</blockquote>"
+        ]
+        
+        f_blocks = []
+        for hdr, key in [(self.strings["v_sig_crit"], "critical"), (self.strings["v_sig_warn"], "warning"), (self.strings["v_sig_info"], "info")]:
+            arr = fnds.get(key, [])
+            if arr: f_blocks.append(f"<b>{hdr}</b>: " + ", ".join(x.get("title", "?") for x in arr[:3]))
+        if f_blocks:
+            lines.append(f"{self.ICONS['search']} <b>{self.strings['v_aud_sigs']}:</b>\n<blockquote expandable>{chr(10).join(f_blocks)}</blockquote>")
+            
+        lines.append(f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=qta.get('remaining', '?'), limit=qta.get('limit', '?'))}</i>")
+        return "\n".join(lines)
+
+    async def cb_comments(self, cb: Any, m_name: str, i: int, group: list, q: str):
+        with suppress(Exception): await cb.answer()
+        token = await self._get_active_token()
+        res = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/comments", token=token)
+        
+        if not res or not isinstance(res, dict):
+            with suppress(Exception): await cb.answer(self.strings["v_talk_err"], show_alert=True)
+            return
+            
+        kb = [[
+            {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
+            {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_name, i, group, q)},
+            {"text": self.strings["v_btn_site"], "url": f"{API_ROOT}/modules/{m_name}/source"},
+        ]]
+        
+        item = group[i] if group and 0 <= i < len(group) else {}
+        await self._safe_edit(cb, self._fmt_comments(res.get("comments", []), m_name), kb, item.get("banner"))
+
+    async def cb_post_comment(self, cb: Any, text: str, m_name: str, i: int, group: list, q: str):
+        token = await self._get_active_token()
+        c_txt = str(text or "").strip()
+        if not c_txt:
+            with suppress(Exception): await cb.answer(self.strings["v_rep_cncl"], show_alert=True)
+            return
+        if len(c_txt) < 2 or len(c_txt) > 1800:
+            with suppress(Exception): await cb.answer(self.strings["v_rep_min" if len(c_txt) < 2 else "v_rep_max"], show_alert=True)
+            return
+
+        with suppress(Exception): await cb.answer(self.strings["v_rep_snt"], show_alert=True)
+        res = await self._net_req("POST", f"/api/modules/{quote(m_name, safe='')}/comments", token=token, json_data={"body": c_txt})
+        
+        if not res:
+            with suppress(Exception): await cb.answer(self.strings["v_rep_err"], show_alert=True)
+            return
+            
+        with suppress(Exception): await cb.answer(self.strings["v_rep_ok"], show_alert=True)
+        
+        await asyncio.sleep(1.5)
+        
+        await self.cb_comments(cb, m_name, i, group, q)
+
+    def _fmt_comments(self, comments: list, m_name: str) -> str:
+        h = f"{self.strings['v_talk_hdr'].format(emoji=self.ICONS['comments'], name=m_name)}\n<b>{self.strings['v_talk_desc']}</b>\n<i>{self.strings['v_talk_num'].format(count=len(comments))}</i>"
+        if not comments: return f"{h}\n\n{self.strings['v_talk_0']}"
+        
+        roots, chmap = [], {}
+        for c in comments:
+            pid = c.get("parent_id")
+            if pid: chmap.setdefault(str(pid), []).append(c)
+            else: roots.append(c)
+            if c.get("replies"): chmap.setdefault(str(c.get("id")), []).extend(c["replies"])
+
+        blks = [h]
+        for r in roots[:10]:
+            rid = str(r.get("id"))
+            
+            uname = str(r.get("author_username", "")).strip().lstrip("@")
+            meta = [f"@{utils.escape_html(uname)}"] if uname else []
+            ts = str(r.get("created_at", "")).replace("T", " ").replace("Z", "").strip()
+            if ts: meta.append(utils.escape_html(ts[:16]))
+            meta_str = f" <i>{' · '.join(meta)}</i>" if meta else ""
+            edit_mark = " *" if r.get("can_edit") else ""
+            
+            auth = f"<b>{utils.escape_html(r.get('author_name') or r.get('author_username') or 'Unknown')}</b>{edit_mark}{meta_str}"
+            blks.append(f"╭─ {auth}\n╰─\n<blockquote>{utils.escape_html(r.get('body', ''))}</blockquote>")
+            
+            subs = chmap.get(rid, [])
+            for s in subs[:4]:
+                s_uname = str(s.get("author_username", "")).strip().lstrip("@")
+                s_meta = [f"@{utils.escape_html(s_uname)}"] if s_uname else []
+                s_ts = str(s.get("created_at", "")).replace("T", " ").replace("Z", "").strip()
+                if s_ts: s_meta.append(utils.escape_html(s_ts[:16]))
+                s_meta_str = f" <i>{' · '.join(s_meta)}</i>" if s_meta else ""
+                s_edit_mark = " *" if s.get("can_edit") else ""
+                
+                s_auth = f"<b>{utils.escape_html(s.get('author_name') or s.get('author_username') or 'Unknown')}</b>{s_edit_mark}{s_meta_str}"
+                blks.append(f"  {self.ICONS['reply']} {s_auth}\n<blockquote>{utils.escape_html(s.get('body', ''))}</blockquote>")
+                
+            if len(subs) > 4: blks.append(f"  <i>{self.strings['v_more_replies'].format(count=len(subs)-4)}</i>")
+            
+        if len(comments) > sum(1 + len(chmap.get(str(r.get("id")), [])[:4]) for r in roots[:10]):
+            blks.append(f"<i>{self.strings['v_more_comments']}</i>")
+            
+        return "\n\n".join(blks)
