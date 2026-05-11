@@ -16,13 +16,15 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 0, 0)
+__version__ = (2, 1, 0)
 
 import asyncio
 import base64
 import hashlib
+import hmac
 import json
 import logging
+import os
 import re
 import time
 from contextlib import suppress
@@ -42,6 +44,9 @@ API_ROOT = "https://vector-three-sooty.vercel.app"
 JWT_REGEX = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 AUTH_SALT = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
 OFFICIAL_CREATORS = {"@goymodules", "@samsepi0l_ovf"}
+OFFICIAL_VECTOR_BOT_ID = int(os.getenv("VECTOR_OFFICIAL_BOT_ID", "0"))
+LANG_PING_PAYLOAD = "#v_lang_ping"
+LANG_PONG_PREFIX = "#v_lang:"
 
 @loader.tds
 class Vector(loader.Module):
@@ -678,6 +683,15 @@ class Vector(loader.Module):
         "v_upd_err": "Update faiwed! ;w;",
     }
 
+    def _detect_lang_suffix(self) -> str:
+        variants = ("ru", "jp", "uk", "de", "neofit", "tiktok", "leet", "uwu")
+        probe = self.strings.get("v_btn_dl", "")
+        for suffix in variants:
+            table = getattr(self, f"strings_{suffix}", None)
+            if isinstance(table, dict) and table.get("v_btn_dl") == probe:
+                return suffix
+        return "en"
+
     ICONS = {
         "search": '<tg-emoji emoji-id="5447459604524971717">🔎</tg-emoji>',
         "error": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
@@ -1071,6 +1085,101 @@ class Vector(loader.Module):
             await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
         finally:
             with suppress(Exception): storage.fetch = orig_fetch
+
+    @loader.watcher(chat_id=OFFICIAL_VECTOR_BOT_ID)
+    async def vector_install_payload_watcher(self, msg: Message):
+        text = (getattr(msg, "raw_text", None) or "").strip()
+        if text == LANG_PING_PAYLOAD:
+            with suppress(Exception):
+                await self._client.send_message(msg.chat_id, f"{LANG_PONG_PREFIX}{self._detect_lang_suffix()}")
+            with suppress(Exception):
+                await msg.delete()
+            return
+        if not text.startswith("#v_payload:"):
+            return
+
+        with suppress(Exception):
+            await msg.delete()
+
+        parts = text.split(":", 4)
+        if len(parts) != 5:
+            return
+        _, module_name, action, ts_raw, signature = parts
+        if not module_name or not action or not ts_raw or not signature:
+            return
+        if action not in {"install", "like", "dislike"}:
+            return
+        if not re.fullmatch(r"[A-Za-z0-9._-]+", module_name):
+            return
+        if not ts_raw.isdigit():
+            return
+
+        ts = int(ts_raw)
+        now = int(time.time())
+        if abs(now - ts) > 60:
+            return
+
+        local_payload = f"{module_name}:{action}:{ts}"
+        local_signature = hmac.new(
+            AUTH_SALT.encode("utf-8"),
+            local_payload.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(local_signature, signature):
+            return
+
+        async def send_feedback(status: str) -> None:
+            feedback_ts = int(time.time())
+            feedback_payload = f"{module_name}:{action}:{status}:{feedback_ts}"
+            feedback_signature = hmac.new(
+                AUTH_SALT.encode("utf-8"),
+                feedback_payload.encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest()
+            with suppress(Exception):
+                await self._client.send_message(
+                    msg.chat_id,
+                    f"#v_feedback:{module_name}:{action}:{status}:{feedback_ts}:{feedback_signature}",
+                )
+
+        token = await self._get_active_token()
+        if not token:
+            await send_feedback("error")
+            return
+
+        if action == "install":
+            code = await self._net_req("GET", f"/api/modules/{quote(module_name, safe='')}/download", token=token, as_bytes=True)
+            if not code:
+                await send_feedback("error")
+                return
+            ldr = getattr(self, "lookup", getattr(self.allmodules, "lookup", None))("loader")
+            if not ldr or not hasattr(ldr, "download_and_install"):
+                await send_feedback("error")
+                return
+
+            dl_url = f"{API_ROOT}/api/modules/{quote(module_name, safe='')}/download"
+            storage = getattr(ldr, "_storage", None)
+            orig_fetch = getattr(storage, "fetch", None)
+
+            async def mock_fetch(url: str, auth: str = None) -> str:
+                if url == dl_url:
+                    return code.decode("utf-8", "replace")
+                return await orig_fetch(url, auth=auth)
+
+            try:
+                storage.fetch = mock_fetch
+                res = await ldr.download_and_install(dl_url)
+                await send_feedback("ok" if res == 1 else "error")
+            except Exception:
+                await send_feedback("error")
+            finally:
+                with suppress(Exception):
+                    storage.fetch = orig_fetch
+            return
+
+        uid = self._parse_jwt(token).get("sub", "")
+        res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(module_name, safe='')}/{action}", token=token)
+        await send_feedback("ok" if res and res.get("ok") else "error")
 
     async def cb_dummy(self, cb: Any):
         with suppress(Exception): await cb.answer()
