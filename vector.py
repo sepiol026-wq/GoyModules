@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 1, 0)
+__version__ = (2, 2, 0)
 
 import asyncio
 import base64
@@ -47,12 +47,15 @@ OFFICIAL_CREATORS = {"@goymodules", "@samsepi0l_ovf"}
 OFFICIAL_VECTOR_BOT_ID = int(os.getenv("VECTOR_OFFICIAL_BOT_ID", "0"))
 LANG_PING_PAYLOAD = "#v_lang_ping"
 LANG_PONG_PREFIX = "#v_lang:"
+BAN_REASON_RE = re.compile(r"(?:Причина|Reason|理由|Grund|R3450n|Weason|Charge):\s*(.+)", re.IGNORECASE)
+BAN_TERM_RE = re.compile(r"(?:Срок|Term|期間|Dauer|73rm|Tewm):\s*(.+)", re.IGNORECASE)
 
 @loader.tds
 class Vector(loader.Module):
     """Vector module registry browser for Heroku."""
 
     strings = {
+        "lang": "en",
         "name": "Vector",
         "_cls_doc": "Vector module registry browser for Heroku.",
         "v_dev_lbl": "Author:",
@@ -69,12 +72,13 @@ class Vector(loader.Module):
         "v_err_404": "No records for: {q}",
         "v_err_len": "Query length is limited to 120 chars.",
         "v_err_api": "Access denied by Vector Server.",
+        "v_ban_notice": "⛔ <b>Vector access blocked.</b>\n<b>Reason:</b> <code>{reason}</code>\n<b>Term:</b> <code>{term}</code>",
         "v_fb_add": "Rated successfully!",
         "v_fb_rm": "Rating cleared!",
-        "v_btn_copy": "📋 Copy Query",
+        "v_btn_copy": " Copy Query",
         "v_btn_dl": "Install",
         "v_page": "[{idx}/{total}]",
-        "v_btn_code": "📄 Source",
+        "v_btn_code": "Source",
         "v_dl_ok": "Module installed successfully!",
         "v_dl_err": "Installation failed!",
         "v_lim_cfg": "Search output limits.",
@@ -124,6 +128,7 @@ class Vector(loader.Module):
     }
 
     strings_ru = {
+        "lang": "ru",
         "_cls_doc": "Обозреватель реестра модулей Vector для Heroku.",
         "v_dev_lbl": "Автор:",
         "v_dev_str": "Разраб:",
@@ -139,12 +144,13 @@ class Vector(loader.Module):
         "v_err_404": "Нет записей по запросу: {q}",
         "v_err_len": "Длина запроса ограничена 120 символами.",
         "v_err_api": "Отказ в доступе от сервера Vector.",
+        "v_ban_notice": "⛔ <b>Доступ к Vector заблокирован.</b>\n<b>Причина:</b> <code>{reason}</code>\n<b>Срок:</b> <code>{term}</code>",
         "v_fb_add": "Оценка добавлена!",
         "v_fb_rm": "Оценка удалена!",
-        "v_btn_copy": "📋 Копировать запрос",
+        "v_btn_copy": " Копировать запрос",
         "v_btn_dl": "Установить",
         "v_page": "[{idx}/{total}]",
-        "v_btn_code": "📄 Исходник",
+        "v_btn_code": "Исходник",
         "v_dl_ok": "Модуль успешно установлен!",
         "v_dl_err": "Ошибка установки!",
         "v_lim_cfg": "Лимиты вывода поиска.",
@@ -194,6 +200,7 @@ class Vector(loader.Module):
     }
 
     strings_jp = {
+        "lang": "jp",
         "_cls_doc": "Heroku用Vectorモジュールレジストリブラウザ。",
         "v_dev_lbl": "作成者:",
         "v_dev_str": "開発:",
@@ -209,12 +216,13 @@ class Vector(loader.Module):
         "v_err_404": "次のクエリの記録はありません: {q}",
         "v_err_len": "クエリの長さは120文字に制限されています。",
         "v_err_api": "Vectorサーバーによりアクセスが拒否されました。",
+        "v_ban_notice": "⛔ <b>Vectorへのアクセスはブロックされています。</b>\n<b>理由:</b> <code>{reason}</code>\n<b>期間:</b> <code>{term}</code>",
         "v_fb_add": "評価が追加されました！",
         "v_fb_rm": "評価がクリアされました！",
-        "v_btn_copy": "📋 クエリをコピー",
+        "v_btn_copy": " クエリをコピー",
         "v_btn_dl": "インストール",
         "v_page": "[{idx}/{total}]",
-        "v_btn_code": "📄 ソース",
+        "v_btn_code": "ソース",
         "v_dl_ok": "モジュールが正常にインストールされました！",
         "v_dl_err": "インストールに失敗しました！",
         "v_lim_cfg": "検索出力制限。",
@@ -264,6 +272,7 @@ class Vector(loader.Module):
     }
 
     strings_uk = {
+        "lang": "uk",
         "_cls_doc": "Оглядач реєстру модулів Vector для Heroku.",
         "v_dev_lbl": "Автор:",
         "v_dev_str": "Розроб:",
@@ -279,12 +288,13 @@ class Vector(loader.Module):
         "v_err_404": "Немає записів за запитом: {q}",
         "v_err_len": "Довжина запиту обмежена 120 символами.",
         "v_err_api": "Відмова в доступі від сервера Vector.",
+        "v_ban_notice": "⛔ <b>Доступ до Vector заблоковано.</b>\n<b>Причина:</b> <code>{reason}</code>\n<b>Термін:</b> <code>{term}</code>",
         "v_fb_add": "Оцінка додана!",
         "v_fb_rm": "Оцінка видалена!",
-        "v_btn_copy": "📋 Копіювати запит",
+        "v_btn_copy": " Копіювати запит",
         "v_btn_dl": "Встановити",
         "v_page": "[{idx}/{total}]",
-        "v_btn_code": "📄 Вихідний код",
+        "v_btn_code": "Вихідний код",
         "v_dl_ok": "Модуль успішно встановлено!",
         "v_dl_err": "Помилка встановлення!",
         "v_lim_cfg": "Ліміти виводу пошуку.",
@@ -334,6 +344,7 @@ class Vector(loader.Module):
     }
 
     strings_de = {
+        "lang": "de",
         "_cls_doc": "Vector-Modul-Registry-Browser für Heroku.",
         "v_dev_lbl": "Autor:",
         "v_dev_str": "Entwickler:",
@@ -349,12 +360,13 @@ class Vector(loader.Module):
         "v_err_404": "Keine Einträge für: {q}",
         "v_err_len": "Abfragelänge ist auf 120 Zeichen begrenzt.",
         "v_err_api": "Zugriff durch Vector-Server verweigert.",
+        "v_ban_notice": "⛔ <b>Zugriff auf Vector gesperrt.</b>\n<b>Grund:</b> <code>{reason}</code>\n<b>Dauer:</b> <code>{term}</code>",
         "v_fb_add": "Erfolgreich bewertet!",
         "v_fb_rm": "Bewertung gelöscht!",
-        "v_btn_copy": "📋 Abfrage kopieren",
+        "v_btn_copy": " Abfrage kopieren",
         "v_btn_dl": "Installieren",
         "v_page": "[{idx}/{total}]",
-        "v_btn_code": "📄 Quellcode",
+        "v_btn_code": "Quellcode",
         "v_dl_ok": "Modul erfolgreich installiert!",
         "v_dl_err": "Installation fehlgeschlagen!",
         "v_lim_cfg": "Suchausgabe-Limits.",
@@ -404,6 +416,7 @@ class Vector(loader.Module):
     }
 
     strings_neofit = {
+        "lang": "neofit",
         "_cls_doc": "Vector loot registry scouter for Heroku.",
         "v_dev_lbl": "Captain:",
         "v_dev_str": "Crew:",
@@ -419,12 +432,13 @@ class Vector(loader.Module):
         "v_err_404": "Dead end fer: {q}",
         "v_err_len": "Too long, mate. Keep it under 120.",
         "v_err_api": "Access denied by the Admiral.",
+        "v_ban_notice": "⛔ <b>Deck access denied by the Admiral.</b>\n<b>Charge:</b> <code>{reason}</code>\n<b>Term:</b> <code>{term}</code>",
         "v_fb_add": "Mark placed!",
         "v_fb_rm": "Mark washed away!",
-        "v_btn_copy": "📋 Snatch Map",
+        "v_btn_copy": " Snatch Map",
         "v_btn_dl": "🏴‍☠️ Plunder",
         "v_page": "[{idx}/{total}]",
-        "v_btn_code": "📄 Blueprints",
+        "v_btn_code": "Blueprints",
         "v_dl_ok": "Loot stashed safely!",
         "v_dl_err": "Plunder failed!",
         "v_lim_cfg": "Spyglass range.",
@@ -474,12 +488,13 @@ class Vector(loader.Module):
     }
 
     strings_tiktok = {
+        "lang": "tiktok",
         "_cls_doc": "Темка для поиска софтов Vector под Heroku.",
         "v_dev_lbl": "Кодер:",
-        "v_dev_str": "Чел:",
-        "v_dev_ofc": "база",
+        "v_dev_str": "дев:",
+        "v_dev_ofc": "офиц",
         "v_dev_unofc": "ноунэйм",
-        "v_info": "Суета:",
+        "v_info": "Инфа:",
         "v_cmds": "Команды:",
         "v_reqs": "Либы:",
         "v_hid_cmd": "+ заныкано команд: {rem}.",
@@ -489,16 +504,17 @@ class Vector(loader.Module):
         "v_err_404": "Ничего не нашлось по: {q}",
         "v_err_len": "Кринж, бро, слишком длинно (до 120 символов).",
         "v_err_api": "Сервак Vector послал лесом.",
+        "v_ban_notice": "⛔ <b>Ты в блоке у Vector.</b>\n<b>Причина:</b> <code>{reason}</code>\n<b>Срок:</b> <code>{term}</code>",
         "v_fb_add": "Лайк влеплен!",
         "v_fb_rm": "Лайк отменен!",
-        "v_btn_copy": "📋 Стянуть текст",
+        "v_btn_copy": "Текст",
         "v_btn_dl": "Поставить",
         "v_page": "[{idx}/{total}]",
-        "v_btn_code": "📄 Сурсы",
+        "v_btn_code": "Сурсы",
         "v_dl_ok": "Софт заинжекчен, красава!",
         "v_dl_err": "Упс, кринжанул при установке!",
         "v_lim_cfg": "Сколько темок выводить.",
-        "v_btn_sec": "🛡 Чекнуть на ратник",
+        "v_btn_sec": "🛡 Чекнуть",
         "v_aud_hdr": "Прожарка кода: {name}",
         "v_aud_req": "Долбимся в API защиты...",
         "v_aud_proc": "Читаем макароны...",
@@ -544,6 +560,7 @@ class Vector(loader.Module):
     }
 
     strings_leet = {
+        "lang": "leet",
         "_cls_doc": "V3c70r m0dul3 r3g157ry br0ws3r f0r H3r0ku.",
         "v_dev_lbl": "C0d3r:",
         "v_dev_str": "D3v:",
@@ -559,12 +576,13 @@ class Vector(loader.Module):
         "v_err_404": "N0 r3c0rd5 f0r: {q}",
         "v_err_len": "Qu3ry 700 l0ng (120 ch4r5 m4x).",
         "v_err_api": "4cc355 d3n13d by V3c70r 53rv3r.",
+        "v_ban_notice": "⛔ <b>V3c70r 4cc355 bl0ck3d.</b>\n<b>R3450n:</b> <code>{reason}</code>\n<b>73rm:</b> <code>{term}</code>",
         "v_fb_add": "R473d 5ucc355fully!",
         "v_fb_rm": "R471ng cl34r3d!",
-        "v_btn_copy": "📋 C0py Qu3ry",
+        "v_btn_copy": " C0py Qu3ry",
         "v_btn_dl": "1n574ll",
         "v_page": "[{idx}/{total}]",
-        "v_btn_code": "📄 50urc3",
+        "v_btn_code": "50urc3",
         "v_dl_ok": "M0dul3 1n574ll3d!",
         "v_dl_err": "1n574ll f41l3d!",
         "v_lim_cfg": "534rch l1m175.",
@@ -614,6 +632,7 @@ class Vector(loader.Module):
     }
 
     strings_uwu = {
+        "lang": "uwu",
         "_cls_doc": "Vectow moduwe wegistwy bwowsew fow Hewoku owo.",
         "v_dev_lbl": "A-Authow:",
         "v_dev_str": "Dev:",
@@ -629,12 +648,13 @@ class Vector(loader.Module):
         "v_err_404": "N-No wecowds fow: {q} T_T",
         "v_err_len": "Quewy is too wong (120 chaws) >_<",
         "v_err_api": "Access denied by Vectow Sewvew qwq.",
+        "v_ban_notice": "⛔ <b>Vectow bwocked access owo.</b>\n<b>Weason:</b> <code>{reason}</code>\n<b>Tewm:</b> <code>{term}</code>",
         "v_fb_add": "Wated successfuwwy! (≧◡≦)",
         "v_fb_rm": "Wating cweawed! ;w;",
-        "v_btn_copy": "📋 Copy Quewy",
+        "v_btn_copy": " Copy Quewy",
         "v_btn_dl": "Instaww pwease~",
         "v_page": "[{idx}/{total}]",
-        "v_btn_code": "📄 Souwce",
+        "v_btn_code": "Souwce",
         "v_dl_ok": "Moduwe instawwed successfuwwy! (≧◡≦)",
         "v_dl_err": "Instawwation faiwed! ;w;",
         "v_lim_cfg": "Seawch wimits owo.",
@@ -684,13 +704,10 @@ class Vector(loader.Module):
     }
 
     def _detect_lang_suffix(self) -> str:
-        variants = ("ru", "jp", "uk", "de", "neofit", "tiktok", "leet", "uwu")
-        probe = self.strings.get("v_btn_dl", "")
-        for suffix in variants:
-            table = getattr(self, f"strings_{suffix}", None)
-            if isinstance(table, dict) and table.get("v_btn_dl") == probe:
-                return suffix
-        return "en"
+        variants = {"en", "ru", "jp", "uk", "de", "neofit", "tiktok", "leet", "uwu"}
+        lang = str(self.strings.get("lang", "en")).strip().lower()
+        return lang if lang in variants else "en"
+
 
     ICONS = {
         "search": '<tg-emoji emoji-id="5447459604524971717">🔎</tg-emoji>',
@@ -723,15 +740,13 @@ class Vector(loader.Module):
         self.http: Optional[aiohttp.ClientSession] = None
         self._security_cache: Dict[str, Dict[str, Any]] = {}
         self._last_http_code = 0
-        self.tele_bot = None
+        self._last_ban_notice = ""
 
     async def client_ready(self, client: "herokutl.TelegramClient", database: "loader.Database") -> None:
         self.client = client
         self.database = database
         self.http = aiohttp.ClientSession()
         
-        il_manager = getattr(self, "inline", None)
-        self.tele_bot = getattr(il_manager, "bot", getattr(il_manager, "_bot", None))
         log.info("Vector Module Monolith Started")
 
     async def on_unload(self) -> None:
@@ -751,12 +766,14 @@ class Vector(loader.Module):
         try:
             async with self.http.request(method, url, params=params, json=json_data, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as r:
                 self._last_http_code = r.status
+                log.debug("HTTP %s %s -> %s", method, path, r.status)
                 if r.status >= 300:
                     return None
                 if as_bytes:
                     return await r.read()
                 return await r.json(content_type=None)
-        except Exception:
+        except Exception as e:
+            log.warning("HTTP request failed method=%s path=%s error=%r", method, path, e)
             return None
 
     def _normalize_module(self, raw: dict) -> dict:
@@ -794,7 +811,7 @@ class Vector(loader.Module):
             "dislikes": int(raw.get("dislikes") or 0),
             "banner": raw.get("banner"),
             "source_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(name, safe='')}/source",
-            "dl_url": f"{API_ROOT}/api/modules/{quote(name, safe='')}/download",
+            "dl_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(name, safe='')}/source",
         }
 
     def _parse_jwt(self, token: str) -> dict:
@@ -818,6 +835,7 @@ class Vector(loader.Module):
         bot_info = await self._net_req("GET", "/api/tg-bot")
         bot_username = (bot_info or {}).get("username", "").strip().lstrip("@")
         if not bot_username:
+            log.warning("No bot username returned from /api/tg-bot")
             return ""
 
         me = await self.client.get_me()
@@ -831,6 +849,7 @@ class Vector(loader.Module):
             await self.client(UnblockRequest(bot_username))
 
         new_jwt = ""
+        ban_notice = ""
         for attempt in range(2):
             b_stamp = int(time.time() // 10) - attempt
             cmd_hash = hashlib.sha256(f"vector-token-v1|{uid}|{b_stamp}|{uname}|{dname}|{AUTH_SALT}".encode()).hexdigest()[:32]
@@ -845,43 +864,45 @@ class Vector(loader.Module):
                         match = JWT_REGEX.search(txt)
                         if match:
                             new_jwt = match.group(0)
+                        elif "заблок" in txt.lower() or "⛔" in txt:
+                            ban_notice = self._format_ban_notice(txt)
                         with suppress(Exception): await out_msg.delete()
                         if new_jwt: break
                     except asyncio.TimeoutError:
                         with suppress(Exception): await out_msg.delete()
-            except Exception:
-                pass
-
-        if not new_jwt:
-            for attempt in range(2):
-                b_stamp = int(time.time() // 10) - attempt
-                cmd_hash = hashlib.sha256(f"vector-token-v1|{uid}|{b_stamp}|{uname}|{dname}|{AUTH_SALT}".encode()).hexdigest()[:32]
-                cmd_str = f"/{cmd_hash}"
-                try:
-                    out_msg = await self.client.send_message(bot_username, cmd_str)
-                except Exception:
-                    continue
-                
-                deadline = time.time() + 15
-                while time.time() < deadline:
-                    await asyncio.sleep(1.5)
-                    try:
-                        async for h_msg in self.client.iter_messages(bot_username, limit=3):
-                            if not h_msg.out:
-                                match = JWT_REGEX.search(getattr(h_msg, "text", ""))
-                                if match:
-                                    new_jwt = match.group(0)
-                                    break
-                    except Exception:
-                        pass
-                    if new_jwt: break
-                    
-                with suppress(Exception): await out_msg.delete()
-                if new_jwt: break
+            except Exception as e:
+                log.warning("Token conversation attempt=%s failed: %r", attempt, e)
 
         if new_jwt:
             self.set("auth_token", new_jwt)
+            self._last_ban_notice = ""
+        elif ban_notice:
+            self._last_ban_notice = ban_notice
         return new_jwt
+
+    def _format_ban_notice(self, raw_text: str) -> str:
+        txt = str(raw_text or "").strip()
+        reason_match = BAN_REASON_RE.search(txt)
+        term_match = BAN_TERM_RE.search(txt)
+
+        reason_raw = reason_match.group(1).strip() if reason_match else ""
+        term_raw = term_match.group(1).strip() if term_match else ""
+
+        if not reason_raw or not term_raw:
+            for line in txt.splitlines():
+                if ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                key_l = key.strip().lower()
+                val = value.strip()
+                if not reason_raw and key_l in {"причина", "reason", "理由", "grund", "r3450n", "weason", "charge"}:
+                    reason_raw = val
+                if not term_raw and key_l in {"срок", "term", "期間", "dauer", "73rm", "tewm"}:
+                    term_raw = val
+
+        reason = utils.escape_html(reason_raw or "-")
+        term = utils.escape_html(term_raw or "permanent")
+        return self.strings["v_ban_notice"].format(reason=reason, term=term)
 
     def _build_html(self, m_data: dict, current_idx: int, total_cnt: int) -> str:
         name = utils.escape_html(str(m_data.get("name", "Unknown")))
@@ -956,18 +977,20 @@ class Vector(loader.Module):
             
         return kbd
 
+
     async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
         safe_url = img if img and img.startswith("http") else ""
-        final_text = f'<a href="{utils.escape_html(safe_url)}">\u200b</a>\n{text}' if safe_url else text
+      
+        final_text = f'<a href="{utils.escape_html(safe_url)}">&#8203;</a>\n{text}' if safe_url else text
         
-        try:
-            if hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
+        if hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
+            try:
                 imgr = target.inline_manager
-                with suppress(Exception):
-                    uid = getattr(target, "unit_id", None)
-                    if uid in getattr(target, "_units", {}):
-                        target._units[uid]["buttons"] = kbd
-                        
+                
+                uid = getattr(target, "unit_id", None)
+                if uid and hasattr(target, "_units") and uid in target._units:
+                    target._units[uid]["buttons"] = kbd
+                    
                 kws = {}
                 if getattr(target, "inline_message_id", None):
                     kws["inline_message_id"] = target.inline_message_id
@@ -977,21 +1000,42 @@ class Vector(loader.Module):
                     
                 if kws:
                     await imgr.bot.edit_message_text(
-                        final_text, 
-                        **kws, 
+                        text=final_text,
+                        **kws,
                         reply_markup=imgr.generate_markup(kbd),
-                        link_preview_options={"url": safe_url, "prefer_large_media": True, "show_above_text": True} if safe_url else None
+                        link_preview_options={
+                            "url": safe_url, 
+                            "prefer_large_media": True, 
+                            "show_above_text": True
+                        } if safe_url else None
                     )
                     return
+            except Exception as e:
+                log.warning("Bot API inline edit failed: %r", e)
 
+        try:
+            kwargs = {
+                "text": final_text,
+                "reply_markup": kbd,
+                "link_preview": True 
+            }
             if hasattr(target, "edit"):
-                await target.edit(final_text, reply_markup=kbd, link_preview=True)
-                return
+                await target.edit(**kwargs)
+            else:
+                await utils.answer(target, **kwargs)
                 
-            await utils.answer(target, final_text, reply_markup=kbd, link_preview=True)
-        except Exception:
+        except TypeError:
+            if hasattr(target, "edit"):
+                await target.edit(final_text, reply_markup=kbd)
+            else:
+                await utils.answer(target, final_text, reply_markup=kbd)
+                
+        except Exception as e:
+            log.warning("Fallback MTProto edit failed: %r", e)
             with suppress(Exception):
                 await target.answer(self.strings["v_err_gui"], show_alert=True)
+
+
 
     @loader.command(
         ru_doc="<запрос> - поиск модулей в Vector.",
@@ -1019,9 +1063,13 @@ class Vector(loader.Module):
         )
         
         token = await self._get_active_token()
+        log.info("Vector search request q=%r token=%s", q, bool(token))
         raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
+        if not token and self._last_ban_notice:
+            return await self._safe_edit(form, self._last_ban_notice, [])
         
         if self._last_http_code == 401:
+            log.info("Search got 401, retrying with forced token refresh")
             token = await self._get_active_token(force=True)
             raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
             
@@ -1035,7 +1083,8 @@ class Vector(loader.Module):
 
         item = m_list[0]
         kbd = self._build_kbd(item, 0, m_list, q)
-        await self._safe_edit(form, self._build_html(item, 1, len(m_list)), kbd, item.get("banner"))
+        text = self._build_html(item, 1, len(m_list))
+        await self._safe_edit(form, text, kbd, item.get("banner"))
 
     @loader.command(
         ru_doc="Обновить модуль Vector.",
@@ -1053,27 +1102,15 @@ class Vector(loader.Module):
         
         token = await self._get_active_token()
         if not token:
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+            return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
 
         m_name = "Vector"
-        code = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/download", token=token, as_bytes=True)
-        if not code:
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
-
-        dl_url = f"{API_ROOT}/api/modules/{quote(m_name, safe='')}/download"
-        ldr = getattr(self, "lookup", getattr(self.allmodules, "lookup", None))("loader")
+        dl_url = f"{API_ROOT}/modules/{quote(m_name, safe='')}/source"
+        ldr = self.lookup("Loader")
         if not ldr or not hasattr(ldr, "download_and_install"):
             return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
-        storage = getattr(ldr, "_storage", None)
-        orig_fetch = getattr(storage, "fetch", None)
-        
-        async def mock_fetch(url: str, auth: str = None) -> str:
-            if url == dl_url: return code.decode("utf-8", "replace")
-            return await orig_fetch(url, auth=auth)
-            
         try:
-            storage.fetch = mock_fetch
             res = await ldr.download_and_install(dl_url)
             if res == 1:
                 if getattr(self, "fully_loaded", True):
@@ -1083,8 +1120,6 @@ class Vector(loader.Module):
                 await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
         except Exception:
             await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
-        finally:
-            with suppress(Exception): storage.fetch = orig_fetch
 
     @loader.watcher(chat_id=OFFICIAL_VECTOR_BOT_ID)
     async def vector_install_payload_watcher(self, msg: Message):
@@ -1128,9 +1163,11 @@ class Vector(loader.Module):
         if not hmac.compare_digest(local_signature, signature):
             return
 
-        async def send_feedback(status: str) -> None:
+        async def send_feedback(status: str, reason: str = "", banned_until: str = "") -> None:
             feedback_ts = int(time.time())
-            feedback_payload = f"{module_name}:{action}:{status}:{feedback_ts}"
+            safe_reason = (reason or "").replace(":", " ").strip()
+            safe_until = (banned_until or "").replace(":", " ").strip()
+            feedback_payload = f"{module_name}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}"
             feedback_signature = hmac.new(
                 AUTH_SALT.encode("utf-8"),
                 feedback_payload.encode("utf-8"),
@@ -1139,46 +1176,35 @@ class Vector(loader.Module):
             with suppress(Exception):
                 await self._client.send_message(
                     msg.chat_id,
-                    f"#v_feedback:{module_name}:{action}:{status}:{feedback_ts}:{feedback_signature}",
+                    f"#v_feedback:{module_name}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}:{feedback_signature}",
                 )
 
         token = await self._get_active_token()
         if not token:
-            await send_feedback("error")
+            reason = "User is banned" if not self._last_ban_notice else self._last_ban_notice
+            await send_feedback("banned", reason, "permanent")
             return
 
         if action == "install":
-            code = await self._net_req("GET", f"/api/modules/{quote(module_name, safe='')}/download", token=token, as_bytes=True)
-            if not code:
-                await send_feedback("error")
-                return
-            ldr = getattr(self, "lookup", getattr(self.allmodules, "lookup", None))("loader")
+            ldr = self.lookup("Loader")
             if not ldr or not hasattr(ldr, "download_and_install"):
                 await send_feedback("error")
                 return
 
-            dl_url = f"{API_ROOT}/api/modules/{quote(module_name, safe='')}/download"
-            storage = getattr(ldr, "_storage", None)
-            orig_fetch = getattr(storage, "fetch", None)
-
-            async def mock_fetch(url: str, auth: str = None) -> str:
-                if url == dl_url:
-                    return code.decode("utf-8", "replace")
-                return await orig_fetch(url, auth=auth)
+            dl_url = f"{API_ROOT}/modules/{quote(module_name, safe='')}/source"
 
             try:
-                storage.fetch = mock_fetch
                 res = await ldr.download_and_install(dl_url)
                 await send_feedback("ok" if res == 1 else "error")
             except Exception:
                 await send_feedback("error")
-            finally:
-                with suppress(Exception):
-                    storage.fetch = orig_fetch
             return
 
         uid = self._parse_jwt(token).get("sub", "")
         res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(module_name, safe='')}/{action}", token=token)
+        if not res and self._last_http_code in {401, 403}:
+            await send_feedback("banned", "User is banned", "permanent")
+            return
         await send_feedback("ok" if res and res.get("ok") else "error")
 
     async def cb_dummy(self, cb: Any):
@@ -1224,7 +1250,7 @@ class Vector(loader.Module):
     async def cb_rate(self, cb: Any, m_name: str, action: str, i: int, group: list, q: str):
         token = await self._get_active_token()
         if not token:
-            with suppress(Exception): await cb.answer(self.strings["v_err_api"], show_alert=True)
+            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
             
         uid = self._parse_jwt(token).get("sub", "")
@@ -1254,29 +1280,17 @@ class Vector(loader.Module):
     async def cb_install(self, cb: Any, m_name: str, i: int, group: list, q: str):
         token = await self._get_active_token()
         if not token:
-            with suppress(Exception): await cb.answer(self.strings["v_err_api"], show_alert=True)
+            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
             
-        ldr = getattr(self, "lookup", getattr(self.allmodules, "lookup", None))("loader")
+        ldr = self.lookup("Loader")
         if not ldr or not hasattr(ldr, "download_and_install"):
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
             return
 
-        code = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/download", token=token, as_bytes=True)
-        if not code:
-            with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
-            return
+        dl_url = f"{API_ROOT}/modules/{quote(m_name, safe='')}/source"
 
-        dl_url = f"{API_ROOT}/api/modules/{quote(m_name, safe='')}/download"
-        storage = getattr(ldr, "_storage", None)
-        orig_fetch = getattr(storage, "fetch", None)
-        
-        async def mock_fetch(url: str, auth: str = None) -> str:
-            if url == dl_url: return code.decode("utf-8", "replace")
-            return await orig_fetch(url, auth=auth)
-            
         try:
-            storage.fetch = mock_fetch
             res = await ldr.download_and_install(dl_url)
             if res == 1:
                 if getattr(self, "fully_loaded", True):
@@ -1286,8 +1300,6 @@ class Vector(loader.Module):
                 with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
         except Exception:
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
-        finally:
-            with suppress(Exception): storage.fetch = orig_fetch
 
     async def cb_sec_check(self, cb: Any, m_name: str, i: int, group: list, q: str):
         def _get_sec_kb(has_run: bool):
@@ -1304,6 +1316,9 @@ class Vector(loader.Module):
 
         await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_req']}</b>", _get_sec_kb(True))
         token = await self._get_active_token()
+        if not token:
+            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            return
         res = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/security-check", token=token)
         
         if not res or self._last_http_code >= 400:
@@ -1315,6 +1330,9 @@ class Vector(loader.Module):
     async def cb_sec_run(self, cb: Any, m_name: str, i: int, group: list, q: str):
         await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
         token = await self._get_active_token()
+        if not token:
+            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            return
         res = await self._net_req("POST", f"/api/modules/{quote(m_name, safe='')}/security-check", token=token, timeout=120)
         
         if self._last_http_code == 429:
@@ -1361,6 +1379,9 @@ class Vector(loader.Module):
     async def cb_comments(self, cb: Any, m_name: str, i: int, group: list, q: str):
         with suppress(Exception): await cb.answer()
         token = await self._get_active_token()
+        if not token:
+            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            return
         res = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/comments", token=token)
         
         if not res or not isinstance(res, dict):
@@ -1378,6 +1399,9 @@ class Vector(loader.Module):
 
     async def cb_post_comment(self, cb: Any, text: str, m_name: str, i: int, group: list, q: str):
         token = await self._get_active_token()
+        if not token:
+            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            return
         c_txt = str(text or "").strip()
         if not c_txt:
             with suppress(Exception): await cb.answer(self.strings["v_rep_cncl"], show_alert=True)
