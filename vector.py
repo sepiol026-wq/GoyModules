@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 2, 0)
+__version__ = (2, 2, 1)
 
 import asyncio
 import base64
@@ -1113,8 +1113,8 @@ class Vector(loader.Module):
         try:
             res = await ldr.download_and_install(dl_url)
             if res == 1:
-                if getattr(self, "fully_loaded", True):
-                    with suppress(Exception): self.update_modules_in_db()
+                if getattr(ldr, "fully_loaded", False):
+                    ldr.update_modules_in_db()
                 await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
             else:
                 await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
@@ -1195,6 +1195,8 @@ class Vector(loader.Module):
 
             try:
                 res = await ldr.download_and_install(dl_url)
+                if getattr(ldr, "fully_loaded", False):
+                    ldr.update_modules_in_db()
                 await send_feedback("ok" if res == 1 else "error")
             except Exception:
                 await send_feedback("error")
@@ -1293,8 +1295,8 @@ class Vector(loader.Module):
         try:
             res = await ldr.download_and_install(dl_url)
             if res == 1:
-                if getattr(self, "fully_loaded", True):
-                    with suppress(Exception): self.update_modules_in_db()
+                if getattr(ldr, "fully_loaded", False):
+                    ldr.update_modules_in_db()
                 with suppress(Exception): await cb.answer(self.strings["v_dl_ok"], show_alert=True)
             else:
                 with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
