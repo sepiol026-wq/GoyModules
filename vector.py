@@ -1010,7 +1010,7 @@ class Vector(loader.Module):
                     
                 if kws:
                     if hasattr(imgr.bot, 'edit_message_text'):
-                        # aiogram (master): Bot API with link_preview_options
+                        
                         await imgr.bot.edit_message_text(
                             text=final_text,
                             **kws,
@@ -1022,7 +1022,7 @@ class Vector(loader.Module):
                             } if safe_url else None
                         )
                     else:
-                        # Telethon (dev): MTProto with invert_media
+                        
                         await imgr.bot.edit_message(
                             kws.get('inline_message_id') or kws.get('chat_id'),
                             kws.get('message_id'),
