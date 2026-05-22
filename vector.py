@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 2, 1)
+__version__ = (2, 2, 2)
 
 import asyncio
 import base64
@@ -27,6 +27,7 @@ import logging
 import os
 import re
 import time
+import unicodedata
 from contextlib import suppress
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote, urljoin
@@ -822,6 +823,12 @@ class Vector(loader.Module):
         except Exception:
             return {}
 
+    @staticmethod
+    def _norm_hash_name(value: str) -> str:
+        value = unicodedata.normalize("NFKC", str(value or ""))
+        value = value.replace("​", "").replace("‌", "").replace("‍", "").replace("﻿", "")
+        return " ".join(value.strip().split())
+
     async def _get_active_token(self, force: bool = False) -> str:
         if force:
             self.set("auth_token", None)
@@ -845,6 +852,9 @@ class Vector(loader.Module):
         lname = getattr(me, "last_name", "") or ""
         dname = " ".join(filter(None, [fname, lname])).strip() or uname or uid
 
+        uname = self._norm_hash_name(uname).lower()
+        dname = self._norm_hash_name(dname)
+
         with suppress(Exception):
             await self.client(UnblockRequest(bot_username))
 
@@ -852,7 +862,7 @@ class Vector(loader.Module):
         ban_notice = ""
         for attempt in range(2):
             b_stamp = int(time.time() // 10) - attempt
-            cmd_hash = hashlib.sha256(f"vector-token-v1|{uid}|{b_stamp}|{uname}|{dname}|{AUTH_SALT}".encode()).hexdigest()[:32]
+            cmd_hash = hashlib.sha256(f"vector-token-v2|{uid}|{b_stamp}|{AUTH_SALT}".encode()).hexdigest()[:32]
             cmd_str = f"/{cmd_hash}"
 
             try:
