@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 2, 4)
+__version__ = (2, 2, 5)
 
 import asyncio
 import base64
@@ -126,6 +126,18 @@ class Vector(loader.Module):
         "v_upd_req": "Updating Vector...",
         "v_upd_ok": "Vector updated successfully!",
         "v_upd_err": "Update failed!",
+        "v_install_log_hdr": "Install log: {name}",
+        "v_install_fail_forbidden": "Forbidden method: <code>{detail}</code>",
+        "v_install_fail_requirements": "Pip deps failed: <code>{detail}</code>",
+        "v_install_fail_dependency": "Missing dependency: <code>{detail}</code>",
+        "v_install_fail_packages": "System pkgs failed: <code>{detail}</code>",
+        "v_install_fail_core_overwrite": "Tried to overwrite core <code>{detail}</code>",
+        "v_install_fail_ffmpeg": "Requires ffmpeg (not installed)",
+        "v_install_fail_inline": "Requires inline mode (unavailable)",
+        "v_install_fail_heroku_min": "Needs Heroku ≥ <code>{detail}</code>",
+        "v_install_fail_not_found": "Not found in configured repos",
+        "v_install_fail_download": "Failed to download module",
+        "v_install_fail_unknown": "Unknown error: <code>{detail}</code>",
     }
 
     strings_ru = {
@@ -198,6 +210,18 @@ class Vector(loader.Module):
         "v_upd_req": "Обновляем Vector...",
         "v_upd_ok": "Vector успешно обновлен!",
         "v_upd_err": "Ошибка обновления!",
+        "v_install_log_hdr": "Журнал установки: {name}",
+        "v_install_fail_forbidden": "Запрещённый метод: <code>{detail}</code>",
+        "v_install_fail_requirements": "Pip-зависимости не встали: <code>{detail}</code>",
+        "v_install_fail_dependency": "Не хватает зависимости: <code>{detail}</code>",
+        "v_install_fail_packages": "Системные пакеты не встали: <code>{detail}</code>",
+        "v_install_fail_core_overwrite": "Пытается перезаписать ядро <code>{detail}</code>",
+        "v_install_fail_ffmpeg": "Требуется ffmpeg (не установлен)",
+        "v_install_fail_inline": "Требуется inline-режим (недоступен)",
+        "v_install_fail_heroku_min": "Нужен Heroku ≥ <code>{detail}</code>",
+        "v_install_fail_not_found": "Не найден в подключённых репозиториях",
+        "v_install_fail_download": "Не удалось скачать модуль",
+        "v_install_fail_unknown": "Неизвестная ошибка: <code>{detail}</code>",
     }
 
     strings_jp = {
@@ -270,6 +294,18 @@ class Vector(loader.Module):
         "v_upd_req": "Vectorを更新中...",
         "v_upd_ok": "Vectorが正常に更新されました！",
         "v_upd_err": "更新に失敗しました！",
+        "v_install_log_hdr": "インストールログ: {name}",
+        "v_install_fail_forbidden": "禁止されたメソッド: <code>{detail}</code>",
+        "v_install_fail_requirements": "Pip依存関係の失敗: <code>{detail}</code>",
+        "v_install_fail_dependency": "不足している依存関係: <code>{detail}</code>",
+        "v_install_fail_packages": "システムパッケージの失敗: <code>{detail}</code>",
+        "v_install_fail_core_overwrite": "コアを上書きしようとしました <code>{detail}</code>",
+        "v_install_fail_ffmpeg": "ffmpegが必要です（未インストール）",
+        "v_install_fail_inline": "インラインモードが必要です（利用不可）",
+        "v_install_fail_heroku_min": "Heroku ≥ <code>{detail}</code>が必要です",
+        "v_install_fail_not_found": "設定されたリポジトリに見つかりません",
+        "v_install_fail_download": "モジュールのダウンロードに失敗",
+        "v_install_fail_unknown": "不明なエラー: <code>{detail}</code>",
     }
 
     strings_uk = {
@@ -342,6 +378,18 @@ class Vector(loader.Module):
         "v_upd_req": "Оновлюємо Vector...",
         "v_upd_ok": "Vector успішно оновлено!",
         "v_upd_err": "Помилка оновлення!",
+        "v_install_log_hdr": "Журнал встановлення: {name}",
+        "v_install_fail_forbidden": "Заборонений метод: <code>{detail}</code>",
+        "v_install_fail_requirements": "Pip-залежності не стали: <code>{detail}</code>",
+        "v_install_fail_dependency": "Бракує залежності: <code>{detail}</code>",
+        "v_install_fail_packages": "Системні пакунки не стали: <code>{detail}</code>",
+        "v_install_fail_core_overwrite": "Намагається перезаписати ядро <code>{detail}</code>",
+        "v_install_fail_ffmpeg": "Потрібен ffmpeg (не встановлено)",
+        "v_install_fail_inline": "Потрібен inline-режим (недоступний)",
+        "v_install_fail_heroku_min": "Потрібен Heroku ≥ <code>{detail}</code>",
+        "v_install_fail_not_found": "Не знайдено в підключених репозиторіях",
+        "v_install_fail_download": "Не вдалося завантажити модуль",
+        "v_install_fail_unknown": "Невідома помилка: <code>{detail}</code>",
     }
 
     strings_de = {
@@ -414,6 +462,18 @@ class Vector(loader.Module):
         "v_upd_req": "Vector wird aktualisiert...",
         "v_upd_ok": "Vector erfolgreich aktualisiert!",
         "v_upd_err": "Aktualisierung fehlgeschlagen!",
+        "v_install_log_hdr": "Installationsprotokoll: {name}",
+        "v_install_fail_forbidden": "Verbotene Methode: <code>{detail}</code>",
+        "v_install_fail_requirements": "Pip-Abhängigkeiten fehlgeschlagen: <code>{detail}</code>",
+        "v_install_fail_dependency": "Fehlende Abhängigkeit: <code>{detail}</code>",
+        "v_install_fail_packages": "Systempakete fehlgeschlagen: <code>{detail}</code>",
+        "v_install_fail_core_overwrite": "Versucht Kern <code>{detail}</code> zu überschreiben",
+        "v_install_fail_ffmpeg": "Benötigt ffmpeg (nicht installiert)",
+        "v_install_fail_inline": "Benötigt Inline-Modus (nicht verfügbar)",
+        "v_install_fail_heroku_min": "Benötigt Heroku ≥ <code>{detail}</code>",
+        "v_install_fail_not_found": "Nicht in konfigurierten Repos gefunden",
+        "v_install_fail_download": "Modul-Download fehlgeschlagen",
+        "v_install_fail_unknown": "Unbekannter Fehler: <code>{detail}</code>",
     }
 
     strings_neofit = {
@@ -486,6 +546,18 @@ class Vector(loader.Module):
         "v_upd_req": "Updating Vector...",
         "v_upd_ok": "Updated.",
         "v_upd_err": "Update failed.",
+        "v_install_log_hdr": "install log: {name}",
+        "v_install_fail_forbidden": "forbidden method: <code>{detail}</code>",
+        "v_install_fail_requirements": "pip deps failed: <code>{detail}</code>",
+        "v_install_fail_dependency": "missing dep: <code>{detail}</code>",
+        "v_install_fail_packages": "system pkgs failed: <code>{detail}</code>",
+        "v_install_fail_core_overwrite": "core overwrite attempt: <code>{detail}</code>",
+        "v_install_fail_ffmpeg": "needs ffmpeg (not found)",
+        "v_install_fail_inline": "needs inline mode (dead)",
+        "v_install_fail_heroku_min": "needs Heroku ≥ <code>{detail}</code>",
+        "v_install_fail_not_found": "not in configured repos",
+        "v_install_fail_download": "download failed",
+        "v_install_fail_unknown": "unknown error: <code>{detail}</code>",
     }
 
     strings_tiktok = {
@@ -558,6 +630,18 @@ class Vector(loader.Module):
         "v_upd_req": "Качаем обнову...",
         "v_upd_ok": "Обнова залетела!",
         "v_upd_err": "Не обновилось!",
+        "v_install_log_hdr": "Лог установки: {name}",
+        "v_install_fail_forbidden": "Запрещёнка: <code>{detail}</code>",
+        "v_install_fail_requirements": "Пип-либы не встали: <code>{detail}</code>",
+        "v_install_fail_dependency": "Не хватает: <code>{detail}</code>",
+        "v_install_fail_packages": "Системные пакеты мимо: <code>{detail}</code>",
+        "v_install_fail_core_overwrite": "Лезет в ядро <code>{detail}</code>",
+        "v_install_fail_ffmpeg": "Нужен ffmpeg (нету)",
+        "v_install_fail_inline": "Нужен inline (не раб)",
+        "v_install_fail_heroku_min": "Нужен Heroku ≥ <code>{detail}</code>",
+        "v_install_fail_not_found": "Нет в подключённых репах",
+        "v_install_fail_download": "Не скачалось",
+        "v_install_fail_unknown": "Непонятная ошибка: <code>{detail}</code>",
     }
 
     strings_leet = {
@@ -630,6 +714,18 @@ class Vector(loader.Module):
         "v_upd_req": "Upd471ng V3c70r...",
         "v_upd_ok": "V3c70r upd473d!",
         "v_upd_err": "Upd473 f41l3d!",
+        "v_install_log_hdr": "1n574ll l0g: {name}",
+        "v_install_fail_forbidden": "f0rb1dd3n m37h0d: <code>{detail}</code>",
+        "v_install_fail_requirements": "p1p d3p5 f41l3d: <code>{detail}</code>",
+        "v_install_fail_dependency": "m1551n9 d3p: <code>{detail}</code>",
+        "v_install_fail_packages": "pkg5 f41l3d: <code>{detail}</code>",
+        "v_install_fail_core_overwrite": "c0r3 0v3rwr173: <code>{detail}</code>",
+        "v_install_fail_ffmpeg": "n33d5 ffmp39 (n07 f0und)",
+        "v_install_fail_inline": "n33d5 1nl1n3 (d34d)",
+        "v_install_fail_heroku_min": "n33d5 H3r0ku ≥ <code>{detail}</code>",
+        "v_install_fail_not_found": "n07 1n c0nf16'd r3p05",
+        "v_install_fail_download": "d0wnl04d f41l3d",
+        "v_install_fail_unknown": "unkn0wn 3rr: <code>{detail}</code>",
     }
 
     strings_uwu = {
@@ -702,6 +798,18 @@ class Vector(loader.Module):
         "v_upd_req": "Updating Vectow...",
         "v_upd_ok": "Vectow updated! (≧◡≦)",
         "v_upd_err": "Update faiwed! ;w;",
+        "v_install_log_hdr": "Instaww wog: {name} >w<",
+        "v_install_fail_forbidden": "Fowbidden method: <code>{detail}</code> ;(",
+        "v_install_fail_requirements": "Pip deps faiwed: <code>{detail}</code> owo",
+        "v_install_fail_dependency": "Missing dep: <code>{detail}</code> ;;w;;",
+        "v_install_fail_packages": "System pkgs faiwed: <code>{detail}</code>",
+        "v_install_fail_core_overwrite": "Twied to ovewwwite cowe <code>{detail}</code>",
+        "v_install_fail_ffmpeg": "Needs ffmpeg (not instawwed) uwu",
+        "v_install_fail_inline": "Needs inwine mode (unavaiwabwe)",
+        "v_install_fail_heroku_min": "Needs Hewoku ≥ <code>{detail}</code>",
+        "v_install_fail_not_found": "Not found in wepos ;w;",
+        "v_install_fail_download": "Downwoad faiwed owo",
+        "v_install_fail_unknown": "Unknown ewwow: <code>{detail}</code> >~<",
     }
 
     def _detect_lang_suffix(self) -> str:
@@ -727,7 +835,105 @@ class Vector(loader.Module):
         "verified": '<tg-emoji emoji-id="5958376256788502078">⭐️</tg-emoji>',
         "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
         "reply": "↳",
+        "broken": '<tg-emoji emoji-id="5877260593903177342">💥</tg-emoji>',
+        "globe": '<tg-emoji emoji-id="5877485980901971030">🌐</tg-emoji>',
     }
+
+    _INSTALL_ERR_PATTERNS = [
+        ("forbidden", re.compile(r"uses forbidden method:\s*(.+)")),
+        ("requirements", re.compile(r"requirements.*failed to install:\s*(.+)", re.DOTALL)),
+        ("dependency", re.compile(r"requires missing dependency\s+(.+)")),
+        ("packages", re.compile(r"system packages.*failed to install:\s*(.+)", re.DOTALL)),
+        ("core_overwrite", re.compile(r"tried to overwrite core\s+(\S+)\s+(\S+)")),
+        ("ffmpeg", re.compile(r"requires ffmpeg")),
+        ("inline", re.compile(r"requires inline mode")),
+        ("heroku_min", re.compile(r"requires Heroku\s+(\S+),\s*current version is\s+(\S+)")),
+        ("not_found", re.compile(r"was not found in configured repos")),
+        ("download", re.compile(r"Failed to download module")),
+    ]
+
+    class _InstallLogCapture(logging.Handler):
+        def __init__(self):
+            super().__init__()
+            self.records: List[logging.LogRecord] = []
+
+        def emit(self, record: logging.LogRecord) -> None:
+            self.records.append(record)
+
+    def _classify_install_errors(self, records: List[logging.LogRecord]) -> List[Dict[str, str]]:
+        errors = []
+        for rec in records:
+            if rec.levelno < logging.WARNING:
+                continue
+            msg = rec.getMessage()
+            for err_type, pattern in self._INSTALL_ERR_PATTERNS:
+                m = pattern.search(msg)
+                if m:
+                    if err_type == "core_overwrite":
+                        detail = f"{m.group(1)}.{m.group(2)}"
+                    elif err_type == "heroku_min":
+                        detail = f"{m.group(1)} (current: {m.group(2)})"
+                    elif m.lastindex:
+                        detail = m.group(1).strip()
+                    else:
+                        detail = ""
+                    errors.append({"type": err_type, "detail": detail, "raw": msg})
+                    break
+            else:
+                if rec.levelno >= logging.ERROR:
+                    errors.append({"type": "unknown", "detail": msg[:200], "raw": msg})
+        return errors
+
+    def _fmt_install_errors(self, m_name: str, errors: List[Dict[str, str]]) -> str:
+        if not errors:
+            return f"{self.ICONS['error']} <b>{self.strings['v_dl_err']}</b>"
+
+        lines = [f"{self.ICONS['broken']} <b>{self.strings['v_install_log_hdr'].format(name=m_name)}</b>"]
+        seen = set()
+        for err in errors:
+            key = err["type"]
+            if key in seen:
+                continue
+            seen.add(key)
+            detail = err["detail"]
+            str_key = f"v_install_fail_{key}"
+            fmt = self.strings.get(str_key)
+            if fmt:
+                try:
+                    lines.append(f"{self.ICONS['warn']} {fmt.format(detail=detail)}")
+                except (KeyError, ValueError):
+                    lines.append(f"{self.ICONS['warn']} {fmt}")
+            else:
+                lines.append(f"{self.ICONS['warn']} {detail or err['raw'][:200]}")
+
+        return "\n".join(lines)
+
+    async def _safe_install(self, m_name: str, dl_url: str, *, notify: bool = True) -> tuple:
+        ldr = self.lookup("Loader")
+        if not ldr or not hasattr(ldr, "download_and_install"):
+            return -1, []
+
+        cap = self._InstallLogCapture()
+        cap.setLevel(logging.WARNING)
+        for lg_name in ("heroku.modules.loader", "heroku", ""):
+            logging.getLogger(lg_name).addHandler(cap)
+
+        classified = []
+        try:
+            res = await ldr.download_and_install(dl_url)
+            if getattr(ldr, "fully_loaded", False):
+                ldr.update_modules_in_db()
+            return res, classified
+        except Exception as e:
+            log.warning("Install wrapper caught exception for %s: %r", m_name, e)
+            return 0, classified
+        finally:
+            for lg_name in ("heroku.modules.loader", "heroku", ""):
+                logging.getLogger(lg_name).removeHandler(cap)
+            if cap.records:
+                classified = self._classify_install_errors(cap.records)
+                if notify and classified:
+                    log.info("Install errors for %s: %s", m_name, [e["type"] for e in classified])
 
     def __init__(self) -> None:
         self.config = loader.ModuleConfig(
@@ -1155,19 +1361,13 @@ class Vector(loader.Module):
 
         m_name = "Vector"
         dl_url = f"{API_ROOT}/modules/{quote(m_name, safe='')}/source"
-        ldr = self.lookup("Loader")
-        if not ldr or not hasattr(ldr, "download_and_install"):
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
-        try:
-            res = await ldr.download_and_install(dl_url)
-            if res == 1:
-                if getattr(ldr, "fully_loaded", False):
-                    ldr.update_modules_in_db()
-                await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
-            else:
-                await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
-        except Exception:
+        res, _ = await self._safe_install(m_name, dl_url, notify=False)
+        if res == -1:
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+        if res == 1:
+            await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
+        else:
             await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
     @loader.watcher(chat_id=OFFICIAL_VECTOR_BOT_ID)
@@ -1235,20 +1435,12 @@ class Vector(loader.Module):
             return
 
         if action == "install":
-            ldr = self.lookup("Loader")
-            if not ldr or not hasattr(ldr, "download_and_install"):
-                await send_feedback("error")
-                return
-
             dl_url = f"{API_ROOT}/modules/{quote(module_name, safe='')}/source"
-
-            try:
-                res = await ldr.download_and_install(dl_url)
-                if getattr(ldr, "fully_loaded", False):
-                    ldr.update_modules_in_db()
-                await send_feedback("ok" if res == 1 else "error")
-            except Exception:
+            res, _ = await self._safe_install(module_name, dl_url, notify=False)
+            if res == -1:
                 await send_feedback("error")
+            else:
+                await send_feedback("ok" if res == 1 else "error")
             return
 
         uid = self._parse_jwt(token).get("sub", "")
@@ -1333,23 +1525,21 @@ class Vector(loader.Module):
         if not token:
             with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
-            
-        ldr = self.lookup("Loader")
-        if not ldr or not hasattr(ldr, "download_and_install"):
-            with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
-            return
 
         dl_url = f"{API_ROOT}/modules/{quote(m_name, safe='')}/source"
+        res, errors = await self._safe_install(m_name, dl_url)
+        if res == -1:
+            with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
+            return
+        if res == 1:
+            with suppress(Exception): await cb.answer(self.strings["v_dl_ok"], show_alert=True)
+            return
 
-        try:
-            res = await ldr.download_and_install(dl_url)
-            if res == 1:
-                if getattr(ldr, "fully_loaded", False):
-                    ldr.update_modules_in_db()
-                with suppress(Exception): await cb.answer(self.strings["v_dl_ok"], show_alert=True)
-            else:
-                with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
-        except Exception:
+        if errors:
+            item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": dl_url}
+            err_text = self._fmt_install_errors(m_name, errors)
+            await self._safe_edit(cb, err_text, self._build_kbd(item, i, group, q), item.get("banner"))
+        else:
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
 
     async def cb_sec_check(self, cb: Any, m_name: str, i: int, group: list, q: str):
