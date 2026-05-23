@@ -163,10 +163,10 @@ class OmniLoad(loader.Module):
                 (f.get("vcodec") and f.get("vcodec") != "none" and (f.get("height") or 0) > 0)
                 for f in formats
             ) if formats else False
-            format_spec = "bestvideo+bestaudio/best" if is_video else "bestaudio/best"
+            format_spec = "best[ext=mp4]/best" if is_video else "bestaudio[ext=m4a]/best"
             media_type = "video" if is_video else "audio"
             self._cache[call_id] = {"info": info, "url": args}
-            await self._do_download(msg, call_id, format_spec, media_type, target_chat_id, reply_id, info, args, ffmpeg_path)
+            await self._do_download(msg, call_id, format_spec, media_type, target_chat_id, reply_id, info, args, ffmpeg_path, force=True)
             return
 
         self._cache[call_id] = {"info": info, "url": args}
@@ -234,7 +234,7 @@ class OmniLoad(loader.Module):
         keyboard.append([{"text": "❌ Cancel", "callback": self._cancel_callback, "args": (call_id,)}])
         return keyboard
 
-    async def _do_download(self, call, call_id: str, format_spec: str, media_type: str, target_chat_id: int, reply_id: int, info: dict, url: str, ffmpeg_path: str):
+    async def _do_download(self, call, call_id: str, format_spec: str, media_type: str, target_chat_id: int, reply_id: int, info: dict, url: str, ffmpeg_path: str, force: bool = False):
         dl_dir = tempfile.mkdtemp(prefix="omniload_")
 
         cmd = [
@@ -243,11 +243,15 @@ class OmniLoad(loader.Module):
             "--extractor-args", "youtube:player_client=android",
             "--ffmpeg-location", ffmpeg_path,
             "-o", os.path.join(dl_dir, "%(id)s.%(ext)s"),
-            "--embed-metadata",
+            "--no-playlist",
         ]
 
+        if not force:
+            cmd.append("--embed-metadata")
+
         if media_type == "video":
-            cmd.extend(["--merge-output-format", "mp4"])
+            if not force:
+                cmd.extend(["--merge-output-format", "mp4"])
         elif media_type in ("audio", "flac"):
             ext = "flac" if media_type == "flac" else "mp3"
             cmd.extend(["-x", "--audio-format", ext])
