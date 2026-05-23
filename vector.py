@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 2, 3)
+__version__ = (2, 2, 4)
 
 import asyncio
 import base64
@@ -429,19 +429,19 @@ class Vector(loader.Module):
         "v_hid_cmd": "+ {rem} hidden cmds.",
         "v_hid_req": "+ {rem} hidden deps.",
         "v_res_hdr": "stdout:",
-        "v_err_empty": "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>SyntaxError:</b> missing query. <code>{p}vector &lt;text&gt;</code>",
-        "v_err_404": "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>grep:</b> <code>{q}</code> not found.",
-        "v_err_len": "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>Buffer overflow:</b> max 120 chars.",
-        "v_err_api": "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> <b>403 Forbidden</b> by Vector API.",
+        "v_err_empty": "<b>SyntaxError:</b> missing query. <code>{p}vector &lt;text&gt;</code>",
+        "v_err_404": "<b>grep:</b> <code>{q}</code> not found.",
+        "v_err_len": "<b>Buffer overflow:</b> max 120 chars.",
+        "v_err_api": "<b>403 Forbidden</b> by Vector API.",
         "v_ban_notice": "⛔ <b>Vector blocked access.</b>\n<b>rule:</b> <code>{reason}</code>\n<b>TTL:</b> <code>{term}</code>",
-        "v_fb_add": "<tg-emoji emoji-id=5215519585150706301>👍</tg-emoji> Rated.",
-        "v_fb_rm": "<tg-emoji emoji-id=5215519585150706301>👍</tg-emoji> Rating cleared.",
+        "v_fb_add": "Rated.",
+        "v_fb_rm": "Rating cleared.",
         "v_btn_copy": "query",
         "v_btn_dl": "install",
         "v_page": "[{idx}/{total}]",
         "v_btn_code": "src",
-        "v_dl_ok": "<tg-emoji emoji-id=5215519585150706301>👍</tg-emoji> Installed.",
-        "v_dl_err": "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> Install failed.",
+        "v_dl_ok": "Installed.",
+        "v_dl_err": "Install failed.",
         "v_lim_cfg": "Search output limits.",
         "v_btn_sec": "🛡 Security scan",
         "v_aud_hdr": "Code audit: {name}",
@@ -470,22 +470,22 @@ class Vector(loader.Module):
         "v_talk_num": "Posts: {count}",
         "v_talk_0": "Thread is empty. Be the first!",
         "v_talk_err": "Connection refused.",
-        "v_rep_ok": "<tg-emoji emoji-id=5215519585150706301>👍</tg-emoji> Posted.",
-        "v_rep_err": "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> Request failed.",
+        "v_rep_ok": "Posted.",
+        "v_rep_err": "Request failed.",
         "v_btn_bck": "⬅️ Back",
         "v_btn_site": "🌐 Web",
         "v_btn_wrt": "✍️ Reply",
         "v_rep_ask": "Reply to post.\n2–1800 chars.",
         "v_rep_snt": "Uploading...",
-        "v_rep_min": "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> Too short.",
-        "v_rep_max": "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> Limit exceeded.",
+        "v_rep_min": "Too short.",
+        "v_rep_max": "Limit exceeded.",
         "v_rep_cncl": "Cancelled.",
         "v_loading_ui": "Searching Vector database...",
         "v_more_replies": "...and {count} more replies.",
         "v_more_comments": "...and more comments.",
         "v_upd_req": "Updating Vector...",
-        "v_upd_ok": "<tg-emoji emoji-id=5215519585150706301>👍</tg-emoji> Updated.",
-        "v_upd_err": "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> Update failed.",
+        "v_upd_ok": "Updated.",
+        "v_upd_err": "Update failed.",
     }
 
     strings_tiktok = {
@@ -814,6 +814,32 @@ class Vector(loader.Module):
             "source_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(name, safe='')}/source",
             "dl_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(name, safe='')}/source",
         }
+
+    @staticmethod
+    def _extract_counts(data: dict):
+        likes = dislikes = None
+        for container in (data, data.get("module"), data.get("data"), data.get("result"), data.get("summary")):
+            if not isinstance(container, dict):
+                continue
+            for lk in ("likes", "likes_count", "likesCount", "likeCount", "like_count"):
+                v = container.get(lk)
+                if v is not None:
+                    try:
+                        likes = int(v)
+                    except (ValueError, TypeError):
+                        pass
+                    break
+            for dk in ("dislikes", "dislikes_count", "dislikesCount", "dislikeCount", "dislike_count"):
+                v = container.get(dk)
+                if v is not None:
+                    try:
+                        dislikes = int(v)
+                    except (ValueError, TypeError):
+                        pass
+                    break
+            if likes is not None and dislikes is not None:
+                break
+        return likes, dislikes
 
     def _parse_jwt(self, token: str) -> dict:
         try:
@@ -1288,15 +1314,15 @@ class Vector(loader.Module):
                 with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
                 return
 
-        fresh_search = await self._net_req("GET", "/api/search", token=token, params={"q": q or m_name, "limit": "30"})
-        fresh_items = fresh_search.get("results", []) if isinstance(fresh_search, dict) else (fresh_search if isinstance(fresh_search, list) else [])
-        fresh_item = next((self._normalize_module(x) for x in fresh_items if x.get("name") == m_name), None)
-        
-        if group and i < len(group) and fresh_item:
-            group[i].update(fresh_item)
+        new_likes, new_dislikes = self._extract_counts(res)
+        if group and i < len(group):
+            if new_likes is not None:
+                group[i]["likes"] = new_likes
+            if new_dislikes is not None:
+                group[i]["dislikes"] = new_dislikes
             item = group[i]
         else:
-            item = fresh_item or {"name": m_name, "likes": 0, "dislikes": 0, "source_url": f"{API_ROOT}/modules/{m_name}/source"}
+            item = {"name": m_name, "likes": new_likes or 0, "dislikes": new_dislikes or 0, "source_url": f"{API_ROOT}/modules/{m_name}/source"}
             
         await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q), item.get("banner"))
         s_val = res.get("rating", {}).get("state")
