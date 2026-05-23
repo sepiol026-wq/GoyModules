@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 2, 3)
+__version__ = (2, 2, 4)
 
 import asyncio
 import base64
@@ -1288,18 +1288,19 @@ class Vector(loader.Module):
                 with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
                 return
 
-        fresh_search = await self._net_req("GET", "/api/search", token=token, params={"q": q or m_name, "limit": "30"})
-        fresh_items = fresh_search.get("results", []) if isinstance(fresh_search, dict) else (fresh_search if isinstance(fresh_search, list) else [])
-        fresh_item = next((self._normalize_module(x) for x in fresh_items if x.get("name") == m_name), None)
-        
-        if group and i < len(group) and fresh_item:
-            group[i].update(fresh_item)
+        summary = res.get("summary", {})
+        fresh_likes = summary.get("likes", 0)
+        fresh_dislikes = summary.get("dislikes", 0)
+        s_val = res.get("rating", {}).get("state")
+
+        if group and i < len(group):
+            group[i]["likes"] = fresh_likes
+            group[i]["dislikes"] = fresh_dislikes
             item = group[i]
         else:
-            item = fresh_item or {"name": m_name, "likes": 0, "dislikes": 0, "source_url": f"{API_ROOT}/modules/{m_name}/source"}
+            item = {"name": m_name, "likes": fresh_likes, "dislikes": fresh_dislikes, "source_url": f"{API_ROOT}/modules/{m_name}/source"}
             
         await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q), item.get("banner"))
-        s_val = res.get("rating", {}).get("state")
         with suppress(Exception): await cb.answer(self.strings["v_fb_rm" if s_val == "removed" else "v_fb_add"], show_alert=True)
 
     async def cb_install(self, cb: Any, m_name: str, i: int, group: list, q: str):
