@@ -205,7 +205,7 @@ class OmniLoad(loader.Module):
             {
                 "text": "⚡ Instant",
                 "callback": self._inline_dl_callback,
-                "args": (cache_id, "best[ext=mp4]/best", "video"),
+                "args": (cache_id, "bestvideo+bestaudio[ext=m4a]/best[ext=mp4]/best", "video"),
             }
         ]])
 
@@ -449,7 +449,7 @@ class OmniLoad(loader.Module):
                 (f.get("vcodec") and f.get("vcodec") != "none" and (f.get("height") or 0) > 0)
                 for f in formats
             ) if formats else False
-            format_spec = "best[ext=mp4]/best" if is_video else "bestaudio[ext=m4a]/best"
+            format_spec = "bestvideo+bestaudio[ext=m4a]/best[ext=mp4]/best" if is_video else "bestaudio[ext=m4a]/best"
             media_type = "video" if is_video else "audio"
             self._cache[call_id] = {"info": info, "url": args}
             await self._do_download(msg, call_id, format_spec, media_type, target_chat_id, reply_id, info, args, ffmpeg_path, force=True)
@@ -536,8 +536,7 @@ class OmniLoad(loader.Module):
             cmd.append("--embed-metadata")
 
         if media_type == "video":
-            if not force:
-                cmd.extend(["--merge-output-format", "mp4"])
+            cmd.extend(["--merge-output-format", "mp4"])
         elif media_type in ("audio", "flac"):
             ext = "flac" if media_type == "flac" else "mp3"
             cmd.extend(["-x", "--audio-format", ext])
