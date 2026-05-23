@@ -20,7 +20,7 @@
 # Description: Universal media downloader.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/omniload.png
 
-__version__ = (1, 6)
+__version__ = (1, 7)
 import asyncio
 import contextlib
 import json
@@ -125,6 +125,14 @@ class OmniLoad(loader.Module):
         if not args:
             return await utils.answer(message, self.strings("no_args"))
 
+        force = False
+        if args.endswith(" --force"):
+            args = args[:-len(" --force")].strip()
+            force = True
+        elif args.endswith(" -f"):
+            args = args[:-len(" -f")].strip()
+            force = True
+
         msg = await utils.answer(message, self.strings("fetching"))
         ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
@@ -149,20 +157,22 @@ class OmniLoad(loader.Module):
         target_chat_id = utils.get_chat_id(message)
         reply_id = message.id
 
+        if force:
+            formats = info.get("formats", [])
+            is_video = any(
+                (f.get("vcodec") and f.get("vcodec") != "none" and (f.get("height") or 0) > 0)
+                for f in formats
+            ) if formats else False
+            format_spec = "bestvideo+bestaudio/best" if is_video else "bestaudio/best"
+            media_type = "video" if is_video else "audio"
+            self._cache[call_id] = {"info": info, "url": args}
+            await self._do_download(msg, call_id, format_spec, media_type, target_chat_id, reply_id, info, args, ffmpeg_path)
+            return
+
         self._cache[call_id] = {"info": info, "url": args}
         title = info.get("title", "Unknown")[:40]
 
-        keyboard = [
-            [
-                {"text": "🎬 Video 1080p", "callback": self._dl_callback, "args": (call_id, "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best", "video", target_chat_id, reply_id)},
-                {"text": "🎬 Video 720p", "callback": self._dl_callback, "args": (call_id, "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best", "video", target_chat_id, reply_id)}
-            ],
-            [
-                {"text": "🎧 Audio MP3", "callback": self._dl_callback, "args": (call_id, "bestaudio/best", "audio", target_chat_id, reply_id)},
-                {"text": "🎧 Audio FLAC", "callback": self._dl_callback, "args": (call_id, "bestaudio/best", "flac", target_chat_id, reply_id)}
-            ],
-            [{"text": "❌ Cancel", "callback": self._cancel_callback, "args": (call_id,)}]
-        ]
+        keyboard = self._build_formats(info, call_id, target_chat_id, reply_id)
 
         await self.inline.form(
             self.strings("menu").format(title=utils.escape_html(title)),
@@ -170,24 +180,62 @@ class OmniLoad(loader.Module):
             reply_markup=keyboard
         )
 
-    async def _dl_callback(self, call, call_id: str, format_spec: str, media_type: str, target_chat_id: int, reply_id: int):
-        with contextlib.suppress(Exception):
-            await call.answer("<tg-emoji emoji-id=5253613479754999811>➡️</tg-emoji> Processing...")
+    def _build_formats(self, info: dict, call_id: str, target_chat_id: int, reply_id: int) -> list:
+        formats = info.get("formats", [])
+        heights = {}
+        for f in formats:
+            vcodec = f.get("vcodec", "none")
+            h = f.get("height")
+            if vcodec and vcodec != "none" and h and h > 0:
+                if h not in heights or (f.get("filesize") or 0) > (heights[h].get("filesize") or 0):
+                    heights[h] = f
 
-        if call_id not in self._cache:
-            with contextlib.suppress(Exception):
-                await call.edit(self.strings("expired"), reply_markup=None)
-            return
+        sorted_heights = sorted(heights.keys(), reverse=True)
+        label_map = []
+        seen_labels = set()
+        for h in sorted_heights:
+            if h >= 4320:
+                lbl = "8K"
+            elif h >= 2160:
+                lbl = "4K"
+            elif h >= 1440:
+                lbl = "2K"
+            elif h >= 1080:
+                lbl = "1080p"
+            elif h >= 720:
+                lbl = "720p"
+            elif h >= 480:
+                lbl = "480p"
+            elif h >= 360:
+                lbl = "360p"
+            else:
+                lbl = f"{h}p"
+            if lbl not in seen_labels:
+                seen_labels.add(lbl)
+                label_map.append((lbl, h))
 
-        with contextlib.suppress(Exception):
-            await call.edit(self.strings("downloading"), reply_markup=None)
+        keyboard = []
+        row = []
+        for lbl, h in label_map[:6]:
+            fmt = heights[h]
+            fid = fmt["format_id"]
+            spec = f"{fid}+bestaudio[ext=m4a]/best[ext=mp4]/best"
+            row.append({"text": f"🎬 {lbl}", "callback": self._dl_callback, "args": (call_id, spec, "video", target_chat_id, reply_id)})
+            if len(row) == 2:
+                keyboard.append(row)
+                row = []
+        if row:
+            keyboard.append(row)
 
-        data = self._cache.pop(call_id)
-        info = data["info"]
-        url = data["url"]
+        keyboard.append([
+            {"text": "🎧 MP3", "callback": self._dl_callback, "args": (call_id, "bestaudio/best", "audio", target_chat_id, reply_id)},
+            {"text": "🎧 FLAC", "callback": self._dl_callback, "args": (call_id, "bestaudio/best", "flac", target_chat_id, reply_id)}
+        ])
+        keyboard.append([{"text": "❌ Cancel", "callback": self._cancel_callback, "args": (call_id,)}])
+        return keyboard
 
+    async def _do_download(self, call, call_id: str, format_spec: str, media_type: str, target_chat_id: int, reply_id: int, info: dict, url: str, ffmpeg_path: str):
         dl_dir = tempfile.mkdtemp(prefix="omniload_")
-        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 
         cmd = [
             sys.executable, "-m", "yt_dlp",
@@ -264,7 +312,6 @@ class OmniLoad(loader.Module):
             if media_type == "video":
                 w = int(info.get("width") or 0)
                 h = int(info.get("height") or 0)
-
                 if w > 0 and h > 0:
                     attrs = [DocumentAttributeVideo(
                         duration=duration,
@@ -310,6 +357,25 @@ class OmniLoad(loader.Module):
 
         finally:
             shutil.rmtree(dl_dir, ignore_errors=True)
+
+    async def _dl_callback(self, call, call_id: str, format_spec: str, media_type: str, target_chat_id: int, reply_id: int):
+        with contextlib.suppress(Exception):
+            await call.answer("<tg-emoji emoji-id=5253613479754999811>➡️</tg-emoji> Processing...")
+
+        if call_id not in self._cache:
+            with contextlib.suppress(Exception):
+                await call.edit(self.strings("expired"), reply_markup=None)
+            return
+
+        with contextlib.suppress(Exception):
+            await call.edit(self.strings("downloading"), reply_markup=None)
+
+        data = self._cache.pop(call_id)
+        info = data["info"]
+        url = data["url"]
+        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+
+        await self._do_download(call, call_id, format_spec, media_type, target_chat_id, reply_id, info, url, ffmpeg_path)
 
     async def _cancel_callback(self, call, call_id: str):
         self._cache.pop(call_id, None)
