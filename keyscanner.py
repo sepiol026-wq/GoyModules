@@ -17,7 +17,7 @@
 # meta developer: @GoyModules
 # requires: aiohttp aiohttp-socks
 
-__version__ = (2, 5, 5)
+__version__ = (2, 5, 6)
 import base64
 import binascii
 import re
@@ -1692,10 +1692,15 @@ class KeyScanner(loader.Module):
             return item
         return markup
 
-    async def _answer(self, message, text, **kwargs):
+    async def _answer(self, message, text, *, preview_banner=None, **kwargs):
         if "reply_markup" in kwargs:
             kwargs["reply_markup"] = self._ui_markup(kwargs["reply_markup"])
-        return await utils.answer(message, self._ui_text(text), **kwargs)
+        safe_url = preview_banner if preview_banner and preview_banner.startswith("http") else ""
+        final_text = self._ui_text(text)
+        if safe_url:
+            final_text = f'<a href="{utils.escape_html(safe_url)}">&#8203;</a>\n{final_text}'
+            kwargs.setdefault("disable_web_page_preview", False)
+        return await utils.answer(message, final_text, **kwargs)
 
     def _preview_banner(self, provider: str | None = None) -> str | None:
         """Return banner URL for preview. Uses provider-specific banner if available."""
@@ -1715,38 +1720,76 @@ class KeyScanner(loader.Module):
             pass
 
     async def _edit(self, call, *, text=None, reply_markup=None, preview_banner=None, **kwargs):
-        if text is not None:
-            kwargs["text"] = self._ui_text(text)
+        kbd = None
         if reply_markup is not None:
-            kwargs["reply_markup"] = self._ui_markup(reply_markup)
-        if preview_banner is not None and _LinkPreviewOptions is not None:
+            kbd = self._ui_markup(reply_markup)
+
+        safe_url = preview_banner if preview_banner and preview_banner.startswith("http") else ""
+        final_text = self._ui_text(text) if text is not None else kwargs.get("text", "")
+        if safe_url:
+            final_text = f'<a href="{utils.escape_html(safe_url)}">&#8203;</a>\n{final_text}'
+
+        if hasattr(call, "inline_manager") and getattr(call, "inline_manager", None):
             try:
-                options = _LinkPreviewOptions(url=preview_banner, show_above_text=True, prefer_large_media=True)
-                markup = self.inline.generate_markup(kwargs.get("reply_markup", []))
-                bot = getattr(self.inline, "bot", None)
-                if bot:
-                    arguments = {
-                        "text": kwargs.get("text", ""),
-                        "reply_markup": markup,
-                        "link_preview_options": options,
-                        "parse_mode": "HTML",
-                    }
-                    inline_id = getattr(call, "inline_message_id", None)
-                    if inline_id:
-                        arguments["inline_message_id"] = inline_id
+                imgr = call.inline_manager
+                uid = getattr(call, "unit_id", None)
+                if uid and hasattr(call, "_units") and uid in call._units and kbd is not None:
+                    call._units[uid]["buttons"] = kbd
+                kws = {}
+                if getattr(call, "inline_message_id", None):
+                    kws["inline_message_id"] = call.inline_message_id
+                elif getattr(call, "chat_id", None) and getattr(call, "message_id", None):
+                    kws["chat_id"] = call.chat_id
+                    kws["message_id"] = call.message_id
+                if kws:
+                    mk = imgr.generate_markup(kbd) if kbd is not None else None
+                    if hasattr(imgr.bot, "edit_message_text"):
+                        await imgr.bot.edit_message_text(
+                            text=final_text,
+                            **kws,
+                            reply_markup=mk,
+                            link_preview_options={
+                                "url": safe_url,
+                                "prefer_large_media": True,
+                                "show_above_text": True,
+                            } if safe_url else None,
+                            parse_mode="HTML",
+                        )
                     else:
-                        message = getattr(call, "message", call)
-                        chat = getattr(getattr(message, "chat", message), "id", getattr(message, "chat_id", None))
-                        identifier = getattr(message, "message_id", getattr(message, "id", None))
-                        if chat and identifier:
-                            arguments["chat_id"] = chat
-                            arguments["message_id"] = identifier
-                        else:
-                            return await call.edit(**kwargs)
-                    return await bot.edit_message_text(**arguments)
+                        await imgr.bot.edit_message(
+                            kws.get("inline_message_id") or kws.get("chat_id"),
+                            kws.get("message_id"),
+                            text=final_text,
+                            parse_mode="HTML",
+                            link_preview=True if safe_url else False,
+                            invert_media=True if safe_url else False,
+                            buttons=mk,
+                        )
+                    return
             except Exception:
                 pass
-        return await call.edit(**kwargs)
+
+        try:
+            edit_kwargs = {k: v for k, v in kwargs.items() if k not in ("text", "reply_markup")}
+            edit_kwargs["text"] = final_text
+            edit_kwargs["disable_web_page_preview"] = False
+            if kbd is not None:
+                edit_kwargs["reply_markup"] = kbd
+            if hasattr(call, "edit"):
+                await call.edit(**edit_kwargs)
+            else:
+                await utils.answer(call, **edit_kwargs)
+        except TypeError:
+            if kbd is not None:
+                if hasattr(call, "edit"):
+                    await call.edit(final_text, reply_markup=kbd)
+                else:
+                    await utils.answer(call, final_text, reply_markup=kbd)
+            else:
+                if hasattr(call, "edit"):
+                    await call.edit(final_text)
+                else:
+                    await utils.answer(call, final_text)
 
     def _models_text(self, models, limit: int = 5, provider: str | None = None):
         models = [m for m in dict.fromkeys(models or []) if m]
