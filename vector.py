@@ -1272,11 +1272,6 @@ class Vector(loader.Module):
             kwargs = {
                 "text": final_text,
                 "reply_markup": kbd,
-                "disable_web_page_preview": False,
-                "link_preview": True
-            } if safe_url else {
-                "text": final_text,
-                "reply_markup": kbd,
                 "disable_web_page_preview": False
             }
             if hasattr(target, "edit"):
