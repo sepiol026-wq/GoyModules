@@ -1223,7 +1223,7 @@ class Vector(loader.Module):
     async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
         safe_url = img if img and img.startswith("http") else ""
       
-        final_text = f'<a href="{utils.escape_html(safe_url)}">&#8203;</a>\n{text}' if safe_url else text
+        final_text = f'<a href="{safe_url}">&#8203;</a>\n{text}' if safe_url else text
         
         if hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
             try:
@@ -1261,7 +1261,6 @@ class Vector(loader.Module):
                             text=final_text,
                             parse_mode='HTML',
                             link_preview=True if safe_url else False,
-                            invert_media=True if safe_url else False,
                             buttons=imgr.generate_markup(kbd)
                         )
                     return

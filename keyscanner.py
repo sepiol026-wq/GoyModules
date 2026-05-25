@@ -1698,7 +1698,7 @@ class KeyScanner(loader.Module):
         safe_url = preview_banner if preview_banner and preview_banner.startswith("http") else ""
         final_text = self._ui_text(text)
         if safe_url:
-            final_text = f'<a href="{utils.escape_html(safe_url)}">&#8203;</a>\n{final_text}'
+            final_text = f'<a href="{safe_url}">&#8203;</a>\n{final_text}'
             if "reply_markup" not in kwargs:
                 kwargs["link_preview"] = True
         return await utils.answer(message, final_text, **kwargs)
@@ -1728,7 +1728,7 @@ class KeyScanner(loader.Module):
         safe_url = preview_banner if preview_banner and preview_banner.startswith("http") else ""
         final_text = self._ui_text(text) if text is not None else kwargs.get("text", "")
         if safe_url:
-            final_text = f'<a href="{utils.escape_html(safe_url)}">&#8203;</a>\n{final_text}'
+            final_text = f'<a href="{safe_url}">&#8203;</a>\n{final_text}'
 
         if hasattr(call, "inline_manager") and getattr(call, "inline_manager", None):
             try:
