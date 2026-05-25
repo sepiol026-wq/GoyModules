@@ -17,7 +17,7 @@
 # meta developer: @GoyModules
 # requires: aiohttp aiohttp-socks
 
-__version__ = (2, 5, 6)
+__version__ = (2, 5, 7)
 import base64
 import binascii
 import re
@@ -1700,6 +1700,7 @@ class KeyScanner(loader.Module):
         if safe_url:
             final_text = f'<a href="{utils.escape_html(safe_url)}">&#8203;</a>\n{final_text}'
             kwargs.setdefault("disable_web_page_preview", False)
+            kwargs["link_preview"] = True
         return await utils.answer(message, final_text, **kwargs)
 
     def _preview_banner(self, provider: str | None = None) -> str | None:
@@ -1773,6 +1774,8 @@ class KeyScanner(loader.Module):
             edit_kwargs = {k: v for k, v in kwargs.items() if k not in ("text", "reply_markup")}
             edit_kwargs["text"] = final_text
             edit_kwargs["disable_web_page_preview"] = False
+            if safe_url:
+                edit_kwargs["link_preview"] = True
             if kbd is not None:
                 edit_kwargs["reply_markup"] = kbd
             if hasattr(call, "edit"):

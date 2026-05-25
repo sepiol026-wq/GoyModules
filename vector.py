@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 2, 5)
+__version__ = (2, 2, 6)
 
 import asyncio
 import base64
@@ -1270,6 +1270,11 @@ class Vector(loader.Module):
 
         try:
             kwargs = {
+                "text": final_text,
+                "reply_markup": kbd,
+                "disable_web_page_preview": False,
+                "link_preview": True
+            } if safe_url else {
                 "text": final_text,
                 "reply_markup": kbd,
                 "disable_web_page_preview": False
