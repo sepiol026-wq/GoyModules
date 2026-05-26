@@ -1287,40 +1287,29 @@ class Vector(loader.Module):
 
     async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
         tname = type(target).__name__
-        log.debug("_safe_edit: has_img=%s kbd_rows=%d target=%s", bool(img), len(kbd) if kbd else 0, tname)
+        log.debug("_safe_edit: kbd_rows=%d target=%s", len(kbd) if kbd else 0, tname)
 
-        is_call = "Call" in tname
+        if "Call" in tname:
+            kw = {"reply_markup": kbd}
+        else:
+            kw = {"buttons": kbd}
 
-        if not is_call and hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
-            log.debug("_safe_edit: %s → Bot API inline edit", tname)
-            try:
-                imgr = target.inline_manager
-                uid = getattr(target, "unit_id", None)
-                if uid and hasattr(target, "_units") and uid in target._units:
-                    target._units[uid]["buttons"] = kbd
-                await target.edit(text, reply_markup=kbd)
-                log.debug("_safe_edit: Bot API edit ok")
-                return
-            except Exception as e:
-                log.warning("_safe_edit: Bot API edit failed: %r, trying fallback", e)
+        log.debug("_safe_edit: using kw=%s", list(kw.keys()))
 
-        log.debug("_safe_edit: %s → MTProto edit", tname)
-        for attempt, kw in enumerate([{"reply_markup": kbd}, {"buttons": kbd}]):
-            try:
-                if hasattr(target, "edit"):
-                    await target.edit(text, **kw)
-                else:
-                    await utils.answer(target, text, **kw)
-                log.debug("_safe_edit: MTProto edit ok (attempt %d, kw=%s)", attempt, list(kw.keys()))
-                return
-            except TypeError:
-                continue
-            except Exception as e:
-                log.warning("_safe_edit: MTProto edit failed (attempt %d): %r", attempt, e)
-                break
-
-        with suppress(Exception):
-            await target.answer(self.strings["v_err_gui"], show_alert=True)
+        try:
+            if hasattr(target, "edit"):
+                await target.edit(text, **kw)
+            else:
+                await utils.answer(target, text, **kw)
+        except TypeError:
+            if hasattr(target, "edit"):
+                await target.edit(text, **kw)
+            else:
+                await utils.answer(target, text, **kw)
+        except Exception as e:
+            log.warning("_safe_edit: edit failed: %r", e)
+            with suppress(Exception):
+                await target.answer(self.strings["v_err_gui"], show_alert=True)
 
 
 
