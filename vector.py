@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 2, 7)
+__version__ = (2, 2, 8)
 
 import asyncio
 import base64
@@ -138,6 +138,9 @@ class Vector(loader.Module):
         "v_install_fail_not_found": "Not found in configured repos",
         "v_install_fail_download": "Failed to download module",
         "v_install_fail_unknown": "Unknown error: <code>{detail}</code>",
+        "v_upd_same": "🌟 <b>You are on the latest version. Update anyway?</b>",
+        "v_upd_force_btn": "🧭 Update",
+        "v_upd_cancel": "🚫 Cancel",
     }
 
     strings_ru = {
@@ -222,6 +225,9 @@ class Vector(loader.Module):
         "v_install_fail_not_found": "Не найден в подключённых репозиториях",
         "v_install_fail_download": "Не удалось скачать модуль",
         "v_install_fail_unknown": "Неизвестная ошибка: <code>{detail}</code>",
+        "v_upd_same": "🌟 <b>У тебя последняя версия. Обновиться принудительно?</b>",
+        "v_upd_force_btn": "🧭 Обновиться",
+        "v_upd_cancel": "🚫 Отмена",
     }
 
     strings_jp = {
@@ -306,6 +312,9 @@ class Vector(loader.Module):
         "v_install_fail_not_found": "設定されたリポジトリに見つかりません",
         "v_install_fail_download": "モジュールのダウンロードに失敗",
         "v_install_fail_unknown": "不明なエラー: <code>{detail}</code>",
+        "v_upd_same": "🌟 <b>最新バージョンですが、とにかくアップデートしますか？</b>",
+        "v_upd_force_btn": "🧭 アップデート",
+        "v_upd_cancel": "🚫 キャンセル",
     }
 
     strings_uk = {
@@ -390,6 +399,9 @@ class Vector(loader.Module):
         "v_install_fail_not_found": "Не знайдено в підключених репозиторіях",
         "v_install_fail_download": "Не вдалося завантажити модуль",
         "v_install_fail_unknown": "Невідома помилка: <code>{detail}</code>",
+        "v_upd_same": "🌟 <b>У тебе остання версія. Оновитися примусово?</b>",
+        "v_upd_force_btn": "🧭 Оновитися",
+        "v_upd_cancel": "🚫 Скасувати",
     }
 
     strings_de = {
@@ -474,6 +486,9 @@ class Vector(loader.Module):
         "v_install_fail_not_found": "Nicht in konfigurierten Repos gefunden",
         "v_install_fail_download": "Modul-Download fehlgeschlagen",
         "v_install_fail_unknown": "Unbekannter Fehler: <code>{detail}</code>",
+        "v_upd_same": "🌟 <b>Du hast bereits die neueste Version. Trotzdem aktualisieren?</b>",
+        "v_upd_force_btn": "🧭 Aktualisieren",
+        "v_upd_cancel": "🚫 Abbrechen",
     }
 
     strings_neofit = {
@@ -558,6 +573,9 @@ class Vector(loader.Module):
         "v_install_fail_not_found": "not in configured repos",
         "v_install_fail_download": "download failed",
         "v_install_fail_unknown": "unknown error: <code>{detail}</code>",
+        "v_upd_same": "🌟 <b>Up to date. git pull --force?</b>",
+        "v_upd_force_btn": "🧭 git pull",
+        "v_upd_cancel": "🚫 abort",
     }
 
     strings_tiktok = {
@@ -642,6 +660,9 @@ class Vector(loader.Module):
         "v_install_fail_not_found": "Нет в подключённых репах",
         "v_install_fail_download": "Не скачалось",
         "v_install_fail_unknown": "Непонятная ошибка: <code>{detail}</code>",
+        "v_upd_same": "🌟 <b>У тебя ласт версия. Все равно обновить?</b>",
+        "v_upd_force_btn": "🧭 Обнова",
+        "v_upd_cancel": "🚫 Отбой",
     }
 
     strings_leet = {
@@ -726,6 +747,9 @@ class Vector(loader.Module):
         "v_install_fail_not_found": "n07 1n c0nf16'd r3p05",
         "v_install_fail_download": "d0wnl04d f41l3d",
         "v_install_fail_unknown": "unkn0wn 3rr: <code>{detail}</code>",
+        "v_upd_same": "🌟 <b>U r 0n 7h3 l47357 v3r510n, pull upd4735 4nyw4y?</b>",
+        "v_upd_force_btn": "🧭 Upd473",
+        "v_upd_cancel": "🚫 n0p3",
     }
 
     strings_uwu = {
@@ -810,6 +834,9 @@ class Vector(loader.Module):
         "v_install_fail_not_found": "Not found in wepos ;w;",
         "v_install_fail_download": "Downwoad faiwed owo",
         "v_install_fail_unknown": "Unknown ewwow: <code>{detail}</code> >~<",
+        "v_upd_same": "🌟 <b>You awe on da watest vewsion, puww updates anyway? (´• ω •`)</b>",
+        "v_upd_force_btn": "🧭 Puww Update",
+        "v_upd_cancel": "🚫 Nu ;-;",
     }
 
     def _detect_lang_suffix(self) -> str:
@@ -1318,14 +1345,34 @@ class Vector(loader.Module):
     )
     async def vecupdate(self, msg: Message):
         """Update Vector module from the registry."""
-        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
-        
-        token = await self._get_active_token()
-        if not token:
-            return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+        args = utils.get_args_raw(msg)
+        force = "-f" in args or "--force" in args
 
         m_name = "Vector"
-        dl_url = f"{API_ROOT}/modules/{quote(m_name, safe='')}/source"
+        dl_path = f"/modules/{quote(m_name, safe='')}/source"
+        dl_url = f"{API_ROOT}{dl_path}"
+
+        if not force:
+            token = await self._get_active_token()
+            if not token:
+                return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+
+            src_bytes = await self._net_req("GET", dl_path, token=token, as_bytes=True)
+            if src_bytes:
+                new_hash = hashlib.sha256(src_bytes).hexdigest()
+                old_hash = self.get("vec_hash", "")
+                if new_hash == old_hash:
+                    await self.inline.form(
+                        message=msg,
+                        text=f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
+                        reply_markup=[
+                            [
+                                {"text": self.strings["v_upd_force_btn"], "callback": self._vecupdate_force, "args": (src_bytes, new_hash), "style": "primary"},
+                                {"text": self.strings["v_upd_cancel"], "action": "close", "style": "danger"},
+                            ]
+                        ],
+                    )
+                    return
 
         res, _ = await self._safe_install(m_name, dl_url, notify=False)
         if res == -1:
@@ -1334,6 +1381,22 @@ class Vector(loader.Module):
             await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
             await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+
+    async def _vecupdate_force(self, call: Any, src_bytes: bytes, new_hash: str):
+        with suppress(Exception):
+            await call.answer()
+        await call.edit(f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
+        ldr = self.lookup("Loader")
+        if not ldr or not hasattr(ldr, "load_module"):
+            await call.answer(self.strings["v_upd_err"], show_alert=True)
+            return
+        doc = src_bytes.decode("utf-8")
+        ok = await ldr.load_module(doc, call, name="Vector", origin="<vector-update>", save_fs=True)
+        if ok:
+            self.set("vec_hash", new_hash)
+            await call.edit(f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
+        else:
+            await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
     @loader.watcher(chat_id=OFFICIAL_VECTOR_BOT_ID)
     async def vector_install_payload_watcher(self, msg: Message):
