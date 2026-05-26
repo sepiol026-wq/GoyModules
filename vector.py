@@ -1294,12 +1294,27 @@ class Vector(loader.Module):
                 uid = target.unit_id
                 if hasattr(target, "_units") and uid in target._units:
                     target._units[uid]["buttons"] = kbd
-                imid = getattr(target, "inline_message_id", None)
-                log.debug("_safe_edit: imid=%r type=%s", imid, type(imid).__name__ if imid else None)
-                unit = target._units.get(uid, {})
-                unit_imid = unit.get("inline_message_id")
-                log.debug("_safe_edit: unit inline_message_id=%r type=%s", unit_imid, type(unit_imid).__name__ if unit_imid else None)
-                await target.edit(text, reply_markup=kbd)
+                result = await target.edit(text, reply_markup=kbd)
+                if not result:
+                    log.debug("_safe_edit: target.edit() returned False, trying direct bot edit")
+                    try:
+                        btns = self.inline.generate_markup(kbd)
+                        bot = getattr(self.inline, "_bot_client", None)
+                        imid = getattr(target, "inline_message_id", None)
+                        if bot and imid and btns:
+                            await bot.edit_message(imid, None, text, parse_mode="HTML", link_preview=False, buttons=btns)
+                        else:
+                            raise RuntimeError("no bot/imid/buttons")
+                    except Exception:
+                        log.debug("_safe_edit: direct bot edit failed, recreating form")
+                        with suppress(Exception):
+                            await target.delete()
+                        msg = (target.form or {}).get("message")
+                        if msg:
+                            kwargs = {}
+                            if img and img.startswith("http"):
+                                kwargs["photo"] = img
+                            await self.inline.form(text, message=msg, reply_markup=kbd, **kwargs)
             elif hasattr(target, "edit"):
                 await target.edit(text, reply_markup=kbd)
             else:
