@@ -1288,10 +1288,10 @@ class Vector(loader.Module):
     async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
         log.debug("_safe_edit: has_img=%s kbd_rows=%d target_type=%s", bool(img), len(kbd) if kbd else 0, type(target).__name__)
 
-        is_form = "Form" in type(target).__name__
+        is_call = "Call" in type(target).__name__
 
-        if is_form and hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
-            log.debug("_safe_edit: form → Bot API")
+        if not is_call and hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
+            log.debug("_safe_edit: form/message → Bot API")
             try:
                 if img and img.startswith("http"):
                     await target.edit(text, reply_markup=kbd, photo=img)
