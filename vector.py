@@ -39,7 +39,7 @@ from herokutl.types import Message
 from .. import loader, utils
 
 log = logging.getLogger("VectorMonolith")
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 API_ROOT = "https://vector-three-sooty.vercel.app"
 JWT_REGEX = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
@@ -842,7 +842,9 @@ class Vector(loader.Module):
     def _detect_lang_suffix(self) -> str:
         variants = {"en", "ru", "jp", "uk", "de", "neofit", "tiktok", "leet", "uwu"}
         lang = str(self.strings.get("lang", "en")).strip().lower()
-        return lang if lang in variants else "en"
+        result = lang if lang in variants else "en"
+        log.debug("_detect_lang_suffix: raw=%r -> %s", lang, result)
+        return result
 
 
     ICONS = {
@@ -888,6 +890,7 @@ class Vector(loader.Module):
             self.records.append(record)
 
     def _classify_install_errors(self, records: List[logging.LogRecord]) -> List[Dict[str, str]]:
+        log.debug("_classify_install_errors: %d records", len(records))
         errors = []
         for rec in records:
             if rec.levelno < logging.WARNING:
@@ -912,6 +915,7 @@ class Vector(loader.Module):
         return errors
 
     def _fmt_install_errors(self, m_name: str, errors: List[Dict[str, str]]) -> str:
+        log.debug("_fmt_install_errors: module=%s errors=%d", m_name, len(errors))
         if not errors:
             return f"{self.ICONS['error']} <b>{self.strings['v_dl_err']}</b>"
 
@@ -936,8 +940,10 @@ class Vector(loader.Module):
         return "\n".join(lines)
 
     async def _safe_install(self, m_name: str, dl_url: str, *, notify: bool = True) -> tuple:
+        log.debug("_safe_install: module=%s url=%s notify=%s", m_name, dl_url, notify)
         ldr = self.lookup("Loader")
         if not ldr or not hasattr(ldr, "download_and_install"):
+            log.error("_safe_install: no Loader or download_and_install missing")
             return -1, []
 
         cap = self._InstallLogCapture()
@@ -947,7 +953,9 @@ class Vector(loader.Module):
 
         classified = []
         try:
+            log.info("_safe_install: calling download_and_install for %s", m_name)
             res = await ldr.download_and_install(dl_url)
+            log.info("_safe_install: download_and_install result=%s", res)
             if getattr(ldr, "fully_loaded", False):
                 ldr.update_modules_in_db()
             return res, classified
@@ -959,10 +967,12 @@ class Vector(loader.Module):
                 logging.getLogger(lg_name).removeHandler(cap)
             if cap.records:
                 classified = self._classify_install_errors(cap.records)
+                log.debug("_safe_install: %d install log records captured", len(cap.records))
                 if notify and classified:
                     log.info("Install errors for %s: %s", m_name, [e["type"] for e in classified])
 
     def __init__(self) -> None:
+        log.debug("__init__: Vector module instance created")
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
                 "limit", 
@@ -984,12 +994,16 @@ class Vector(loader.Module):
         log.info("Vector Module Monolith Started")
 
     async def on_unload(self) -> None:
+        log.info("on_unload: Vector module unloading")
         if self.http and not self.http.closed:
             await self.http.close()
+            log.debug("on_unload: HTTP session closed")
 
     async def _net_req(self, method: str, path: str, token: str = "", params: dict = None, json_data: dict = None, as_bytes: bool = False, timeout: int = 15) -> Any:
+        log.debug("_net_req: %s %s params=%s json=%s bytes=%s timeout=%s", method, path, bool(params), bool(json_data), as_bytes, timeout)
         if not self.http or self.http.closed:
             self.http = aiohttp.ClientSession()
+            log.debug("_net_req: created new aiohttp ClientSession")
             
         url = urljoin(API_ROOT + "/", path.lstrip("/"))
         headers = {"User-Agent": "VectorUserbotClient/2.0"}
@@ -1011,6 +1025,7 @@ class Vector(loader.Module):
             return None
 
     def _normalize_module(self, raw: dict) -> dict:
+        log.debug("_normalize_module: name=%s version=%s", raw.get("name", "?"), raw.get("version", "?"))
         cmds = []
         for c in (raw.get("commands") or []):
             if isinstance(c, dict):
@@ -1072,9 +1087,11 @@ class Vector(loader.Module):
                     break
             if likes is not None and dislikes is not None:
                 break
+        log.debug("_extract_counts: likes=%s dislikes=%s", likes, dislikes)
         return likes, dislikes
 
     def _parse_jwt(self, token: str) -> dict:
+        log.debug("_parse_jwt: token len=%d", len(token) if token else 0)
         try:
             b64_part = token.split(".")[1]
             b64_part += "=" * (-len(b64_part) % 4)
@@ -1084,20 +1101,26 @@ class Vector(loader.Module):
 
     @staticmethod
     def _norm_hash_name(value: str) -> str:
+        log.debug("_norm_hash_name: value=%r", str(value)[:64] if value else "")
         value = unicodedata.normalize("NFKC", str(value or ""))
         value = value.replace("​", "").replace("‌", "").replace("‍", "").replace("﻿", "")
         return " ".join(value.strip().split())
 
     async def _get_active_token(self, force: bool = False) -> str:
+        log.debug("_get_active_token: force=%s", force)
         if force:
             self.set("auth_token", None)
+            log.debug("_get_active_token: auth_token cleared (force)")
             
         cached = self.get("auth_token")
         if cached:
             payload = self._parse_jwt(cached)
             if payload.get("exp", 0) - time.time() > 60:
+                log.debug("_get_active_token: cached token valid, exp=%s", payload.get("exp"))
                 return cached
+            log.debug("_get_active_token: cached token expired or expiring")
 
+        log.info("_get_active_token: requesting fresh token")
         bot_info = await self._net_req("GET", "/api/tg-bot")
         bot_username = (bot_info or {}).get("username", "").strip().lstrip("@")
         if not bot_username:
@@ -1145,11 +1168,16 @@ class Vector(loader.Module):
         if new_jwt:
             self.set("auth_token", new_jwt)
             self._last_ban_notice = ""
+            log.info("_get_active_token: new token obtained")
         elif ban_notice:
             self._last_ban_notice = ban_notice
+            log.warning("_get_active_token: user banned")
+        else:
+            log.warning("_get_active_token: no token obtained")
         return new_jwt
 
     def _format_ban_notice(self, raw_text: str) -> str:
+        log.debug("_format_ban_notice: raw_len=%d", len(raw_text) if raw_text else 0)
         txt = str(raw_text or "").strip()
         reason_match = BAN_REASON_RE.search(txt)
         term_match = BAN_TERM_RE.search(txt)
@@ -1174,6 +1202,7 @@ class Vector(loader.Module):
         return self.strings["v_ban_notice"].format(reason=reason, term=term)
 
     def _build_html(self, m_data: dict, current_idx: int, total_cnt: int) -> str:
+        log.debug("_build_html: name=%s idx=%d/%d", m_data.get("name", "?"), current_idx, total_cnt)
         name = utils.escape_html(str(m_data.get("name", "Unknown")))
         author = utils.escape_html(str(m_data.get("author", "@Unknown")))
         ver = str(m_data.get("version", "?.?.?"))
@@ -1210,6 +1239,7 @@ class Vector(loader.Module):
         return doc_str[:3900]
 
     def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False) -> list:
+        log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
         m_name = str(item.get("name", ""))
         kbd = [
             [
@@ -1248,7 +1278,9 @@ class Vector(loader.Module):
 
 
     async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
+        log.debug("_safe_edit: has_img=%s kbd_rows=%d", bool(img), len(kbd) if kbd else 0)
         if hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
+            log.debug("_safe_edit: using Bot API inline edit")
             try:
                 imgr = target.inline_manager
                 
@@ -1296,11 +1328,14 @@ class Vector(loader.Module):
     async def vectorcmd(self, msg: Message):
         """<query> - search modules in Vector."""
         q = utils.get_args_raw(msg)
+        log.info("vectorcmd: query=%r", q)
         if not q:
+            log.debug("vectorcmd: empty query, aborting")
             return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}')}</code></b>")
         if len(q) > 120:
             return await utils.answer(msg, f"{self.ICONS['warn']} <b>{self.strings['v_err_len']}</b>")
 
+        log.debug("vectorcmd: sending loading form")
         form = await self.inline.form(
             f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>",
             msg,
@@ -1316,16 +1351,19 @@ class Vector(loader.Module):
             return await self._safe_edit(form, self._last_ban_notice, [])
         
         if self._last_http_code == 401:
-            log.info("Search got 401, retrying with forced token refresh")
+            log.info("vectorcmd: got 401, forcing token refresh")
             token = await self._get_active_token(force=True)
             raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
             
+        log.debug("vectorcmd: raw response type=%s", type(raw_res).__name__)
         m_list = []
         if isinstance(raw_res, dict): m_list = raw_res.get("results", [])
         elif isinstance(raw_res, list): m_list = raw_res
         m_list = [self._normalize_module(x) for x in m_list if isinstance(x, dict)]
+        log.info("vectorcmd: %d results after normalization", len(m_list))
         
         if not m_list:
+            log.debug("vectorcmd: no results, showing 404")
             return await self._safe_edit(form, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", [])
 
         item = m_list[0]
@@ -1347,28 +1385,36 @@ class Vector(loader.Module):
         """Update Vector module from the registry."""
         args = utils.get_args_raw(msg)
         force = "-f" in args or "--force" in args
+        log.info("vecupdate: force=%s args=%r", force, args)
 
         m_name = "Vector"
         dl_path = f"/modules/{quote(m_name, safe='')}/source"
         dl_url = f"{API_ROOT}{dl_path}"
+        log.debug("vecupdate: dl_url=%s", dl_url)
 
         if not force:
             token = await self._get_active_token()
             if not token:
+                log.warning("vecupdate: no token, aborting")
                 return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
 
             src_bytes = await self._net_req("GET", dl_path, token=token, as_bytes=True)
             if src_bytes:
+                log.debug("vecupdate: downloaded %d bytes", len(src_bytes))
                 remote_hash = hashlib.sha256(src_bytes).hexdigest()
 
                 import inspect
                 try:
-                    with open(inspect.getfile(self.__class__), "rb") as f:
+                    local_path = inspect.getfile(self.__class__)
+                    with open(local_path, "rb") as f:
                         local_hash = hashlib.sha256(f.read()).hexdigest()
-                except Exception:
+                    log.debug("vecupdate: local_hash=%s remote_hash=%s path=%s", local_hash[:16], remote_hash[:16], local_path)
+                except Exception as e:
                     local_hash = ""
+                    log.warning("vecupdate: failed to read local file: %r", e)
 
                 if remote_hash == local_hash:
+                    log.info("vecupdate: hashes match, showing force-update prompt")
                     await self.inline.form(
                         message=msg,
                         text=f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
@@ -1380,29 +1426,43 @@ class Vector(loader.Module):
                         ],
                     )
                     return
+                log.info("vecupdate: hashes differ, proceeding with install")
+            else:
+                log.warning("vecupdate: download returned no bytes, falling through to install")
+        else:
+            log.info("vecupdate: force flag set, skipping hash check")
 
+        log.info("vecupdate: calling _safe_install")
         res, _ = await self._safe_install(m_name, dl_url, notify=False)
         if res == -1:
+            log.error("vecupdate: _safe_install returned -1 (no loader)")
             return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
         if res == 1:
+            log.info("vecupdate: install successful")
             await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
+            log.warning("vecupdate: install failed, res=%s", res)
             await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
     async def _vecupdate_force(self, call: Any, dl_url: str):
+        log.info("_vecupdate_force: force update triggered, url=%s", dl_url)
         with suppress(Exception):
             await call.answer()
         await call.edit(f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
         res, _ = await self._safe_install("Vector", dl_url, notify=False)
         if res == 1:
+            log.info("_vecupdate_force: force install successful")
             await call.edit(f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
+            log.warning("_vecupdate_force: force install failed, res=%s", res)
             await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
     @loader.watcher(chat_id=OFFICIAL_VECTOR_BOT_ID)
     async def vector_install_payload_watcher(self, msg: Message):
         text = (getattr(msg, "raw_text", None) or "").strip()
+        log.debug("vector_install_payload_watcher: text_len=%d starts_with_payload=%s", len(text), text.startswith("#v_payload:") if len(text) > 5 else False)
         if text == LANG_PING_PAYLOAD:
+            log.debug("vector_install_payload_watcher: lang ping received")
             with suppress(Exception):
                 await self._client.send_message(msg.chat_id, f"{LANG_PONG_PREFIX}{self._detect_lang_suffix()}")
             with suppress(Exception):
@@ -1416,8 +1476,10 @@ class Vector(loader.Module):
 
         parts = text.split(":", 4)
         if len(parts) != 5:
+            log.debug("vector_install_payload_watcher: invalid parts count=%d", len(parts))
             return
         _, module_name, action, ts_raw, signature = parts
+        log.info("vector_install_payload_watcher: module=%s action=%s", module_name, action)
         if not module_name or not action or not ts_raw or not signature:
             return
         if action not in {"install", "like", "dislike"}:
@@ -1464,31 +1526,39 @@ class Vector(loader.Module):
             return
 
         if action == "install":
+            log.info("vector_install_payload_watcher: install action for %s", module_name)
             dl_url = f"{API_ROOT}/modules/{quote(module_name, safe='')}/source"
             res, _ = await self._safe_install(module_name, dl_url, notify=False)
             if res == -1:
+                log.error("vector_install_payload_watcher: install failed (no loader)")
                 await send_feedback("error")
             else:
+                log.info("vector_install_payload_watcher: install result=%s", res)
                 await send_feedback("ok" if res == 1 else "error")
             return
 
+        log.info("vector_install_payload_watcher: rate action %s for %s", action, module_name)
         uid = self._parse_jwt(token).get("sub", "")
         res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(module_name, safe='')}/{action}", token=token)
         if not res and self._last_http_code in {401, 403}:
+            log.warning("vector_install_payload_watcher: banned (401/403)")
             await send_feedback("banned", "User is banned", "permanent")
             return
         await send_feedback("ok" if res and res.get("ok") else "error")
 
     async def cb_dummy(self, cb: Any):
+        log.debug("cb_dummy: no-op callback")
         with suppress(Exception): await cb.answer()
 
     async def cb_nav(self, cb: Any, target_i: int, group: list, q: str):
+        log.debug("cb_nav: target_i=%d group_len=%d", target_i, len(group) if group else 0)
         with suppress(Exception): await cb.answer()
         if 0 <= target_i < len(group):
             item = group[target_i]
             await self._safe_edit(cb, self._build_html(item, target_i + 1, len(group)), self._build_kbd(item, target_i, group, q), item.get("banner"))
 
     async def cb_list(self, cb: Any, curr_i: int, group: list, q: str):
+        log.debug("cb_list: curr_i=%d group_len=%d", curr_i, len(group) if group else 0)
         with suppress(Exception): await cb.answer()
         kb = []
         for i in range(0, min(8, len(group))):
@@ -1500,6 +1570,7 @@ class Vector(loader.Module):
         await self._safe_edit(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", kb)
 
     async def cb_page(self, cb: Any, pg: int, group: list, q: str, orig_i: int):
+        log.debug("cb_page: pg=%d group_len=%d orig_i=%d", pg, len(group) if group else 0, orig_i)
         with suppress(Exception): await cb.answer()
         kb = []
         start, end = pg * 8, min((pg + 1) * 8, len(group))
@@ -1515,11 +1586,13 @@ class Vector(loader.Module):
         await self._safe_edit(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", kb)
 
     async def cb_toggle(self, cb: Any, m_name: str, i: int, group: list, q: str, exp: bool):
+        log.debug("cb_toggle: name=%s idx=%d exp=%s", m_name, i, exp)
         with suppress(Exception): await cb.answer()
         item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{API_ROOT}/modules/{m_name}/source"}
         await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q, exp), item.get("banner"))
 
     async def cb_rate(self, cb: Any, m_name: str, action: str, i: int, group: list, q: str):
+        log.info("cb_rate: name=%s action=%s", m_name, action)
         token = await self._get_active_token()
         if not token:
             with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
@@ -1536,6 +1609,7 @@ class Vector(loader.Module):
                 return
 
         new_likes, new_dislikes = self._extract_counts(res)
+        log.debug("cb_rate: new likes=%s dislikes=%s", new_likes, new_dislikes)
         if group and i < len(group):
             if new_likes is not None:
                 group[i]["likes"] = new_likes
@@ -1550,13 +1624,17 @@ class Vector(loader.Module):
         with suppress(Exception): await cb.answer(self.strings["v_fb_rm" if s_val == "removed" else "v_fb_add"], show_alert=True)
 
     async def cb_install(self, cb: Any, m_name: str, i: int, group: list, q: str):
+        log.info("cb_install: name=%s", m_name)
         token = await self._get_active_token()
         if not token:
+            log.warning("cb_install: no token")
             with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
 
         dl_url = f"{API_ROOT}/modules/{quote(m_name, safe='')}/source"
+        log.debug("cb_install: dl_url=%s", dl_url)
         res, errors = await self._safe_install(m_name, dl_url)
+        log.info("cb_install: result=%s errors=%d", res, len(errors) if errors else 0)
         if res == -1:
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
             return
@@ -1572,6 +1650,7 @@ class Vector(loader.Module):
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
 
     async def cb_sec_check(self, cb: Any, m_name: str, i: int, group: list, q: str):
+        log.info("cb_sec_check: name=%s", m_name)
         def _get_sec_kb(has_run: bool):
             k = [[
                 {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
@@ -1582,6 +1661,7 @@ class Vector(loader.Module):
 
         cached = self._security_cache.get(m_name)
         if cached and cached.get("check"):
+            log.debug("cb_sec_check: cache hit for %s", m_name)
             return await self._safe_edit(cb, f"{self.ICONS['safe']} <i>{self.strings['v_aud_mem']}</i>\n\n{self._fmt_sec(m_name, cached)}", _get_sec_kb(True))
 
         await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_req']}</b>", _get_sec_kb(True))
@@ -1592,12 +1672,16 @@ class Vector(loader.Module):
         res = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/security-check", token=token)
         
         if not res or self._last_http_code >= 400:
+            log.warning("cb_sec_check: API error for %s, http=%s", m_name, self._last_http_code)
             return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", _get_sec_kb(True))
 
-        if res.get("check"): self._security_cache[m_name] = res
+        if res.get("check"):
+            self._security_cache[m_name] = res
+            log.debug("cb_sec_check: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), _get_sec_kb(bool(res.get("checked"))))
 
     async def cb_sec_run(self, cb: Any, m_name: str, i: int, group: list, q: str):
+        log.info("cb_sec_run: name=%s", m_name)
         await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
         token = await self._get_active_token()
         if not token:
@@ -1606,17 +1690,23 @@ class Vector(loader.Module):
         res = await self._net_req("POST", f"/api/modules/{quote(m_name, safe='')}/security-check", token=token, timeout=120)
         
         if self._last_http_code == 429:
+            log.warning("cb_sec_run: rate limited (429)")
             return await self._safe_edit(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
         if not res or self._last_http_code >= 400:
+            log.warning("cb_sec_run: API error, http=%s", self._last_http_code)
             return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
 
-        if res.get("check"): self._security_cache[m_name] = res
+        log.info("cb_sec_run: scan complete for %s", m_name)
+        if res.get("check"):
+            self._security_cache[m_name] = res
+            log.debug("cb_sec_run: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), [[
             {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
             {"text": self.strings["v_btn_code"], "url": f"{API_ROOT}/modules/{m_name}/source"},
         ]])
 
     def _fmt_sec(self, m_name: str, payload: dict) -> str:
+        log.debug("_fmt_sec: name=%s has_check=%s", m_name, bool(payload.get("check")))
         chk = payload.get("check")
         qta = payload.get("quota") or (chk.get("quota") if chk else None) or {}
         if not chk:
@@ -1647,16 +1737,20 @@ class Vector(loader.Module):
         return "\n".join(lines)
 
     async def cb_comments(self, cb: Any, m_name: str, i: int, group: list, q: str):
+        log.info("cb_comments: name=%s", m_name)
         with suppress(Exception): await cb.answer()
         token = await self._get_active_token()
         if not token:
+            log.warning("cb_comments: no token")
             with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
         res = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/comments", token=token)
         
         if not res or not isinstance(res, dict):
+            log.warning("cb_comments: bad response for %s", m_name)
             with suppress(Exception): await cb.answer(self.strings["v_talk_err"], show_alert=True)
             return
+        log.debug("cb_comments: %d comments for %s", len(res.get("comments", [])), m_name)
             
         kb = [[
             {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
@@ -1668,12 +1762,15 @@ class Vector(loader.Module):
         await self._safe_edit(cb, self._fmt_comments(res.get("comments", []), m_name), kb, item.get("banner"))
 
     async def cb_post_comment(self, cb: Any, text: str, m_name: str, i: int, group: list, q: str):
+        log.info("cb_post_comment: name=%s text_len=%d", m_name, len(text) if text else 0)
         token = await self._get_active_token()
         if not token:
+            log.warning("cb_post_comment: no token")
             with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
         c_txt = str(text or "").strip()
         if not c_txt:
+            log.debug("cb_post_comment: empty text, cancelled")
             with suppress(Exception): await cb.answer(self.strings["v_rep_cncl"], show_alert=True)
             return
         if len(c_txt) < 2 or len(c_txt) > 1800:
@@ -1684,8 +1781,11 @@ class Vector(loader.Module):
         res = await self._net_req("POST", f"/api/modules/{quote(m_name, safe='')}/comments", token=token, json_data={"body": c_txt})
         
         if not res:
+            log.warning("cb_post_comment: API error posting to %s", m_name)
             with suppress(Exception): await cb.answer(self.strings["v_rep_err"], show_alert=True)
             return
+        
+        log.info("cb_post_comment: posted to %s successfully", m_name)
             
         with suppress(Exception): await cb.answer(self.strings["v_rep_ok"], show_alert=True)
         
@@ -1694,6 +1794,7 @@ class Vector(loader.Module):
         await self.cb_comments(cb, m_name, i, group, q)
 
     def _fmt_comments(self, comments: list, m_name: str) -> str:
+        log.debug("_fmt_comments: name=%s count=%d", m_name, len(comments) if comments else 0)
         h = f"{self.strings['v_talk_hdr'].format(emoji=self.ICONS['comments'], name=m_name)}\n<b>{self.strings['v_talk_desc']}</b>\n<i>{self.strings['v_talk_num'].format(count=len(comments))}</i>"
         if not comments: return f"{h}\n\n{self.strings['v_talk_0']}"
         
