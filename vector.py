@@ -1661,21 +1661,22 @@ class Vector(loader.Module):
             await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
     @loader.command(
-        en_doc="<collection slug> — download and install entire module collection from Vector.",
-        ru_doc="<slug коллекции> — скачать и установить всю коллекцию модулей из Vector.",
-        jp_doc="<コレクションslug> — Vectorからコレクション全体をダウンロードしてインストール。",
-        uk_doc="<slug колекції> — завантажити та встановити всю колекцію модулів із Vector.",
-        de_doc="<slug> — gesamte Modulsammlung von Vector herunterladen und installieren.",
-        neofit_doc="<collection slug> — pull entire module collection from Vector.",
-        tiktok_doc="<slug подборки> — скачать и вкатить всю подборку темок из Vector.",
-        leet_doc="<c0ll3c710n_5lu9> — pull 3n71r3 m0dul3 c0ll3c710n fr0m V3c70r.",
-        uwu_doc="<cowwection-swug> — downwoad and instaww entiwe moduwe cowwection fwom Vectow (・ω・)."
+        en_doc="<slug or URL> — download and install entire module collection from Vector.",
+        ru_doc="<slug_или_ссылка> — скачать и установить всю коллекцию модулей из Vector.",
+        jp_doc="<slugかURL> — Vectorからコレクション全体をダウンロードしてインストール。",
+        uk_doc="<slug_або_посилання> — завантажити та встановити всю колекцію модулів із Vector.",
+        de_doc="<slug_oder_url> — gesamte Modulsammlung von Vector herunterladen und installieren.",
+        neofit_doc="<slug or URL> — pull entire module collection from Vector.",
+        tiktok_doc="<slug_или_ссылка> — скачать и вкатить всю подборку темок из Vector.",
+        leet_doc="<5lu9_0r_url> — pull 3n71r3 m0dul3 c0ll3c710n fr0m V3c70r.",
+        uwu_doc="<swug-ow-url> — downwoad and instaww entiwe moduwe cowwection fwom Vectow (・ω・)."
     )
-    async def dlcollcmd(self, msg: Message):
-        slug = utils.get_args_raw(msg).strip()
-        log.info("dlcoll: slug=%r", slug)
+    async def vecdlcmd(self, msg: Message):
+        raw_arg = utils.get_args_raw(msg).strip()
+        slug = raw_arg.split("/collections/")[-1].split("/")[0].split("?")[0] if "/collections/" in raw_arg else raw_arg
+        log.info("vecdl: raw=%r slug=%r", raw_arg, slug)
         if not slug:
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}dlcoll</code>')}</b>")
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}vecdl</code>')}</b>")
 
         form = await self.inline.form(
             f"{self.ICONS['search']} <b>Fetching collection…</b>",
@@ -1705,14 +1706,16 @@ class Vector(loader.Module):
             await asyncio.sleep(1.5)
 
         col_name = col.get("name", slug)
-        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.strings['v_dlcoll_start']}", [])
+        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n<code>{self.strings['v_dlcoll_count'].format(count=len(modules))}</code>\n\n⚡ {self.strings['v_dlcoll_start']}", [])
 
         ok = 0
         failed: List[str] = []
         for i, mod in enumerate(modules, 1):
             dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{API_ROOT}/modules/{quote((mod.get('name') or ''), safe='')}/source"
             m_name = mod.get("name", "?")
-            await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_progress'].format(done=i, total=len(modules), name=utils.escape_html(m_name))}", [])
+            bar = "▓" * max(1, i * 10 // max(len(modules), 1))
+            progress_line = f"{'🟢' * ok}{'⚫' * (i - ok - len(failed))}{'🔴' * len(failed)}" if failed else f"{'🟢' * ok}{'⚫' * (i - ok)}"
+            await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n\n<code>[{bar}{'░' * max(0, 10 - i * 10 // max(len(modules), 1))}] {i}/{len(modules)}</code>\n{progress_line}\n\n<code>{self.strings['v_dlcoll_progress'].format(done=i, total=len(modules), name=utils.escape_html(m_name))}</code>", [])
 
             res, errors = await self._safe_install(m_name, dl_url, notify=False)
             if res == 1:
@@ -1729,7 +1732,8 @@ class Vector(loader.Module):
 
             await asyncio.sleep(2)
 
-        result = f"{self.ICONS['safe']} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
+        icon = "✅" if ok == len(modules) else "⚠️" if ok > 0 else "❌"
+        result = f"{icon} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
         if failed:
             result += "\n\n" + "\n".join(failed[:10])
             if len(failed) > 10:
