@@ -1290,12 +1290,10 @@ class Vector(loader.Module):
         log.debug("_safe_edit: kbd_rows=%d target=%s", len(kbd) if kbd else 0, tname)
 
         try:
-            if hasattr(target, "edit"):
-                await target.edit(text, reply_markup=kbd)
-            else:
-                await utils.answer(target, text, reply_markup=kbd)
-        except TypeError:
-            if hasattr(target, "edit"):
+            uid = getattr(target, "unit_id", None)
+            if uid and hasattr(target, "inline_manager"):
+                await target.inline_manager._edit_unit(uid, text, reply_markup=kbd)
+            elif hasattr(target, "edit"):
                 await target.edit(text, reply_markup=kbd)
             else:
                 await utils.answer(target, text, reply_markup=kbd)
