@@ -1889,10 +1889,20 @@ class Vector(loader.Module):
             
         return "\n\n".join(blks)
 
-    @loader.inline_handler()
-    async def vector_inline(self, query):
+    @loader.inline_handler(
+        en_doc="<query> — search modules in Vector.",
+        ru_doc="<запрос> — поиск модулей в Vector.",
+        jp_doc="<クエリ> — Vectorでモジュールを検索。",
+        uk_doc="<запит> — пошук модулів у Vector.",
+        de_doc="<Abfrage> — Suche nach Modulen in Vector.",
+        neofit_doc="<query> — grep modules in Vector.",
+        tiktok_doc="<запрос> — чекнуть темки (модули) в Vector.",
+        leet_doc="<qu3ry> — 534rch m0dul35 1n V3c70r.",
+        uwu_doc="<quewy> — seawch moduwes in Vectow (´• ω •`)."
+    )
+    async def vector(self, query):
         q = (getattr(query, "query", "") or getattr(query, "args", "") or "").strip()
-        log.info("vector_inline: query=%r", q)
+        log.info("vector inline: query=%r", q)
 
         dl_url = f"{API_ROOT}/modules/{quote('Vector', safe='')}/source"
         _strip = lambda t: re.sub(r"<tg-emoji[^>]*>([^<]*)</tg-emoji>", r"\1", t)
