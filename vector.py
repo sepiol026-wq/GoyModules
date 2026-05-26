@@ -1350,10 +1350,24 @@ class Vector(loader.Module):
                 ekw = {}
                 if img and img.startswith("http"):
                     ekw["photo"] = img
+                imid_val = getattr(target, "inline_message_id", None)
+                unit_imid = target._units.get(getattr(target, "unit_id", ""), {}).get("inline_message_id") if hasattr(target, "_units") else None
+                log.debug("_safe_edit: InlineCall imid=%r unit_imid=%r", type(imid_val).__name__ if imid_val else None, type(unit_imid).__name__ if unit_imid else None)
                 result = await target.edit(text, reply_markup=kbd, **ekw)
                 log.debug("_safe_edit: InlineCall edit returned %r", result)
                 if not result:
                     log.warning("_safe_edit: InlineCall edit failed, result=%r", result)
+                    try:
+                        btns = self.inline.generate_markup(kbd)
+                        bot = getattr(self.inline, "_bot_client", None)
+                        imid = imid_val or unit_imid
+                        if bot and imid and btns:
+                            ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
+                            if img and img.startswith("http"):
+                                ekw2["file"] = img
+                            await bot.edit_message(imid, None, text, **ekw2)
+                    except Exception:
+                        pass
             else:
                 await utils.answer(target, text, reply_markup=kbd)
         except Exception as e:
