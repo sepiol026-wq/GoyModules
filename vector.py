@@ -1317,7 +1317,10 @@ class Vector(loader.Module):
                 uid = target.unit_id
                 if hasattr(target, "_units") and uid in target._units:
                     target._units[uid]["buttons"] = kbd
-                result = await target.edit(text, reply_markup=kbd)
+                ekw = {}
+                if img and img.startswith("http"):
+                    ekw["photo"] = img
+                result = await target.edit(text, reply_markup=kbd, **ekw)
                 if not result:
                     log.debug("_safe_edit: target.edit() returned False (text_len=%d), trying direct bot edit", len(text))
                     try:
@@ -1325,7 +1328,10 @@ class Vector(loader.Module):
                         bot = getattr(self.inline, "_bot_client", None)
                         imid = getattr(target, "inline_message_id", None)
                         if bot and imid and btns:
-                            await bot.edit_message(imid, None, text, parse_mode="HTML", link_preview=False, buttons=btns)
+                            ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
+                            if img and img.startswith("http"):
+                                ekw2["file"] = img
+                            await bot.edit_message(imid, None, text, **ekw2)
                         else:
                             raise RuntimeError("no bot/imid/buttons")
                     except Exception as e2:
