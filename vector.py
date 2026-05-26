@@ -1291,8 +1291,8 @@ class Vector(loader.Module):
 
         try:
             uid = getattr(target, "unit_id", None)
-            if uid and hasattr(target, "inline_manager"):
-                await target.inline_manager._edit_unit(unit_id=uid, text=text, reply_markup=kbd)
+            if uid and "Call" not in tname:
+                await target.edit(uid, kbd, text=text)
             elif hasattr(target, "edit"):
                 await target.edit(text, reply_markup=kbd)
             else:
