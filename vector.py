@@ -1352,7 +1352,6 @@ class Vector(loader.Module):
         dl_path = f"/modules/{quote(m_name, safe='')}/source"
         dl_url = f"{API_ROOT}{dl_path}"
 
-        new_hash = ""
         if not force:
             token = await self._get_active_token()
             if not token:
@@ -1360,15 +1359,22 @@ class Vector(loader.Module):
 
             src_bytes = await self._net_req("GET", dl_path, token=token, as_bytes=True)
             if src_bytes:
-                new_hash = hashlib.sha256(src_bytes).hexdigest()
-                old_hash = self.get("vec_hash", "")
-                if new_hash == old_hash:
+                remote_hash = hashlib.sha256(src_bytes).hexdigest()
+
+                import inspect
+                try:
+                    with open(inspect.getfile(self.__class__), "rb") as f:
+                        local_hash = hashlib.sha256(f.read()).hexdigest()
+                except Exception:
+                    local_hash = ""
+
+                if remote_hash == local_hash:
                     await self.inline.form(
                         message=msg,
                         text=f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
                         reply_markup=[
                             [
-                                {"text": self.strings["v_upd_force_btn"], "callback": self._vecupdate_force, "args": (src_bytes, new_hash), "style": "primary"},
+                                {"text": self.strings["v_upd_force_btn"], "callback": self._vecupdate_force, "args": (dl_url,), "style": "primary"},
                                 {"text": self.strings["v_upd_cancel"], "action": "close", "style": "danger"},
                             ]
                         ],
@@ -1379,24 +1385,16 @@ class Vector(loader.Module):
         if res == -1:
             return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
         if res == 1:
-            if new_hash:
-                self.set("vec_hash", new_hash)
             await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
             await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
-    async def _vecupdate_force(self, call: Any, src_bytes: bytes, new_hash: str):
+    async def _vecupdate_force(self, call: Any, dl_url: str):
         with suppress(Exception):
             await call.answer()
         await call.edit(f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
-        ldr = self.lookup("Loader")
-        if not ldr or not hasattr(ldr, "load_module"):
-            await call.answer(self.strings["v_upd_err"], show_alert=True)
-            return
-        doc = src_bytes.decode("utf-8")
-        ok = await ldr.load_module(doc, call, name="Vector", origin="<vector-update>", save_fs=True)
-        if ok:
-            self.set("vec_hash", new_hash)
+        res, _ = await self._safe_install("Vector", dl_url, notify=False)
+        if res == 1:
             await call.edit(f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
             await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
