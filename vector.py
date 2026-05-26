@@ -1661,21 +1661,21 @@ class Vector(loader.Module):
             await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
     @loader.command(
-        en_doc="<collection_slug> — download and install entire module collection from Vector.",
-        ru_doc="<slug_коллекции> — скачать и установить всю коллекцию модулей из Vector.",
+        en_doc="<collection slug> — download and install entire module collection from Vector.",
+        ru_doc="<slug коллекции> — скачать и установить всю коллекцию модулей из Vector.",
         jp_doc="<コレクションslug> — Vectorからコレクション全体をダウンロードしてインストール。",
-        uk_doc="<slug_колекції> — завантажити та встановити всю колекцію модулів із Vector.",
-        de_doc="<Sammlungs-Slug> — gesamte Modulsammlung von Vector herunterladen und installieren.",
-        neofit_doc="<collection_slug> — pull entire module collection from Vector.",
-        tiktok_doc="<slug_подборки> — скачать и вкатить всю подборку темок из Vector.",
+        uk_doc="<slug колекції> — завантажити та встановити всю колекцію модулів із Vector.",
+        de_doc="<slug> — gesamte Modulsammlung von Vector herunterladen und installieren.",
+        neofit_doc="<collection slug> — pull entire module collection from Vector.",
+        tiktok_doc="<slug подборки> — скачать и вкатить всю подборку темок из Vector.",
         leet_doc="<c0ll3c710n_5lu9> — pull 3n71r3 m0dul3 c0ll3c710n fr0m V3c70r.",
         uwu_doc="<cowwection-swug> — downwoad and instaww entiwe moduwe cowwection fwom Vectow (・ω・)."
     )
-    async def dlcollectioncmd(self, msg: Message):
+    async def dlcollcmd(self, msg: Message):
         slug = utils.get_args_raw(msg).strip()
-        log.info("dlcollection: slug=%r", slug)
+        log.info("dlcoll: slug=%r", slug)
         if not slug:
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}dlcollection</code>')}</b>")
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}dlcoll</code>')}</b>")
 
         form = await self.inline.form(
             f"{self.ICONS['search']} <b>Fetching collection…</b>",
@@ -1701,18 +1701,18 @@ class Vector(loader.Module):
         max_batch = int(self.config.get("max_batch", 50))
         if total > max_batch:
             modules = modules[:max_batch]
-            await self._safe_edit(form, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_max_batch'].format(total=len(col['modules']), max=max_batch)}</b>")
+            await self._safe_edit(form, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_max_batch'].format(total=len(col['modules']), max=max_batch)}</b>", [])
             await asyncio.sleep(1.5)
 
         col_name = col.get("name", slug)
-        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.strings['v_dlcoll_start']}")
+        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.strings['v_dlcoll_start']}", [])
 
         ok = 0
         failed: List[str] = []
         for i, mod in enumerate(modules, 1):
             dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{API_ROOT}/modules/{quote((mod.get('name') or ''), safe='')}/source"
             m_name = mod.get("name", "?")
-            await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_progress'].format(done=i, total=len(modules), name=utils.escape_html(m_name))}")
+            await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_progress'].format(done=i, total=len(modules), name=utils.escape_html(m_name))}", [])
 
             res, errors = await self._safe_install(m_name, dl_url, notify=False)
             if res == 1:
@@ -1735,6 +1735,7 @@ class Vector(loader.Module):
             if len(failed) > 10:
                 result += f"\n… +{len(failed) - 10} more"
         await self._safe_edit(form, result, [[{"text": "✖️", "action": "close"}]])
+
 
     @loader.watcher(chat_id=OFFICIAL_VECTOR_BOT_ID)
     async def vector_install_payload_watcher(self, msg: Message):
