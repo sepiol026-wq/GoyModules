@@ -1228,50 +1228,12 @@ class Vector(loader.Module):
                 uid = getattr(target, "unit_id", None)
                 if uid and hasattr(target, "_units") and uid in target._units:
                     target._units[uid]["buttons"] = kbd
-                    
-                kws = {}
-                if getattr(target, "inline_message_id", None):
-                    kws["inline_message_id"] = target.inline_message_id
-                elif getattr(target, "chat_id", None) and getattr(target, "message_id", None):
-                    kws["chat_id"] = target.chat_id
-                    kws["message_id"] = target.message_id
-                    
-                if kws:
-                    if img and img.startswith("http"):
-                        if hasattr(imgr.bot, 'edit_message_media'):
-                            
-                            await imgr.bot.edit_message_media(
-                                media={"type": "photo", "media": img, "caption": text, "parse_mode": "HTML"},
-                                **kws,
-                                reply_markup=imgr.generate_markup(kbd)
-                            )
-                        else:
-                            
-                            await imgr.bot.edit_message(
-                                kws.get('inline_message_id') or kws.get('chat_id'),
-                                kws.get('message_id'),
-                                text=text,
-                                parse_mode='HTML',
-                                buttons=imgr.generate_markup(kbd)
-                            )
-                    else:
-                        if hasattr(imgr.bot, 'edit_message_text'):
-                            
-                            await imgr.bot.edit_message_text(
-                                text=text,
-                                **kws,
-                                reply_markup=imgr.generate_markup(kbd)
-                            )
-                        else:
-                            
-                            await imgr.bot.edit_message(
-                                kws.get('inline_message_id') or kws.get('chat_id'),
-                                kws.get('message_id'),
-                                text=text,
-                                parse_mode='HTML',
-                                buttons=imgr.generate_markup(kbd)
-                            )
-                    return
+                
+                if img and img.startswith("http"):
+                    await target.edit(text, reply_markup=kbd, photo=img)
+                else:
+                    await target.edit(text, reply_markup=kbd)
+                return
             except Exception as e:
                 log.warning("Bot API inline edit failed: %r", e)
 
@@ -1316,9 +1278,9 @@ class Vector(loader.Module):
             f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>",
             msg,
             reply_markup=[[{"text": "ㅤ", "callback": self.cb_dummy}]],
+            photo="https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vsearch.png",
             silent=True
         )
-        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>", [[{"text": "ㅤ", "callback": self.cb_dummy}]], "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vsearch.png")
         
         token = await self._get_active_token()
         log.info("Vector search request q=%r token=%s", q, bool(token))
