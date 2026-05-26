@@ -1352,6 +1352,7 @@ class Vector(loader.Module):
         dl_path = f"/modules/{quote(m_name, safe='')}/source"
         dl_url = f"{API_ROOT}{dl_path}"
 
+        new_hash = ""
         if not force:
             token = await self._get_active_token()
             if not token:
@@ -1378,6 +1379,8 @@ class Vector(loader.Module):
         if res == -1:
             return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
         if res == 1:
+            if new_hash:
+                self.set("vec_hash", new_hash)
             await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
             await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
