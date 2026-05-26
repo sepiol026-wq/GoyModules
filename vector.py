@@ -1290,13 +1290,10 @@ class Vector(loader.Module):
         log.debug("_safe_edit: kbd_rows=%d target=%s", len(kbd) if kbd else 0, tname)
 
         try:
-            if hasattr(target, "edit"):
-                await target.edit(text=text, reply_markup=kbd)
-            else:
-                await utils.answer(target, text, reply_markup=kbd)
-        except TypeError:
-            if hasattr(target, "edit"):
-                await target.edit(text=text, reply_markup=kbd)
+            if "Message" in tname and hasattr(target, "unit_id"):
+                await self.inline.form(text, message=target, reply_markup=kbd, photo=img if img and img.startswith("http") else None)
+            elif hasattr(target, "edit"):
+                await target.edit(text, reply_markup=kbd)
             else:
                 await utils.answer(target, text, reply_markup=kbd)
         except Exception as e:
