@@ -1309,12 +1309,13 @@ class Vector(loader.Module):
                         log.debug("_safe_edit: direct bot edit failed, recreating form")
                         with suppress(Exception):
                             await target.delete()
-                        msg = (target.form or {}).get("message")
-                        if msg:
-                            kwargs = {}
+                        unit = target._units.get(uid, {})
+                        chat = unit.get("chat")
+                        if chat:
+                            kwargs = {"reply_markup": kbd}
                             if img and img.startswith("http"):
                                 kwargs["photo"] = img
-                            await self.inline.form(text, message=msg, reply_markup=kbd, **kwargs)
+                            await self.inline.form(text, message=chat, **kwargs)
             elif hasattr(target, "edit"):
                 await target.edit(text, reply_markup=kbd)
             else:
