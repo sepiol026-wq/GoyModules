@@ -1286,36 +1286,41 @@ class Vector(loader.Module):
 
 
     async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
-        log.debug("_safe_edit: has_img=%s kbd_rows=%d target_type=%s", bool(img), len(kbd) if kbd else 0, type(target).__name__)
+        tname = type(target).__name__
+        log.debug("_safe_edit: has_img=%s kbd_rows=%d target=%s", bool(img), len(kbd) if kbd else 0, tname)
 
-        is_call = "Call" in type(target).__name__
+        is_call = "Call" in tname
 
         if not is_call and hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
-            log.debug("_safe_edit: form/message → Bot API")
+            log.debug("_safe_edit: %s → Bot API inline edit", tname)
             try:
-                if img and img.startswith("http"):
-                    await target.edit(text, reply_markup=kbd, photo=img)
-                else:
-                    await target.edit(text, reply_markup=kbd)
+                imgr = target.inline_manager
+                uid = getattr(target, "unit_id", None)
+                if uid and hasattr(target, "_units") and uid in target._units:
+                    target._units[uid]["buttons"] = kbd
+                await target.edit(text, reply_markup=kbd)
+                log.debug("_safe_edit: Bot API edit ok")
                 return
             except Exception as e:
-                log.warning("_safe_edit: Bot API edit failed: %r, falling back", e)
+                log.warning("_safe_edit: Bot API edit failed: %r, trying fallback", e)
 
-        log.debug("_safe_edit: callback → MTProto")
-        try:
-            if hasattr(target, "edit"):
-                await target.edit(text, reply_markup=kbd)
-            else:
-                await utils.answer(target, text, reply_markup=kbd)
-        except TypeError:
-            if hasattr(target, "edit"):
-                await target.edit(text, reply_markup=kbd)
-            else:
-                await utils.answer(target, text, reply_markup=kbd)
-        except Exception as e:
-            log.warning("_safe_edit: MTProto edit failed: %r", e)
-            with suppress(Exception):
-                await target.answer(self.strings["v_err_gui"], show_alert=True)
+        log.debug("_safe_edit: %s → MTProto edit", tname)
+        for attempt, kw in enumerate([{"reply_markup": kbd}, {"buttons": kbd}]):
+            try:
+                if hasattr(target, "edit"):
+                    await target.edit(text, **kw)
+                else:
+                    await utils.answer(target, text, **kw)
+                log.debug("_safe_edit: MTProto edit ok (attempt %d, kw=%s)", attempt, list(kw.keys()))
+                return
+            except TypeError:
+                continue
+            except Exception as e:
+                log.warning("_safe_edit: MTProto edit failed (attempt %d): %r", attempt, e)
+                break
+
+        with suppress(Exception):
+            await target.answer(self.strings["v_err_gui"], show_alert=True)
 
 
 
