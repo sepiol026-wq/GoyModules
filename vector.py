@@ -1211,7 +1211,7 @@ class Vector(loader.Module):
 
     def _build_html(self, m_data: dict, current_idx: int, total_cnt: int) -> str:
         log.debug("_build_html: name=%s idx=%d/%d", m_data.get("name", "?"), current_idx, total_cnt)
-        CAP = 960
+        CAP = 900
 
         name = utils.escape_html(str(m_data.get("name", "Unknown")))
         author = utils.escape_html(str(m_data.get("author", "@Unknown")))
