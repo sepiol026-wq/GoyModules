@@ -1671,23 +1671,23 @@ class Vector(loader.Module):
         leet_doc="<5lu9_0r_url> — pull 3n71r3 m0dul3 c0ll3c710n fr0m V3c70r.",
         uwu_doc="<swug-ow-url> — downwoad and instaww entiwe moduwe cowwection fwom Vectow (・ω・)."
     )
-    async def vecdlcmd(self, msg: Message):
+        async def vecdlcmd(self, msg: Message):
         raw_arg = utils.get_args_raw(msg).strip()
         slug = raw_arg.split("/collections/")[-1].split("/")[0].split("?")[0] if "/collections/" in raw_arg else raw_arg
         log.info("vecdl: raw=%r slug=%r", raw_arg, slug)
         if not slug:
             return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}vecdl</code>')}</b>")
 
+        token = await self._get_active_token()
+        if not token:
+            return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+
         form = await self.inline.form(
-            f"{self.ICONS['search']} <b>Fetching collection…</b>",
+            f"{self.ICONS['search']} <b>Fetching…</b>",
             msg,
             reply_markup=[[{"text": "…", "callback": self.cb_dummy}]],
             silent=True
         )
-
-        token = await self._get_active_token()
-        if not token:
-            return await self._safe_edit(form, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", [[{"text": "✖️", "action": "close"}]])
 
         raw = await self._net_req("GET", f"/api/collections/{quote(slug, safe='')}", token=token)
         if not raw or not raw.get("ok"):
@@ -1695,28 +1695,22 @@ class Vector(loader.Module):
 
         col = raw["collection"]
         modules = [entry["module"] for entry in (col.get("modules") or []) if entry.get("module")]
-        total = len(modules)
-        if total == 0:
+        if not modules:
             return await self._safe_edit(form, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_empty']}</b>", [[{"text": "✖️", "action": "close"}]])
 
         max_batch = int(self.config.get("max_batch", 50))
-        if total > max_batch:
+        total_orig = len(modules)
+        if total_orig > max_batch:
             modules = modules[:max_batch]
-            await self._safe_edit(form, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_max_batch'].format(total=len(col['modules']), max=max_batch)}</b>", [])
-            await asyncio.sleep(1.5)
 
         col_name = col.get("name", slug)
-        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n<code>{self.strings['v_dlcoll_count'].format(count=len(modules))}</code>\n\n⚡ {self.strings['v_dlcoll_start']}", [])
+        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.strings['v_dlcoll_start']}", [])
 
         ok = 0
         failed: List[str] = []
-        for i, mod in enumerate(modules, 1):
+        for mod in modules:
             dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{API_ROOT}/modules/{quote((mod.get('name') or ''), safe='')}/source"
             m_name = mod.get("name", "?")
-            bar = "▓" * max(1, i * 10 // max(len(modules), 1))
-            progress_line = f"{'🟢' * ok}{'⚫' * (i - ok - len(failed))}{'🔴' * len(failed)}" if failed else f"{'🟢' * ok}{'⚫' * (i - ok)}"
-            await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n\n<code>[{bar}{'░' * max(0, 10 - i * 10 // max(len(modules), 1))}] {i}/{len(modules)}</code>\n{progress_line}\n\n<code>{self.strings['v_dlcoll_progress'].format(done=i, total=len(modules), name=utils.escape_html(m_name))}</code>", [])
-
             res, errors = await self._safe_install(m_name, dl_url, notify=False)
             if res == 1:
                 ok += 1
@@ -1729,15 +1723,23 @@ class Vector(loader.Module):
                 else:
                     err_text = self.strings("v_dl_err")
                 failed.append(self.strings('v_dlcoll_fail_item').format(name=utils.escape_html(m_name), reason=err_text))
-
             await asyncio.sleep(2)
 
-        icon = "✅" if ok == len(modules) else "⚠️" if ok > 0 else "❌"
-        result = f"{icon} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
-        if failed:
-            result += "\n\n" + "\n".join(failed[:10])
-            if len(failed) > 10:
-                result += f"\n… +{len(failed) - 10} more"
+        if ok == len(modules):
+            result = f"{self.ICONS['safe']} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
+            if total_orig > max_batch:
+                result += f"\n\n<i>{self.strings['v_dlcoll_max_batch'].format(total=total_orig, max=max_batch)}</i>"
+        elif ok == 0:
+            result = f"{self.ICONS['error']} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
+            if failed:
+                result += "\n\n" + "\n".join(failed[:8])
+        else:
+            result = f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
+            if failed:
+                result += "\n\n" + "\n".join(failed[:8])
+                if len(failed) > 8:
+                    result += f"\n… +{len(failed) - 8} more"
+
         await self._safe_edit(form, result, [[{"text": "✖️", "action": "close"}]])
 
 
