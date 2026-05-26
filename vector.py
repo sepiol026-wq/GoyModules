@@ -126,6 +126,7 @@ class Vector(loader.Module):
         "v_upd_req": "Updating Vector...",
         "v_upd_ok": "Vector updated successfully!",
         "v_upd_err": "Update failed!",
+        "v_upd_check": "Checking hashes…",
         "v_install_log_hdr": "Install log: {name}",
         "v_install_fail_forbidden": "Forbidden method: <code>{detail}</code>",
         "v_install_fail_requirements": "Pip deps failed: <code>{detail}</code>",
@@ -213,6 +214,7 @@ class Vector(loader.Module):
         "v_upd_req": "Обновляем Vector...",
         "v_upd_ok": "Vector успешно обновлен!",
         "v_upd_err": "Ошибка обновления!",
+        "v_upd_check": "Проверка хэшей…",
         "v_install_log_hdr": "Журнал установки: {name}",
         "v_install_fail_forbidden": "Запрещённый метод: <code>{detail}</code>",
         "v_install_fail_requirements": "Pip-зависимости не встали: <code>{detail}</code>",
@@ -300,6 +302,7 @@ class Vector(loader.Module):
         "v_upd_req": "Vectorを更新中...",
         "v_upd_ok": "Vectorが正常に更新されました！",
         "v_upd_err": "更新に失敗しました！",
+        "v_upd_check": "ハッシュをチェック中…",
         "v_install_log_hdr": "インストールログ: {name}",
         "v_install_fail_forbidden": "禁止されたメソッド: <code>{detail}</code>",
         "v_install_fail_requirements": "Pip依存関係の失敗: <code>{detail}</code>",
@@ -387,6 +390,7 @@ class Vector(loader.Module):
         "v_upd_req": "Оновлюємо Vector...",
         "v_upd_ok": "Vector успішно оновлено!",
         "v_upd_err": "Помилка оновлення!",
+        "v_upd_check": "Перевірка хешів…",
         "v_install_log_hdr": "Журнал встановлення: {name}",
         "v_install_fail_forbidden": "Заборонений метод: <code>{detail}</code>",
         "v_install_fail_requirements": "Pip-залежності не стали: <code>{detail}</code>",
@@ -474,6 +478,7 @@ class Vector(loader.Module):
         "v_upd_req": "Vector wird aktualisiert...",
         "v_upd_ok": "Vector erfolgreich aktualisiert!",
         "v_upd_err": "Aktualisierung fehlgeschlagen!",
+        "v_upd_check": "Überprüfe Hashes…",
         "v_install_log_hdr": "Installationsprotokoll: {name}",
         "v_install_fail_forbidden": "Verbotene Methode: <code>{detail}</code>",
         "v_install_fail_requirements": "Pip-Abhängigkeiten fehlgeschlagen: <code>{detail}</code>",
@@ -561,6 +566,7 @@ class Vector(loader.Module):
         "v_upd_req": "Updating Vector...",
         "v_upd_ok": "Updated.",
         "v_upd_err": "Update failed.",
+        "v_upd_check": "Checkin' hashes…",
         "v_install_log_hdr": "install log: {name}",
         "v_install_fail_forbidden": "forbidden method: <code>{detail}</code>",
         "v_install_fail_requirements": "pip deps failed: <code>{detail}</code>",
@@ -648,6 +654,7 @@ class Vector(loader.Module):
         "v_upd_req": "Качаем обнову...",
         "v_upd_ok": "Обнова залетела!",
         "v_upd_err": "Не обновилось!",
+        "v_upd_check": "Чекаю хэши…",
         "v_install_log_hdr": "Лог установки: {name}",
         "v_install_fail_forbidden": "Запрещёнка: <code>{detail}</code>",
         "v_install_fail_requirements": "Пип-либы не встали: <code>{detail}</code>",
@@ -735,6 +742,7 @@ class Vector(loader.Module):
         "v_upd_req": "Upd471ng V3c70r...",
         "v_upd_ok": "V3c70r upd473d!",
         "v_upd_err": "Upd473 f41l3d!",
+        "v_upd_check": "Ch3ck1ng h45h35…",
         "v_install_log_hdr": "1n574ll l0g: {name}",
         "v_install_fail_forbidden": "f0rb1dd3n m37h0d: <code>{detail}</code>",
         "v_install_fail_requirements": "p1p d3p5 f41l3d: <code>{detail}</code>",
@@ -822,6 +830,7 @@ class Vector(loader.Module):
         "v_upd_req": "Updating Vectow...",
         "v_upd_ok": "Vectow updated! (≧◡≦)",
         "v_upd_err": "Update faiwed! ;w;",
+        "v_upd_check": "Checking hashy-washies… owo",
         "v_install_log_hdr": "Instaww wog: {name} >w<",
         "v_install_fail_forbidden": "Fowbidden method: <code>{detail}</code> ;(",
         "v_install_fail_requirements": "Pip deps faiwed: <code>{detail}</code> owo",
@@ -1394,6 +1403,7 @@ class Vector(loader.Module):
 
         if force:
             log.info("vecupdate: force flag set, installing immediately")
+            await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
             res, _ = await self._safe_install(m_name, dl_url, notify=False)
             if res == -1:
                 log.error("vecupdate: _safe_install returned -1 (no loader)")
@@ -1406,6 +1416,8 @@ class Vector(loader.Module):
                 await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
             return
 
+        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_check']}</b>")
+
         token = await self._get_active_token()
         if not token:
             log.warning("vecupdate: no token, aborting")
@@ -1414,6 +1426,7 @@ class Vector(loader.Module):
         src_bytes = await self._net_req("GET", dl_path, token=token, as_bytes=True)
         if not src_bytes:
             log.warning("vecupdate: download returned no bytes, installing anyway")
+            await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
             res, _ = await self._safe_install(m_name, dl_url, notify=False)
             if res == -1:
                 return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
@@ -1469,6 +1482,7 @@ class Vector(loader.Module):
             return
 
         log.info("vecupdate: hashes differ, proceeding with install")
+        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
 
         log.info("vecupdate: calling _safe_install")
         res, _ = await self._safe_install(m_name, dl_url, notify=False)
