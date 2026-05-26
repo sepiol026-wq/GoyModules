@@ -1351,8 +1351,8 @@ class Vector(loader.Module):
                 if img and img.startswith("http"):
                     ekw["photo"] = img
                 imid_val = getattr(target, "inline_message_id", None)
-                unit_imid = target._units.get(getattr(target, "unit_id", ""), {}).get("inline_message_id") if hasattr(target, "_units") else None
-                log.debug("_safe_edit: InlineCall imid=%r unit_imid=%r", type(imid_val).__name__ if imid_val else None, type(unit_imid).__name__ if unit_imid else None)
+                unit_data = target._units.get(getattr(target, "unit_id", ""), {}) if hasattr(target, "_units") else {}
+                log.debug("_safe_edit: InlineCall imid=%r unit_keys=%s", type(imid_val).__name__ if imid_val else None, list(unit_data.keys()))
                 result = await target.edit(text, reply_markup=kbd, **ekw)
                 log.debug("_safe_edit: InlineCall edit returned %r", result)
                 if not result:
@@ -1360,14 +1360,14 @@ class Vector(loader.Module):
                     try:
                         btns = self.inline.generate_markup(kbd)
                         bot = getattr(self.inline, "_bot_client", None)
-                        imid = imid_val or unit_imid
+                        imid = imid_val
                         if bot and imid and btns:
                             ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
                             if img and img.startswith("http"):
                                 ekw2["file"] = img
                             await bot.edit_message(imid, None, text, **ekw2)
-                    except Exception:
-                        pass
+                    except Exception as e3:
+                        log.debug("_safe_edit: InlineCall bot fallback failed: %r", e3)
             else:
                 await utils.answer(target, text, reply_markup=kbd)
         except Exception as e:
