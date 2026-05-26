@@ -1321,6 +1321,7 @@ class Vector(loader.Module):
                 if img and img.startswith("http"):
                     ekw["photo"] = img
                 result = await target.edit(text, reply_markup=kbd, **ekw)
+                log.debug("_safe_edit: target.edit() returned %r", result)
                 if not result:
                     log.debug("_safe_edit: target.edit() returned False (text_len=%d), trying direct bot edit", len(text))
                     try:
