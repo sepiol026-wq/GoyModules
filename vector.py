@@ -1291,7 +1291,18 @@ class Vector(loader.Module):
 
         try:
             if "Message" in tname and hasattr(target, "unit_id"):
-                await self.inline.form(text, message=target, reply_markup=kbd, photo=img if img and img.startswith("http") else None)
+                msg = None
+                for attr in ("_message", "message", "_msg", "msg", "_form", "form"):
+                    v = getattr(target, attr, None)
+                    if v is not None and not isinstance(v, str) and not callable(v):
+                        log.debug("_safe_edit: found %s = %s", attr, type(v).__name__)
+                        msg = v
+                        break
+                if msg is None:
+                    attrs = {k: type(v).__name__ for k, v in vars(target).items() if not k.startswith("__") and not callable(v)}
+                    log.debug("_safe_edit: target attrs: %s", attrs)
+                if msg:
+                    await self.inline.form(text, message=msg, reply_markup=kbd, photo=img if img and img.startswith("http") else None)
             elif hasattr(target, "edit"):
                 await target.edit(text, reply_markup=kbd)
             else:
