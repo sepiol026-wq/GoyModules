@@ -150,6 +150,7 @@ class Vector(loader.Module):
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
         "v_dlcoll_empty": "<b>Collection is empty</b>",
         "v_dlcoll_not_found": "<b>Collection not found</b>",
+"v_vecdl_usage": "<b>Specify collection: </b><code>{p}vecdl <slug or URL></code>",
         "v_dlcoll_max_batch": "Collection has {total} modules, max {max} per batch. Installing first {max}…",
         "v_upd_cancel": "🚫 Cancel",
     }
@@ -249,6 +250,7 @@ class Vector(loader.Module):
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
         "v_dlcoll_empty": "<b>Коллекция пуста</b>",
         "v_dlcoll_not_found": "<b>Коллекция не найдена</b>",
+"v_vecdl_usage": "<b>Укажи коллекцию: </b><code>{p}vecdl <slug или ссылка></code>",
         "v_dlcoll_max_batch": "В коллекции {total} модулей, макс {max} за раз. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отмена",
     }
@@ -348,6 +350,7 @@ class Vector(loader.Module):
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
         "v_dlcoll_empty": "<b>コレクションは空です</b>",
         "v_dlcoll_not_found": "<b>コレクションが見つかりません</b>",
+"v_vecdl_usage": "<b>コレクションを指定: </b><code>{p}vecdl <slugかURL></code>",
         "v_dlcoll_max_batch": "コレクションに{total}モジュール、最大{max}まで。最初の{max}をインストール中…",
         "v_upd_cancel": "🚫 キャンセル",
     }
@@ -447,6 +450,7 @@ class Vector(loader.Module):
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
         "v_dlcoll_empty": "<b>Колекція порожня</b>",
         "v_dlcoll_not_found": "<b>Колекцію не знайдено</b>",
+"v_vecdl_usage": "<b>Вкажи колекцію: </b><code>{p}vecdl <slug або посилання></code>",
         "v_dlcoll_max_batch": "У колекції {total} модулів, макс {max} за раз. Ставлю перші {max}…",
         "v_upd_cancel": "🚫 Скасувати",
     }
@@ -546,6 +550,7 @@ class Vector(loader.Module):
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
         "v_dlcoll_empty": "<b>Sammlung ist leer</b>",
         "v_dlcoll_not_found": "<b>Sammlung nicht gefunden</b>",
+"v_vecdl_usage": "<b>Sammlung angeben: </b><code>{p}vecdl <slug oder URL></code>",
         "v_dlcoll_max_batch": "Sammlung hat {total} Module, max {max} pro Durchlauf. Installiere erste {max}…",
         "v_upd_cancel": "🚫 Abbrechen",
     }
@@ -645,6 +650,7 @@ class Vector(loader.Module):
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
         "v_dlcoll_empty": "<b>Empty collection, cope harder</b>",
         "v_dlcoll_not_found": "<b>404 collection not found, seethe</b>",
+"v_vecdl_usage": "<b>specify collection: </b><code>{p}vecdl <slug></code>",
         "v_dlcoll_max_batch": "{total} mods, max {max}. pulling first {max}…",
         "v_upd_cancel": "🚫 abort",
     }
@@ -744,6 +750,7 @@ class Vector(loader.Module):
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
         "v_dlcoll_empty": "<b>Подборка пустая, клоун</b>",
         "v_dlcoll_not_found": "<b>Нет такой подборки, ризз или ливни</b>",
+"v_vecdl_usage": "<b>Скажи подборку: </b><code>{p}vecdl <slug или ссылка></code>",
         "v_dlcoll_max_batch": "Темок {total}, макс {max}. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отбой",
     }
@@ -843,6 +850,7 @@ class Vector(loader.Module):
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
         "v_dlcoll_empty": "<b>3mp7y c0ll3c710n</b>",
         "v_dlcoll_not_found": "<b>C0ll3c710n n07 f0und</b>",
+"v_vecdl_usage": "<b>5p3c1fy c0ll3c710n: </b><code>{p}vecdl <5lu9></code>",
         "v_dlcoll_max_batch": "{total} m0d5, m4x {max}. 1n574ll1n9 f1r57 {max}…",
         "v_upd_cancel": "🚫 n0p3",
     }
@@ -942,6 +950,7 @@ class Vector(loader.Module):
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
         "v_dlcoll_empty": "<b>Cowwection is emptyy ;-;</b>",
         "v_dlcoll_not_found": "<b>Cowwection not found owo</b>",
+"v_vecdl_usage": "<b>Pwease specify cowwection: </b><code>{p}vecdl <swug></code>",
         "v_dlcoll_max_batch": "{total} moduwes, max {max}. Instawwing fiwst {max}…",
         "v_upd_cancel": "🚫 Nu ;-;",
     }
@@ -1685,7 +1694,7 @@ class Vector(loader.Module):
         slug = raw_arg.split("/collections/")[-1].split("/")[0].split("?")[0] if "/collections/" in raw_arg else raw_arg
         log.info("vecdl: raw=%r slug=%r", raw_arg, slug)
         if not slug:
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}vecdl</code>')}</b>")
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>Specify collection: </b><code>{self.get_prefix()}vecdl {'<slug or URL>'}</code>")
 
         token = await self._get_active_token()
         if not token:
