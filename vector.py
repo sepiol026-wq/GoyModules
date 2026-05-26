@@ -1291,15 +1291,16 @@ class Vector(loader.Module):
 
         try:
             if "Message" in tname and hasattr(target, "unit_id"):
-                msg = None
-                frm = getattr(target, "form", None)
-                if isinstance(frm, dict):
-                    log.debug("_safe_edit: form keys=%s", list(frm.keys()))
-                    msg = frm.get("message") or frm.get("msg")
-                if msg is None:
-                    msg = getattr(target, "_message", None) or getattr(target, "message", None)
-                if msg:
-                    await self.inline.form(text, message=msg, reply_markup=kbd, photo=img if img and img.startswith("http") else None)
+                uid = target.unit_id
+                if hasattr(target, "_units") and uid in target._units:
+                    target._units[uid]["buttons"] = kbd
+                imid = getattr(target, "inline_message_id", None)
+                if imid:
+                    btns = self.inline.generate_markup(kbd)
+                    await self._client.edit_message(imid, None, text, parse_mode="HTML", buttons=btns)
+                else:
+                    log.warning("_safe_edit: no inline_message_id, falling back")
+                    await target.edit(text, reply_markup=kbd)
             elif hasattr(target, "edit"):
                 await target.edit(text, reply_markup=kbd)
             else:
