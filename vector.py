@@ -1292,7 +1292,7 @@ class Vector(loader.Module):
         try:
             uid = getattr(target, "unit_id", None)
             if uid and hasattr(target, "inline_manager"):
-                await target.inline_manager._edit_unit(uid, text, reply_markup=kbd)
+                await target.inline_manager._edit_unit(unit_id=uid, text=text, reply_markup=kbd)
             elif hasattr(target, "edit"):
                 await target.edit(text, reply_markup=kbd)
             else:
