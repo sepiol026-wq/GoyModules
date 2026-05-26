@@ -1425,32 +1425,99 @@ class Vector(loader.Module):
 
         log.debug("vecupdate: downloaded %d bytes", len(src_bytes))
         remote_hash = hashlib.sha256(src_bytes).hexdigest()
+        remote_src = src_bytes.decode("utf-8", errors="replace")
 
         import inspect, sys, os
         local_hash = ""
         local_path = ""
+
+        # Method 1: inspect.getfile (normal imports)
         try:
             local_path = inspect.getfile(self.__class__)
             with open(local_path, "rb") as f:
                 local_hash = hashlib.sha256(f.read()).hexdigest()
+            log.debug("vecupdate: got local via inspect.getfile: %s", local_path)
         except TypeError:
+            pass
+
+        # Method 2: sys.modules __file__
+        if not local_hash:
             try:
                 mod = sys.modules.get(self.__class__.__module__)
-                local_path = getattr(mod, '__file__', '') or ''
-                if local_path and os.path.isfile(local_path):
+                fp = getattr(mod, '__file__', '') or ''
+                if fp and os.path.isfile(fp):
+                    local_path = fp
                     with open(local_path, "rb") as f:
                         local_hash = hashlib.sha256(f.read()).hexdigest()
-                else:
-                    log.debug("vecupdate: sys.modules __file__ not found or not a file for %s", self.__class__.__module__)
-            except Exception as e2:
-                log.warning("vecupdate: sys.modules fallback also failed: %r", e2)
-        except Exception as e:
-            log.warning("vecupdate: failed to read local file: %r", e)
+                    log.debug("vecupdate: got local via sys.modules __file__: %s", fp)
+            except Exception:
+                pass
+
+        # Method 3: inspect.getsource (works if loader populates linecache)
+        if not local_hash:
+            try:
+                src = inspect.getsource(self.__class__)
+                local_hash = hashlib.sha256(src.encode("utf-8")).hexdigest()
+                local_path = "<getsource>"
+                log.debug("vecupdate: got local via inspect.getsource, len=%d", len(src))
+            except (OSError, TypeError, IndentationError):
+                pass
+
+        # Method 4: compare remote source with getsource of module-level
+        if not local_hash:
+            try:
+                mod = sys.modules.get(self.__class__.__module__)
+                if mod:
+                    src = inspect.getsource(mod)
+                    local_hash = hashlib.sha256(src.encode("utf-8")).hexdigest()
+                    local_path = "<getsource-module>"
+                    log.debug("vecupdate: got local via getsource(module), len=%d", len(src))
+            except (OSError, TypeError, IndentationError):
+                pass
+
+        # Method 5: try loader's _local_storage
+        if not local_hash:
+            try:
+                ldr = self.lookup("Loader")
+                if hasattr(ldr, '_local_storage'):
+                    ls_mod = ldr._local_storage
+                    for attr in ('cache_dir', '_cache_dir', 'directory'):
+                        d = getattr(ls_mod, attr, None)
+                        if d and os.path.isdir(str(d)):
+                            for root, _, files in os.walk(str(d)):
+                                for fn in files:
+                                    if 'Vector' in fn and fn.endswith('.py'):
+                                        fp = os.path.join(root, fn)
+                                        with open(fp, "rb") as f:
+                                            local_hash = hashlib.sha256(f.read()).hexdigest()
+                                        local_path = fp
+                                        log.debug("vecupdate: got local via _local_storage: %s", fp)
+                                        break
+                                if local_hash:
+                                    break
+                            if local_hash:
+                                break
+            except Exception as e5:
+                log.debug("vecupdate: _local_storage search failed: %r", e5)
+
+        # Method 6: compare remote source text vs local class source text (normalized)
+        if not local_hash:
+            try:
+                mod_src = inspect.getsource(self.__class__)
+                # Compare after normalizing whitespace to hide encoding diffs
+                norm_remote = "\n".join(remote_src.splitlines())
+                norm_local = "\n".join(mod_src.splitlines())
+                if norm_remote == norm_local:
+                    local_hash = remote_hash
+                    local_path = "<getsource-normalized>"
+                    log.debug("vecupdate: sources match after normalization")
+            except Exception:
+                pass
 
         if local_hash:
             log.debug("vecupdate: local_hash=%s remote_hash=%s path=%s", local_hash[:16], remote_hash[:16], local_path or "?")
         else:
-            log.warning("vecupdate: could not read local file, assuming hashes differ")
+            log.warning("vecupdate: could not read local source via any method, assuming hashes differ")
 
         if remote_hash == local_hash:
             log.info("vecupdate: hashes match, showing force-update prompt")
