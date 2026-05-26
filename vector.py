@@ -1289,23 +1289,16 @@ class Vector(loader.Module):
         tname = type(target).__name__
         log.debug("_safe_edit: kbd_rows=%d target=%s", len(kbd) if kbd else 0, tname)
 
-        if "Call" in tname:
-            kw = {"reply_markup": kbd}
-        else:
-            kw = {"buttons": kbd}
-
-        log.debug("_safe_edit: using kw=%s", list(kw.keys()))
-
         try:
             if hasattr(target, "edit"):
-                await target.edit(text, **kw)
+                await target.edit(text, reply_markup=kbd)
             else:
-                await utils.answer(target, text, **kw)
+                await utils.answer(target, text, reply_markup=kbd)
         except TypeError:
             if hasattr(target, "edit"):
-                await target.edit(text, **kw)
+                await target.edit(text, reply_markup=kbd)
             else:
-                await utils.answer(target, text, **kw)
+                await utils.answer(target, text, reply_markup=kbd)
         except Exception as e:
             log.warning("_safe_edit: edit failed: %r", e)
             with suppress(Exception):
