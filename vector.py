@@ -1350,7 +1350,10 @@ class Vector(loader.Module):
                 ekw = {}
                 if img and img.startswith("http"):
                     ekw["photo"] = img
-                await target.edit(text, reply_markup=kbd, **ekw)
+                result = await target.edit(text, reply_markup=kbd, **ekw)
+                log.debug("_safe_edit: InlineCall edit returned %r", result)
+                if not result:
+                    log.warning("_safe_edit: InlineCall edit failed, result=%r", result)
             else:
                 await utils.answer(target, text, reply_markup=kbd)
         except Exception as e:
