@@ -1251,7 +1251,6 @@ class Vector(loader.Module):
                                 kws.get('inline_message_id') or kws.get('chat_id'),
                                 kws.get('message_id'),
                                 text=text,
-                                file=img,
                                 parse_mode='HTML',
                                 buttons=imgr.generate_markup(kbd)
                             )
@@ -1277,16 +1276,10 @@ class Vector(loader.Module):
                 log.warning("Bot API inline edit failed: %r", e)
 
         try:
-            if img and img.startswith("http"):
-                if hasattr(target, "edit"):
-                    await target.edit(text, reply_markup=kbd, file=img)
-                else:
-                    await utils.answer(target, text, reply_markup=kbd, file=img)
+            if hasattr(target, "edit"):
+                await target.edit(text, reply_markup=kbd)
             else:
-                if hasattr(target, "edit"):
-                    await target.edit(text, reply_markup=kbd)
-                else:
-                    await utils.answer(target, text, reply_markup=kbd)
+                await utils.answer(target, text, reply_markup=kbd)
                 
         except TypeError:
             if hasattr(target, "edit"):
