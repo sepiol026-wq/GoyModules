@@ -1296,7 +1296,7 @@ class Vector(loader.Module):
                     target._units[uid]["buttons"] = kbd
                 result = await target.edit(text, reply_markup=kbd)
                 if not result:
-                    log.debug("_safe_edit: target.edit() returned False, trying direct bot edit")
+                    log.debug("_safe_edit: target.edit() returned False (text_len=%d), trying direct bot edit", len(text))
                     try:
                         btns = self.inline.generate_markup(kbd)
                         bot = getattr(self.inline, "_bot_client", None)
@@ -1305,8 +1305,8 @@ class Vector(loader.Module):
                             await bot.edit_message(imid, None, text, parse_mode="HTML", link_preview=False, buttons=btns)
                         else:
                             raise RuntimeError("no bot/imid/buttons")
-                    except Exception:
-                        log.debug("_safe_edit: direct bot edit failed, recreating form")
+                    except Exception as e2:
+                        log.debug("_safe_edit: direct bot edit failed: %r", e2)
                         with suppress(Exception):
                             await target.delete()
                         unit = target._units.get(uid, {})
