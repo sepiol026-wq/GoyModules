@@ -1292,7 +1292,7 @@ class Vector(loader.Module):
         try:
             uid = getattr(target, "unit_id", None)
             if uid and "Call" not in tname:
-                await target.edit(uid, kbd, text=text)
+                await target.edit(uid, reply_markup=kbd, text=text)
             elif hasattr(target, "edit"):
                 await target.edit(text, reply_markup=kbd)
             else:
