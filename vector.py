@@ -1295,11 +1295,12 @@ class Vector(loader.Module):
                 if hasattr(target, "_units") and uid in target._units:
                     target._units[uid]["buttons"] = kbd
                 imid = getattr(target, "inline_message_id", None)
-                if imid:
+                bot = getattr(self.inline, "_bot_client", None)
+                if imid and bot:
                     btns = self.inline.generate_markup(kbd)
-                    await self._client.edit_message(imid, None, text, parse_mode="HTML", buttons=btns)
+                    await bot.edit_message(imid, None, text, parse_mode="HTML", buttons=btns)
                 else:
-                    log.warning("_safe_edit: no inline_message_id, falling back")
+                    log.warning("_safe_edit: no imid or bot_client, falling back")
                     await target.edit(text, reply_markup=kbd)
             elif hasattr(target, "edit"):
                 await target.edit(text, reply_markup=kbd)
