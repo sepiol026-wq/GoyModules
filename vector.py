@@ -1888,3 +1888,74 @@ class Vector(loader.Module):
             blks.append(f"<i>{self.strings['v_more_comments']}</i>")
             
         return "\n\n".join(blks)
+
+    @loader.inline_handler()
+    async def vector_inline(self, query):
+        q = (getattr(query, "query", "") or getattr(query, "args", "") or "").strip()
+        log.info("vector_inline: query=%r", q)
+
+        dl_url = f"{API_ROOT}/modules/{quote('Vector', safe='')}/source"
+        _strip = lambda t: re.sub(r"<tg-emoji[^>]*>([^<]*)</tg-emoji>", r"\1", t)
+
+        if not q:
+            return [{
+                "type": "article",
+                "id": "vecupdate",
+                "title": f"🔄 {_strip(self.strings['v_upd_req'])}",
+                "description": _strip(self.strings["v_upd_same"]).replace("<b>", "").replace("</b>", ""),
+                "thumb": "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png",
+                "message": f"🔎 {_strip(self.strings['v_upd_req'])}",
+                "reply_markup": [[
+                    {"text": _strip(self.strings["v_upd_force_btn"]), "callback": self._vecupdate_force, "args": (dl_url,)},
+                ]]
+            }]
+
+        if len(q) > 120:
+            return [{
+                "type": "article",
+                "id": "err_len",
+                "title": f"⚠️ {_strip(self.strings['v_err_len'])}",
+                "description": "",
+                "message": f"⚠️ {_strip(self.strings['v_err_len'])}",
+            }]
+
+        token = await self._get_active_token()
+        if not token:
+            return []
+
+        raw = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
+        m_list = []
+        if isinstance(raw, dict):
+            m_list = raw.get("results", [])
+        elif isinstance(raw, list):
+            m_list = raw
+        m_list = [self._normalize_module(x) for x in m_list if isinstance(x, dict)]
+
+        if not m_list:
+            return [{
+                "type": "article",
+                "id": "notfound",
+                "title": _strip(self.strings["v_err_404"]).replace("<code>", "").replace("</code>", "").format(q=q),
+                "description": "",
+                "message": _strip(self.strings["v_err_404"]).format(q=f"<code>{utils.escape_html(q)}</code>"),
+            }]
+
+        results = []
+        for i, item in enumerate(m_list[:30]):
+            name = item.get("name", "Unknown")
+            dev = item.get("author", "@Unknown")
+            desc = (item.get("description") or "")[:200]
+            single = [item]
+            card = _strip(self._build_html(item, 1, 1))
+            kbd = self._build_kbd(item, 0, single, q)
+            results.append({
+                "type": "article",
+                "id": f"v_{i}_{name}",
+                "title": f"{name} by {dev}",
+                "description": desc or name,
+                "thumb": item.get("banner", ""),
+                "message": card,
+                "reply_markup": kbd,
+            })
+
+        return results
