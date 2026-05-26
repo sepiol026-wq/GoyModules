@@ -1211,40 +1211,63 @@ class Vector(loader.Module):
 
     def _build_html(self, m_data: dict, current_idx: int, total_cnt: int) -> str:
         log.debug("_build_html: name=%s idx=%d/%d", m_data.get("name", "?"), current_idx, total_cnt)
+        CAP = 960
+
         name = utils.escape_html(str(m_data.get("name", "Unknown")))
         author = utils.escape_html(str(m_data.get("author", "@Unknown")))
         ver = str(m_data.get("version", "?.?.?"))
-        
-        lines = [f"{self.ICONS['module']} <code>{name}</code> <b>{self.strings['v_dev_lbl']}</b> <code>{author}</code>"]
-        if ver != "?.?.?":
-            lines[-1] += f" (<code>v{utils.escape_html(ver)}</code>)"
-            
-        status = self.strings["v_dev_ofc"] if m_data.get("official") else self.strings["v_dev_unofc"]
-        lines.append(f"{self.ICONS['verified']} <b>{self.strings['v_dev_str']}</b> <code>{status}</code>")
-        if total_cnt > 1:
-            lines.append(f"{self.ICONS['modules_list']} <i>{self.strings['v_page'].format(idx=current_idx, total=total_cnt)}</i>")
-            
-        desc = m_data.get("description")
-        if desc:
-            lines.append(f"\n{self.ICONS['description']} <b>{self.strings['v_info']}</b>\n<blockquote expandable>{utils.escape_html(str(desc))}</blockquote>")
-            
-        doc_str = "\n".join(lines)
-        
-        cmds = m_data.get("commands", [])
-        if cmds:
-            c_lines = []
-            for i, c in enumerate(cmds):
-                cn = utils.escape_html(str(c.get("name", "")))
-                cd = utils.escape_html(str(c.get("description", ""))).split("\n")[0]
-                c_lines.append(f"<code>{self.get_prefix()}{cn}</code> {cd}")
-            doc_str += f"\n\n{self.ICONS['command']} <b>{self.strings['v_cmds']}</b>\n<blockquote expandable>{chr(10).join(c_lines)}</blockquote>"
 
-        deps = m_data.get("dependencies", [])
-        if deps:
-            d_lines = [f"<code>{utils.escape_html(d)}</code>" for d in deps]
-            doc_str += f"\n\n{self.ICONS['dependency']} <b>{self.strings['v_reqs']}</b>\n<blockquote expandable>{chr(10).join(d_lines)}</blockquote>"
-            
-        return doc_str[:3900]
+        header = f"{self.ICONS['module']} <code>{name}</code> <b>{self.strings['v_dev_lbl']}</b> <code>{author}</code>"
+        if ver != "?.?.?":
+            header += f" (<code>v{utils.escape_html(ver)}</code>)"
+        status_text = self.strings["v_dev_ofc"] if m_data.get("official") else self.strings["v_dev_unofc"]
+        status = f"{self.ICONS['verified']} <b>{self.strings['v_dev_str']}</b> <code>{status_text}</code>"
+        page = f"{self.ICONS['modules_list']} <i>{self.strings['v_page'].format(idx=current_idx, total=total_cnt)}</i>" if total_cnt > 1 else ""
+
+        pfx = [header, status]
+        if page:
+            pfx.append(page)
+        used = len("\n".join(pfx))
+
+        # --- description ---
+        desc = m_data.get("description")
+        desc_block = ""
+        if desc and used < CAP - 20:
+            desc_raw = utils.escape_html(str(desc))
+            hdr = f"\n{self.ICONS['description']} <b>{self.strings['v_info']}</b>\n<blockquote expandable>"
+            ftr = "</blockquote>"
+            room = CAP - used - len(hdr) - len(ftr) - 8
+            if room > 0:
+                if len(desc_raw) > room:
+                    desc_raw = desc_raw[:room - 3].rstrip() + "..."
+                if desc_raw:
+                    desc_block = f"{hdr}{desc_raw}{ftr}"
+
+        # --- commands ---
+        cmds = m_data.get("commands", [])
+        cmd_block = ""
+        if cmds:
+            est = used + len(desc_block) + 30
+            if est < CAP:
+                hdr = f"\n\n{self.ICONS['command']} <b>{self.strings['v_cmds']}</b>\n<blockquote expandable>"
+                ftr = "</blockquote>"
+                room = CAP - used - len(desc_block) - len(hdr) - len(ftr) - 5
+                if room > 0:
+                    cl = []
+                    for c in cmds:
+                        cn = utils.escape_html(str(c.get("name", "")))
+                        cd = utils.escape_html(str(c.get("description", ""))).split("\n")[0]
+                        line = f"<code>{self.get_prefix()}{cn}</code> {cd}"
+                        if room - len(line) - 1 < 0:
+                            break
+                        cl.append(line)
+                        room -= len(line) + 1
+                    if cl:
+                        if len(cl) < len(cmds):
+                            cl.append(f"... +{len(cmds) - len(cl)} more")
+                        cmd_block = f"{hdr}{chr(10).join(cl)}{ftr}"
+
+        return f"{'\n'.join(pfx)}{desc_block}{cmd_block}".rstrip()[:CAP]
 
     def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False) -> list:
         log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
