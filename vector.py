@@ -1334,14 +1334,14 @@ class Vector(loader.Module):
         await self._safe_edit(form, text, kbd, item.get("banner"))
 
     @loader.command(
-        ru_doc="Обновить модуль Vector.",
-        jp_doc="Vectorモジュールを更新します。",
-        uk_doc="Оновити модуль Vector.",
-        de_doc="Vector-Modul aktualisieren.",
-        neofit_doc="Upgrade the spyglass.",
-        tiktok_doc="Обновить эту темку.",
-        leet_doc="Upd473 V3c70r m0dul3.",
-        uwu_doc="Update Vectow moduwe owo."
+        ru_doc="[-f|--force] — Обновить модуль Vector.",
+        jp_doc="[-f|--force] — Vectorモジュールを更新します。",
+        uk_doc="[-f|--force] — Оновити модуль Vector.",
+        de_doc="[-f|--force] — Vector-Modul aktualisieren.",
+        neofit_doc="[-f|--force] — git pull the spyglass.",
+        tiktok_doc="[-f|--force] — Обновить эту темку.",
+        leet_doc="[-f|--force] — Upd473 V3c70r m0dul3.",
+        uwu_doc="[-f|--force] — Update Vectow moduwe owo."
     )
     async def vecupdate(self, msg: Message):
         """Update Vector module from the registry."""
