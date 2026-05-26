@@ -1286,25 +1286,12 @@ class Vector(loader.Module):
 
 
     async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
-        log.debug("_safe_edit: has_img=%s kbd_rows=%d", bool(img), len(kbd) if kbd else 0)
+        log.debug("_safe_edit: has_img=%s kbd_rows=%d target_type=%s", bool(img), len(kbd) if kbd else 0, type(target).__name__)
 
-        try:
-            if hasattr(target, "edit"):
-                await target.edit(text, reply_markup=kbd)
-            else:
-                await utils.answer(target, text, reply_markup=kbd)
-            return
-        except TypeError:
-            if hasattr(target, "edit"):
-                await target.edit(text, reply_markup=kbd)
-            else:
-                await utils.answer(target, text, reply_markup=kbd)
-            return
-        except Exception as e:
-            log.warning("MTProto edit failed: %r, trying Bot API", e)
+        is_form = "Form" in type(target).__name__
 
-        if hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
-            log.debug("_safe_edit: falling back to Bot API inline edit")
+        if is_form and hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
+            log.debug("_safe_edit: form → Bot API")
             try:
                 if img and img.startswith("http"):
                     await target.edit(text, reply_markup=kbd, photo=img)
@@ -1312,10 +1299,23 @@ class Vector(loader.Module):
                     await target.edit(text, reply_markup=kbd)
                 return
             except Exception as e:
-                log.warning("Bot API inline edit failed: %r", e)
+                log.warning("_safe_edit: Bot API edit failed: %r, falling back", e)
 
-        with suppress(Exception):
-            await target.answer(self.strings["v_err_gui"], show_alert=True)
+        log.debug("_safe_edit: callback → MTProto")
+        try:
+            if hasattr(target, "edit"):
+                await target.edit(text, reply_markup=kbd)
+            else:
+                await utils.answer(target, text, reply_markup=kbd)
+        except TypeError:
+            if hasattr(target, "edit"):
+                await target.edit(text, reply_markup=kbd)
+            else:
+                await utils.answer(target, text, reply_markup=kbd)
+        except Exception as e:
+            log.warning("_safe_edit: MTProto edit failed: %r", e)
+            with suppress(Exception):
+                await target.answer(self.strings["v_err_gui"], show_alert=True)
 
 
 
@@ -1349,11 +1349,13 @@ class Vector(loader.Module):
         )
         
         token = await self._get_active_token()
+        if not token:
+            log.warning("vectorcmd: no token, aborting")
+            return await self._safe_edit(form, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", [[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+
         log.info("Vector search request q=%r token=%s", q, bool(token))
         raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
-        if not token and self._last_ban_notice:
-            return await self._safe_edit(form, self._last_ban_notice, [])
-        
+
         if self._last_http_code == 401:
             log.info("vectorcmd: got 401, forcing token refresh")
             token = await self._get_active_token(force=True)
@@ -1368,7 +1370,7 @@ class Vector(loader.Module):
         
         if not m_list:
             log.debug("vectorcmd: no results, showing 404")
-            return await self._safe_edit(form, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", [])
+            return await self._safe_edit(form, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", [[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
 
         item = m_list[0]
         kbd = self._build_kbd(item, 0, m_list, q)
