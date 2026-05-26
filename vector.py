@@ -1901,7 +1901,7 @@ class Vector(loader.Module):
         uwu_doc="<quewy> — seawch moduwes in Vectow (´• ω •`)."
     )
     async def vector(self, query):
-        q = (getattr(query, "query", "") or getattr(query, "args", "") or "").strip()
+        q = (getattr(query, "args", "") or "").strip()
         log.info("vector inline: query=%r", q)
 
         dl_url = f"{API_ROOT}/modules/{quote('Vector', safe='')}/source"
