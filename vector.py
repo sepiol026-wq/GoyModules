@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 2, 6)
+__version__ = (2, 2, 7)
 
 import asyncio
 import base64
@@ -1221,10 +1221,6 @@ class Vector(loader.Module):
 
 
     async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
-        safe_url = img if img and img.startswith("http") else ""
-      
-        final_text = f'<a href="{safe_url}">&#8203;</a>\n{text}' if safe_url else text
-        
         if hasattr(target, "inline_manager") and getattr(target, "inline_manager", None):
             try:
                 imgr = target.inline_manager
@@ -1241,48 +1237,62 @@ class Vector(loader.Module):
                     kws["message_id"] = target.message_id
                     
                 if kws:
-                    if hasattr(imgr.bot, 'edit_message_text'):
-                        
-                        await imgr.bot.edit_message_text(
-                            text=final_text,
-                            **kws,
-                            reply_markup=imgr.generate_markup(kbd),
-                            link_preview_options={
-                                "url": safe_url,
-                                "prefer_large_media": True,
-                                "show_above_text": True
-                            } if safe_url else None
-                        )
+                    if img and img.startswith("http"):
+                        if hasattr(imgr.bot, 'edit_message_media'):
+                            
+                            await imgr.bot.edit_message_media(
+                                media={"type": "photo", "media": img, "caption": text, "parse_mode": "HTML"},
+                                **kws,
+                                reply_markup=imgr.generate_markup(kbd)
+                            )
+                        else:
+                            
+                            await imgr.bot.edit_message(
+                                kws.get('inline_message_id') or kws.get('chat_id'),
+                                kws.get('message_id'),
+                                text=text,
+                                file=img,
+                                parse_mode='HTML',
+                                buttons=imgr.generate_markup(kbd)
+                            )
                     else:
-                        
-                        await imgr.bot.edit_message(
-                            kws.get('inline_message_id') or kws.get('chat_id'),
-                            kws.get('message_id'),
-                            text=final_text,
-                            parse_mode='HTML',
-                            link_preview=True if safe_url else False,
-                            buttons=imgr.generate_markup(kbd)
-                        )
+                        if hasattr(imgr.bot, 'edit_message_text'):
+                            
+                            await imgr.bot.edit_message_text(
+                                text=text,
+                                **kws,
+                                reply_markup=imgr.generate_markup(kbd)
+                            )
+                        else:
+                            
+                            await imgr.bot.edit_message(
+                                kws.get('inline_message_id') or kws.get('chat_id'),
+                                kws.get('message_id'),
+                                text=text,
+                                parse_mode='HTML',
+                                buttons=imgr.generate_markup(kbd)
+                            )
                     return
             except Exception as e:
                 log.warning("Bot API inline edit failed: %r", e)
 
         try:
-            kwargs = {
-                "text": final_text,
-                "reply_markup": kbd,
-                "disable_web_page_preview": False
-            }
-            if hasattr(target, "edit"):
-                await target.edit(**kwargs)
+            if img and img.startswith("http"):
+                if hasattr(target, "edit"):
+                    await target.edit(text, reply_markup=kbd, file=img)
+                else:
+                    await utils.answer(target, text, reply_markup=kbd, file=img)
             else:
-                await utils.answer(target, **kwargs)
+                if hasattr(target, "edit"):
+                    await target.edit(text, reply_markup=kbd)
+                else:
+                    await utils.answer(target, text, reply_markup=kbd)
                 
         except TypeError:
             if hasattr(target, "edit"):
-                await target.edit(final_text, reply_markup=kbd)
+                await target.edit(text, reply_markup=kbd)
             else:
-                await utils.answer(target, final_text, reply_markup=kbd)
+                await utils.answer(target, text, reply_markup=kbd)
                 
         except Exception as e:
             log.warning("Fallback MTProto edit failed: %r", e)
@@ -1315,6 +1325,7 @@ class Vector(loader.Module):
             reply_markup=[[{"text": "ㅤ", "callback": self.cb_dummy}]],
             silent=True
         )
+        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>", [[{"text": "ㅤ", "callback": self.cb_dummy}]], "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vsearch.png")
         
         token = await self._get_active_token()
         log.info("Vector search request q=%r token=%s", q, bool(token))
