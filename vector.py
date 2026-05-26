@@ -141,14 +141,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Unknown error: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>You are on the latest version. Update anyway?</b>",
         "v_upd_force_btn": "🧭 Update",
-        "v_dlcoll_hdr": "Collection: {name}",
+        "v_dlcoll_hdr": "<b>Collection {name}</b>",
         "v_dlcoll_count": "{count} modules",
-        "v_dlcoll_start": "Starting install…",
-        "v_dlcoll_progress": "[{done}/{total}] {name}",
-        "v_dlcoll_done": "Installed {ok}/{total}",
+        "v_dlcoll_start": "<b>Installing all modules from collection...</b>",
+        "v_dlcoll_done": "<b>All modules from collection installed</b>",
+        "v_dlcoll_done_partial": "<b>Some modules failed to install</b>",
+        "v_dlcoll_done_none": "<b>No modules were installed</b>",
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
-        "v_dlcoll_empty": "Collection is empty",
-        "v_dlcoll_not_found": "Collection not found",
+        "v_dlcoll_empty": "<b>Collection is empty</b>",
+        "v_dlcoll_not_found": "<b>Collection not found</b>",
         "v_dlcoll_max_batch": "Collection has {total} modules, max {max} per batch. Installing first {max}…",
         "v_upd_cancel": "🚫 Cancel",
     }
@@ -239,14 +240,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Неизвестная ошибка: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>У тебя последняя версия. Обновиться принудительно?</b>",
         "v_upd_force_btn": "🧭 Обновиться",
-        "v_dlcoll_hdr": "Коллекция: {name}",
+        "v_dlcoll_hdr": "<b>Коллекция {name}</b>",
         "v_dlcoll_count": "Модулей: {count}",
-        "v_dlcoll_start": "Начинаю установку…",
-        "v_dlcoll_progress": "[{done}/{total}] {name}",
-        "v_dlcoll_done": "Установлено {ok}/{total}",
+        "v_dlcoll_start": "<b>Устанавливаю все модули из коллекции...</b>",
+        "v_dlcoll_done": "<b>Все модули из коллекции установлены</b>",
+        "v_dlcoll_done_partial": "<b>Часть модулей не установилась</b>",
+        "v_dlcoll_done_none": "<b>Ни один модуль не установлен</b>",
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
-        "v_dlcoll_empty": "Коллекция пуста",
-        "v_dlcoll_not_found": "Коллекция не найдена",
+        "v_dlcoll_empty": "<b>Коллекция пуста</b>",
+        "v_dlcoll_not_found": "<b>Коллекция не найдена</b>",
         "v_dlcoll_max_batch": "В коллекции {total} модулей, макс {max} за раз. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отмена",
     }
@@ -337,14 +339,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "不明なエラー: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>最新バージョンですが、とにかくアップデートしますか？</b>",
         "v_upd_force_btn": "🧭 アップデート",
-        "v_dlcoll_hdr": "コレクション: {name}",
+        "v_dlcoll_hdr": "<b>コレクション {name}</b>",
         "v_dlcoll_count": "{count}モジュール",
-        "v_dlcoll_start": "インストール開始…",
-        "v_dlcoll_progress": "[{done}/{total}] {name}",
-        "v_dlcoll_done": "{ok}/{total}インストール完了",
+        "v_dlcoll_start": "<b>コレクションからすべてのモジュールをインストール中...</b>",
+        "v_dlcoll_done": "<b>コレクションからすべてのモジュールをインストールしました</b>",
+        "v_dlcoll_done_partial": "<b>一部のモジュールのインストールに失敗しました</b>",
+        "v_dlcoll_done_none": "<b>モジュールがインストールされませんでした</b>",
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
-        "v_dlcoll_empty": "コレクションは空です",
-        "v_dlcoll_not_found": "コレクションが見つかりません",
+        "v_dlcoll_empty": "<b>コレクションは空です</b>",
+        "v_dlcoll_not_found": "<b>コレクションが見つかりません</b>",
         "v_dlcoll_max_batch": "コレクションに{total}モジュール、最大{max}まで。最初の{max}をインストール中…",
         "v_upd_cancel": "🚫 キャンセル",
     }
@@ -435,14 +438,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Невідома помилка: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>У тебе остання версія. Оновитися примусово?</b>",
         "v_upd_force_btn": "🧭 Оновитися",
-        "v_dlcoll_hdr": "Колекція: {name}",
+        "v_dlcoll_hdr": "<b>Колекція {name}</b>",
         "v_dlcoll_count": "Модулів: {count}",
-        "v_dlcoll_start": "Починаю встановлення…",
-        "v_dlcoll_progress": "[{done}/{total}] {name}",
-        "v_dlcoll_done": "Встановлено {ok}/{total}",
+        "v_dlcoll_start": "<b>Встановлюю всі модулі з колекції...</b>",
+        "v_dlcoll_done": "<b>Всі модулі з колекції встановлено</b>",
+        "v_dlcoll_done_partial": "<b>Деякі модулі не вдалося встановити</b>",
+        "v_dlcoll_done_none": "<b>Жоден модуль не встановлено</b>",
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
-        "v_dlcoll_empty": "Колекція порожня",
-        "v_dlcoll_not_found": "Колекцію не знайдено",
+        "v_dlcoll_empty": "<b>Колекція порожня</b>",
+        "v_dlcoll_not_found": "<b>Колекцію не знайдено</b>",
         "v_dlcoll_max_batch": "У колекції {total} модулів, макс {max} за раз. Ставлю перші {max}…",
         "v_upd_cancel": "🚫 Скасувати",
     }
@@ -533,14 +537,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Unbekannter Fehler: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>Du hast bereits die neueste Version. Trotzdem aktualisieren?</b>",
         "v_upd_force_btn": "🧭 Aktualisieren",
-        "v_dlcoll_hdr": "Sammlung: {name}",
+        "v_dlcoll_hdr": "<b>Sammlung {name}</b>",
         "v_dlcoll_count": "{count} Module",
-        "v_dlcoll_start": "Installation beginnt…",
-        "v_dlcoll_progress": "[{done}/{total}] {name}",
-        "v_dlcoll_done": "{ok}/{total} installiert",
+        "v_dlcoll_start": "<b>Alle Module aus der Sammlung werden installiert...</b>",
+        "v_dlcoll_done": "<b>Alle Module aus der Sammlung installiert</b>",
+        "v_dlcoll_done_partial": "<b>Einige Module konnten nicht installiert werden</b>",
+        "v_dlcoll_done_none": "<b>Keine Module installiert</b>",
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
-        "v_dlcoll_empty": "Sammlung ist leer",
-        "v_dlcoll_not_found": "Sammlung nicht gefunden",
+        "v_dlcoll_empty": "<b>Sammlung ist leer</b>",
+        "v_dlcoll_not_found": "<b>Sammlung nicht gefunden</b>",
         "v_dlcoll_max_batch": "Sammlung hat {total} Module, max {max} pro Durchlauf. Installiere erste {max}…",
         "v_upd_cancel": "🚫 Abbrechen",
     }
@@ -631,14 +636,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "unknown error: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>Up to date. git pull --force?</b>",
         "v_upd_force_btn": "🧭 git pull",
-        "v_dlcoll_hdr": "Collection: {name}",
+        "v_dlcoll_hdr": "<b>Collection {name}</b>",
         "v_dlcoll_count": "{count} mods",
-        "v_dlcoll_start": "pulling…",
-        "v_dlcoll_progress": "[{done}/{total}] {name}",
-        "v_dlcoll_done": "pulled {ok}/{total}",
+        "v_dlcoll_start": "<b>git cloning collection and installing all mods via git pull && makepkg -si...</b>",
+        "v_dlcoll_done": "<b>All mods from collection installed (no errors, chad moment)</b>",
+        "v_dlcoll_done_partial": "<b>Some mods failed to install (skill issue)</b>",
+        "v_dlcoll_done_none": "<b>No mods installed (RTFM or gtfo, normie)</b>",
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
-        "v_dlcoll_empty": "empty collection",
-        "v_dlcoll_not_found": "404 collection",
+        "v_dlcoll_empty": "<b>Empty collection, cope harder</b>",
+        "v_dlcoll_not_found": "<b>404 collection not found, seethe</b>",
         "v_dlcoll_max_batch": "{total} mods, max {max}. pulling first {max}…",
         "v_upd_cancel": "🚫 abort",
     }
@@ -729,14 +735,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Непонятная ошибка: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>У тебя ласт версия. Все равно обновить?</b>",
         "v_upd_force_btn": "🧭 Обнова",
-        "v_dlcoll_hdr": "Подборка: {name}",
+        "v_dlcoll_hdr": "<b>Подборка {name}</b>",
         "v_dlcoll_count": "Темок: {count}",
-        "v_dlcoll_start": "Ща всё встанет…",
-        "v_dlcoll_progress": "[{done}/{total}] {name}",
-        "v_dlcoll_done": "Встало {ok}/{total}",
+        "v_dlcoll_start": "<b>Качаем все темки из подборки... сигма, подожди секунду, щавель уже в деле</b>",
+        "v_dlcoll_done": "<b>Все темки из подборки установлены! Сигма момент</b>",
+        "v_dlcoll_done_partial": "<b>Плаки, плаки. Некоторые темки не установились, кароче фейл</b>",
+        "v_dlcoll_done_none": "<b>Ни одна темка не встала. Кринж</b>",
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
-        "v_dlcoll_empty": "Подборка пустая",
-        "v_dlcoll_not_found": "Нет такой подборки",
+        "v_dlcoll_empty": "<b>Подборка пустая, клоун</b>",
+        "v_dlcoll_not_found": "<b>Нет такой подборки, ризз или ливни</b>",
         "v_dlcoll_max_batch": "Темок {total}, макс {max}. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отбой",
     }
@@ -827,14 +834,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "unkn0wn 3rr: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>U r 0n 7h3 l47357 v3r510n, pull upd4735 4nyw4y?</b>",
         "v_upd_force_btn": "🧭 Upd473",
-        "v_dlcoll_hdr": "C0ll3c710n: {name}",
+        "v_dlcoll_hdr": "<b>C0ll3c710n {name}</b>",
         "v_dlcoll_count": "{count} m0d5",
-        "v_dlcoll_start": "1n574ll1n9…",
-        "v_dlcoll_progress": "[{done}/{total}] {name}",
-        "v_dlcoll_done": "1n574ll3d {ok}/{total}",
+        "v_dlcoll_start": "<b>1n574ll1n9 4ll m0d5 fr0m c0ll3c710n...</b>",
+        "v_dlcoll_done": "<b>4ll m0d5 fr0m c0ll3c710n 1n574ll3d 5ucc355fully!</b>",
+        "v_dlcoll_done_partial": "<b>50m3 m0d5 f41l3d 2 1n574ll, b17ch</b>",
+        "v_dlcoll_done_none": "<b>N0 m0d5 1n574ll3d, f4gg07</b>",
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
-        "v_dlcoll_empty": "3mp7y c0ll3c710n",
-        "v_dlcoll_not_found": "c0ll3c710n n07 f0und",
+        "v_dlcoll_empty": "<b>3mp7y c0ll3c710n</b>",
+        "v_dlcoll_not_found": "<b>C0ll3c710n n07 f0und</b>",
         "v_dlcoll_max_batch": "{total} m0d5, m4x {max}. 1n574ll1n9 f1r57 {max}…",
         "v_upd_cancel": "🚫 n0p3",
     }
@@ -925,14 +933,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Unknown ewwow: <code>{detail}</code> >~<",
         "v_upd_same": "🌟 <b>You awe on da watest vewsion, puww updates anyway? (´• ω •`)</b>",
         "v_upd_force_btn": "🧭 Puww Update",
-        "v_dlcoll_hdr": "Cowwection: {name}",
+        "v_dlcoll_hdr": "<b>Cowwection {name}</b>",
         "v_dlcoll_count": "{count} moduwes",
-        "v_dlcoll_start": "Instawwing… (・ω・)",
-        "v_dlcoll_progress": "[{done}/{total}] {name}",
-        "v_dlcoll_done": "Instawwed {ok}/{total} (´• ω •`)",
+        "v_dlcoll_start": "<b>Instawwing aww da moduwes fwom cowwection... pwease wait a wittle, nyaa~ >w<</b>",
+        "v_dlcoll_done": "<b>Aww moduwes fwom cowwection instawwed successfuwwy! OwO yippee~</b>",
+        "v_dlcoll_done_partial": "<b>Some moduwes faiwed to instaww... sowwy senpai :c</b>",
+        "v_dlcoll_done_none": "<b>Nyooo moduwes instawwed... >///<</b>",
         "v_dlcoll_fail_item": "❌ {name}: {reason}",
-        "v_dlcoll_empty": "Cowwection is emptyy ;-;",
-        "v_dlcoll_not_found": "Cowwection not found owo",
+        "v_dlcoll_empty": "<b>Cowwection is emptyy ;-;</b>",
+        "v_dlcoll_not_found": "<b>Cowwection not found owo</b>",
         "v_dlcoll_max_batch": "{total} moduwes, max {max}. Instawwing fiwst {max}…",
         "v_upd_cancel": "🚫 Nu ;-;",
     }
@@ -1671,7 +1680,7 @@ class Vector(loader.Module):
         leet_doc="<5lu9_0r_url> — pull 3n71r3 m0dul3 c0ll3c710n fr0m V3c70r.",
         uwu_doc="<swug-ow-url> — downwoad and instaww entiwe moduwe cowwection fwom Vectow (・ω・)."
     )
-        async def vecdlcmd(self, msg: Message):
+    async def vecdlcmd(self, msg: Message):
         raw_arg = utils.get_args_raw(msg).strip()
         slug = raw_arg.split("/collections/")[-1].split("/")[0].split("?")[0] if "/collections/" in raw_arg else raw_arg
         log.info("vecdl: raw=%r slug=%r", raw_arg, slug)
@@ -1682,21 +1691,14 @@ class Vector(loader.Module):
         if not token:
             return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
 
-        form = await self.inline.form(
-            f"{self.ICONS['search']} <b>Fetching…</b>",
-            msg,
-            reply_markup=[[{"text": "…", "callback": self.cb_dummy}]],
-            silent=True
-        )
-
         raw = await self._net_req("GET", f"/api/collections/{quote(slug, safe='')}", token=token)
         if not raw or not raw.get("ok"):
-            return await self._safe_edit(form, f"{self.ICONS['error']} <b>{self.strings['v_dlcoll_not_found']}</b>", [[{"text": "✖️", "action": "close"}]])
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_dlcoll_not_found']}</b>")
 
         col = raw["collection"]
         modules = [entry["module"] for entry in (col.get("modules") or []) if entry.get("module")]
         if not modules:
-            return await self._safe_edit(form, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_empty']}</b>", [[{"text": "✖️", "action": "close"}]])
+            return await utils.answer(msg, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_empty']}</b>")
 
         max_batch = int(self.config.get("max_batch", 50))
         total_orig = len(modules)
@@ -1704,7 +1706,12 @@ class Vector(loader.Module):
             modules = modules[:max_batch]
 
         col_name = col.get("name", slug)
-        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.strings['v_dlcoll_start']}", [])
+        form = await self.inline.form(
+            f"{self.ICONS['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.ICONS['search']} {self.strings['v_dlcoll_start']}",
+            msg,
+            reply_markup=[[{"text": "…", "callback": self.cb_dummy}]],
+            silent=True
+        )
 
         ok = 0
         failed: List[str] = []
@@ -1726,22 +1733,21 @@ class Vector(loader.Module):
             await asyncio.sleep(2)
 
         if ok == len(modules):
-            result = f"{self.ICONS['safe']} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
-            if total_orig > max_batch:
-                result += f"\n\n<i>{self.strings['v_dlcoll_max_batch'].format(total=total_orig, max=max_batch)}</i>"
-        elif ok == 0:
-            result = f"{self.ICONS['error']} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
-            if failed:
-                result += "\n\n" + "\n".join(failed[:8])
+            result = f"{self.ICONS['safe']} {self.strings['v_dlcoll_done']}"
+        elif ok > 0:
+            result = f"{self.ICONS['warn']} {self.strings['v_dlcoll_done_partial']}"
         else:
-            result = f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
-            if failed:
-                result += "\n\n" + "\n".join(failed[:8])
-                if len(failed) > 8:
-                    result += f"\n… +{len(failed) - 8} more"
+            result = f"{self.ICONS['error']} {self.strings['v_dlcoll_done_none']}"
+
+        result += f"\n<b>{ok}/{len(modules)}</b>"
+        if failed:
+            result += "\n\n" + "\n".join(failed[:8])
+            if len(failed) > 8:
+                result += f"\n… +{len(failed) - 8} more"
+        if total_orig > max_batch:
+            result += f"\n\n<i>{self.strings['v_dlcoll_max_batch'].format(total=total_orig, max=max_batch)}</i>"
 
         await self._safe_edit(form, result, [[{"text": "✖️", "action": "close"}]])
-
 
     @loader.watcher(chat_id=OFFICIAL_VECTOR_BOT_ID)
     async def vector_install_payload_watcher(self, msg: Message):
