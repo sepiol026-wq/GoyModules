@@ -53,7 +53,6 @@ BAN_TERM_RE = re.compile(r"(?:Срок|Term|期間|Dauer|73rm|Tewm):\s*(.+)", re
 
 @loader.tds
 class Vector(loader.Module):
-    """Vector module registry browser for Heroku."""
 
     strings = {
         "lang": "en",
@@ -1325,17 +1324,17 @@ class Vector(loader.Module):
 
 
     @loader.command(
-        ru_doc="<запрос> - поиск модулей в Vector.",
-        jp_doc="<クエリ> - Vectorでモジュールを検索。",
-        uk_doc="<запит> - пошук модулів у Vector.",
-        de_doc="<Abfrage> - Suche nach Modulen in Vector.",
-        neofit_doc="<query> - scout fer loot in Vector.",
-        tiktok_doc="<запрос> - чекнуть темки (модули) в Vector.",
-        leet_doc="<qu3ry> - 534rch m0dul35 1n V3c70r.",
-        uwu_doc="<quewy> - seawch moduwes in Vectow (´• ω •`)."
+        en_doc="<query> — search modules in Vector.",
+        ru_doc="<запрос> — поиск модулей в Vector.",
+        jp_doc="<クエリ> — Vectorでモジュールを検索。",
+        uk_doc="<запит> — пошук модулів у Vector.",
+        de_doc="<Abfrage> — Suche nach Modulen in Vector.",
+        neofit_doc="<query> — чекни модули во Vector, имба.",
+        tiktok_doc="<запрос> — чекнуть темки (модули) в Vector.",
+        leet_doc="<qu3ry> — 534rch m0dul35 1n V3c70r.",
+        uwu_doc="<quewy> — seawch moduwes in Vectow (´• ω •`)."
     )
     async def vectorcmd(self, msg: Message):
-        """<query> - search modules in Vector."""
         q = utils.get_args_raw(msg)
         log.info("vectorcmd: query=%r", q)
         if not q:
@@ -1381,17 +1380,17 @@ class Vector(loader.Module):
         await self._safe_edit(form, text, kbd, item.get("banner"))
 
     @loader.command(
-        ru_doc="[-f|--force] — Обновить модуль Vector.",
+        en_doc="[-f|--force] — update Vector module.",
+        ru_doc="[-f|--force] — обновить модуль Vector.",
         jp_doc="[-f|--force] — Vectorモジュールを更新します。",
-        uk_doc="[-f|--force] — Оновити модуль Vector.",
+        uk_doc="[-f|--force] — оновити модуль Vector.",
         de_doc="[-f|--force] — Vector-Modul aktualisieren.",
-        neofit_doc="[-f|--force] — git pull the spyglass.",
-        tiktok_doc="[-f|--force] — Обновить эту темку.",
+        neofit_doc="[-f|--force] — обнова Vector, без рофла.",
+        tiktok_doc="[-f|--force] — обновить эту темку.",
         leet_doc="[-f|--force] — Upd473 V3c70r m0dul3.",
         uwu_doc="[-f|--force] — Update Vectow moduwe owo."
     )
     async def vecupdate(self, msg: Message):
-        """Update Vector module from the registry."""
         args = utils.get_args_raw(msg)
         force = "-f" in args or "--force" in args
         log.info("vecupdate: force=%s args=%r", force, args)
