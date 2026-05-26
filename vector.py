@@ -1392,45 +1392,81 @@ class Vector(loader.Module):
         dl_url = f"{API_ROOT}{dl_path}"
         log.debug("vecupdate: dl_url=%s", dl_url)
 
-        if not force:
-            token = await self._get_active_token()
-            if not token:
-                log.warning("vecupdate: no token, aborting")
-                return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+        if force:
+            log.info("vecupdate: force flag set, installing immediately")
+            res, _ = await self._safe_install(m_name, dl_url, notify=False)
+            if res == -1:
+                log.error("vecupdate: _safe_install returned -1 (no loader)")
+                return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+            if res == 1:
+                log.info("vecupdate: force install successful")
+                await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
+            else:
+                log.warning("vecupdate: force install failed, res=%s", res)
+                await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+            return
 
-            src_bytes = await self._net_req("GET", dl_path, token=token, as_bytes=True)
-            if src_bytes:
-                log.debug("vecupdate: downloaded %d bytes", len(src_bytes))
-                remote_hash = hashlib.sha256(src_bytes).hexdigest()
+        token = await self._get_active_token()
+        if not token:
+            log.warning("vecupdate: no token, aborting")
+            return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
 
-                import inspect
-                try:
-                    local_path = inspect.getfile(self.__class__)
+        src_bytes = await self._net_req("GET", dl_path, token=token, as_bytes=True)
+        if not src_bytes:
+            log.warning("vecupdate: download returned no bytes, installing anyway")
+            res, _ = await self._safe_install(m_name, dl_url, notify=False)
+            if res == -1:
+                return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+            if res == 1:
+                await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
+            else:
+                await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+            return
+
+        log.debug("vecupdate: downloaded %d bytes", len(src_bytes))
+        remote_hash = hashlib.sha256(src_bytes).hexdigest()
+
+        import inspect, sys, os
+        local_hash = ""
+        local_path = ""
+        try:
+            local_path = inspect.getfile(self.__class__)
+            with open(local_path, "rb") as f:
+                local_hash = hashlib.sha256(f.read()).hexdigest()
+        except TypeError:
+            try:
+                mod = sys.modules.get(self.__class__.__module__)
+                local_path = getattr(mod, '__file__', '') or ''
+                if local_path and os.path.isfile(local_path):
                     with open(local_path, "rb") as f:
                         local_hash = hashlib.sha256(f.read()).hexdigest()
-                    log.debug("vecupdate: local_hash=%s remote_hash=%s path=%s", local_hash[:16], remote_hash[:16], local_path)
-                except Exception as e:
-                    local_hash = ""
-                    log.warning("vecupdate: failed to read local file: %r", e)
+                else:
+                    log.debug("vecupdate: sys.modules __file__ not found or not a file for %s", self.__class__.__module__)
+            except Exception as e2:
+                log.warning("vecupdate: sys.modules fallback also failed: %r", e2)
+        except Exception as e:
+            log.warning("vecupdate: failed to read local file: %r", e)
 
-                if remote_hash == local_hash:
-                    log.info("vecupdate: hashes match, showing force-update prompt")
-                    await self.inline.form(
-                        message=msg,
-                        text=f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
-                        reply_markup=[
-                            [
-                                {"text": self.strings["v_upd_force_btn"], "callback": self._vecupdate_force, "args": (dl_url,), "style": "primary"},
-                                {"text": self.strings["v_upd_cancel"], "action": "close", "style": "danger"},
-                            ]
-                        ],
-                    )
-                    return
-                log.info("vecupdate: hashes differ, proceeding with install")
-            else:
-                log.warning("vecupdate: download returned no bytes, falling through to install")
+        if local_hash:
+            log.debug("vecupdate: local_hash=%s remote_hash=%s path=%s", local_hash[:16], remote_hash[:16], local_path or "?")
         else:
-            log.info("vecupdate: force flag set, skipping hash check")
+            log.warning("vecupdate: could not read local file, assuming hashes differ")
+
+        if remote_hash == local_hash:
+            log.info("vecupdate: hashes match, showing force-update prompt")
+            await self.inline.form(
+                message=msg,
+                text=f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
+                reply_markup=[
+                    [
+                        {"text": self.strings["v_upd_force_btn"], "callback": self._vecupdate_force, "args": (dl_url,), "style": "primary"},
+                        {"text": self.strings["v_upd_cancel"], "action": "close", "style": "danger"},
+                    ]
+                ],
+            )
+            return
+
+        log.info("vecupdate: hashes differ, proceeding with install")
 
         log.info("vecupdate: calling _safe_install")
         res, _ = await self._safe_install(m_name, dl_url, notify=False)
