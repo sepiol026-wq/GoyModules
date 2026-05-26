@@ -1290,11 +1290,13 @@ class Vector(loader.Module):
         log.debug("_safe_edit: kbd_rows=%d target=%s", len(kbd) if kbd else 0, tname)
 
         try:
-            uid = getattr(target, "unit_id", None)
-            if uid and "Call" not in tname:
+            if hasattr(target, "edit"):
                 await target.edit(text=text, reply_markup=kbd)
-            elif hasattr(target, "edit"):
-                await target.edit(text, reply_markup=kbd)
+            else:
+                await utils.answer(target, text, reply_markup=kbd)
+        except TypeError:
+            if hasattr(target, "edit"):
+                await target.edit(text=text, reply_markup=kbd)
             else:
                 await utils.answer(target, text, reply_markup=kbd)
         except Exception as e:
