@@ -82,6 +82,7 @@ class Vector(loader.Module):
         "v_dl_ok": "Module installed successfully!",
         "v_dl_err": "Installation failed!",
         "v_lim_cfg": "Search output limits.",
+        "v_max_batch_cfg": "Max modules per batch install.",
         "v_btn_sec": "🛡 Security Scan",
         "v_aud_hdr": "Code Audit: {name}",
         "v_aud_req": "Connecting to Security API...",
@@ -140,6 +141,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Unknown error: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>You are on the latest version. Update anyway?</b>",
         "v_upd_force_btn": "🧭 Update",
+        "v_dlcoll_hdr": "Collection: {name}",
+        "v_dlcoll_count": "{count} modules",
+        "v_dlcoll_start": "Starting install…",
+        "v_dlcoll_progress": "[{done}/{total}] {name}",
+        "v_dlcoll_done": "Installed {ok}/{total}",
+        "v_dlcoll_fail_item": "❌ {name}: {reason}",
+        "v_dlcoll_empty": "Collection is empty",
+        "v_dlcoll_not_found": "Collection not found",
+        "v_dlcoll_max_batch": "Collection has {total} modules, max {max} per batch. Installing first {max}…",
         "v_upd_cancel": "🚫 Cancel",
     }
 
@@ -171,6 +181,7 @@ class Vector(loader.Module):
         "v_dl_err": "Ошибка установки!",
         "v_lim_cfg": "Лимиты вывода поиска.",
         "v_btn_sec": "🛡 Проверка кода",
+        "v_max_batch_cfg": "Макс модулей за одну установку.",
         "v_aud_hdr": "Аудит кода: {name}",
         "v_aud_req": "Соединение с Security API...",
         "v_aud_proc": "Анализ AST дерева...",
@@ -228,6 +239,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Неизвестная ошибка: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>У тебя последняя версия. Обновиться принудительно?</b>",
         "v_upd_force_btn": "🧭 Обновиться",
+        "v_dlcoll_hdr": "Коллекция: {name}",
+        "v_dlcoll_count": "Модулей: {count}",
+        "v_dlcoll_start": "Начинаю установку…",
+        "v_dlcoll_progress": "[{done}/{total}] {name}",
+        "v_dlcoll_done": "Установлено {ok}/{total}",
+        "v_dlcoll_fail_item": "❌ {name}: {reason}",
+        "v_dlcoll_empty": "Коллекция пуста",
+        "v_dlcoll_not_found": "Коллекция не найдена",
+        "v_dlcoll_max_batch": "В коллекции {total} модулей, макс {max} за раз. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отмена",
     }
 
@@ -259,6 +279,7 @@ class Vector(loader.Module):
         "v_dl_err": "インストールに失敗しました！",
         "v_lim_cfg": "検索出力制限。",
         "v_btn_sec": "🛡 セキュリティスキャン",
+        "v_max_batch_cfg": "一括インストールの最大モジュール数。",
         "v_aud_hdr": "コード監査: {name}",
         "v_aud_req": "セキュリティAPIに接続中...",
         "v_aud_proc": "ASTツリーを処理中...",
@@ -316,6 +337,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "不明なエラー: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>最新バージョンですが、とにかくアップデートしますか？</b>",
         "v_upd_force_btn": "🧭 アップデート",
+        "v_dlcoll_hdr": "コレクション: {name}",
+        "v_dlcoll_count": "{count}モジュール",
+        "v_dlcoll_start": "インストール開始…",
+        "v_dlcoll_progress": "[{done}/{total}] {name}",
+        "v_dlcoll_done": "{ok}/{total}インストール完了",
+        "v_dlcoll_fail_item": "❌ {name}: {reason}",
+        "v_dlcoll_empty": "コレクションは空です",
+        "v_dlcoll_not_found": "コレクションが見つかりません",
+        "v_dlcoll_max_batch": "コレクションに{total}モジュール、最大{max}まで。最初の{max}をインストール中…",
         "v_upd_cancel": "🚫 キャンセル",
     }
 
@@ -347,6 +377,7 @@ class Vector(loader.Module):
         "v_dl_err": "Помилка встановлення!",
         "v_lim_cfg": "Ліміти виводу пошуку.",
         "v_btn_sec": "🛡 Перевірка коду",
+        "v_max_batch_cfg": "Макс модулів за одну установку.",
         "v_aud_hdr": "Аудит коду: {name}",
         "v_aud_req": "З'єднання з Security API...",
         "v_aud_proc": "Аналіз AST дерева...",
@@ -404,6 +435,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Невідома помилка: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>У тебе остання версія. Оновитися примусово?</b>",
         "v_upd_force_btn": "🧭 Оновитися",
+        "v_dlcoll_hdr": "Колекція: {name}",
+        "v_dlcoll_count": "Модулів: {count}",
+        "v_dlcoll_start": "Починаю встановлення…",
+        "v_dlcoll_progress": "[{done}/{total}] {name}",
+        "v_dlcoll_done": "Встановлено {ok}/{total}",
+        "v_dlcoll_fail_item": "❌ {name}: {reason}",
+        "v_dlcoll_empty": "Колекція порожня",
+        "v_dlcoll_not_found": "Колекцію не знайдено",
+        "v_dlcoll_max_batch": "У колекції {total} модулів, макс {max} за раз. Ставлю перші {max}…",
         "v_upd_cancel": "🚫 Скасувати",
     }
 
@@ -435,6 +475,7 @@ class Vector(loader.Module):
         "v_dl_err": "Installation fehlgeschlagen!",
         "v_lim_cfg": "Suchausgabe-Limits.",
         "v_btn_sec": "🛡 Sicherheits-Scan",
+        "v_max_batch_cfg": "Max Module pro Batch-Installation.",
         "v_aud_hdr": "Code-Audit: {name}",
         "v_aud_req": "Verbindung zur Security-API...",
         "v_aud_proc": "Verarbeite AST-Baum...",
@@ -492,6 +533,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Unbekannter Fehler: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>Du hast bereits die neueste Version. Trotzdem aktualisieren?</b>",
         "v_upd_force_btn": "🧭 Aktualisieren",
+        "v_dlcoll_hdr": "Sammlung: {name}",
+        "v_dlcoll_count": "{count} Module",
+        "v_dlcoll_start": "Installation beginnt…",
+        "v_dlcoll_progress": "[{done}/{total}] {name}",
+        "v_dlcoll_done": "{ok}/{total} installiert",
+        "v_dlcoll_fail_item": "❌ {name}: {reason}",
+        "v_dlcoll_empty": "Sammlung ist leer",
+        "v_dlcoll_not_found": "Sammlung nicht gefunden",
+        "v_dlcoll_max_batch": "Sammlung hat {total} Module, max {max} pro Durchlauf. Installiere erste {max}…",
         "v_upd_cancel": "🚫 Abbrechen",
     }
 
@@ -523,6 +573,7 @@ class Vector(loader.Module):
         "v_dl_err": "Install failed.",
         "v_lim_cfg": "Search output limits.",
         "v_btn_sec": "🛡 Security scan",
+        "v_max_batch_cfg": "max mods per batch install.",
         "v_aud_hdr": "Code audit: {name}",
         "v_aud_req": "Connecting to security API...",
         "v_aud_proc": "Parsing AST...",
@@ -580,6 +631,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "unknown error: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>Up to date. git pull --force?</b>",
         "v_upd_force_btn": "🧭 git pull",
+        "v_dlcoll_hdr": "Collection: {name}",
+        "v_dlcoll_count": "{count} mods",
+        "v_dlcoll_start": "pulling…",
+        "v_dlcoll_progress": "[{done}/{total}] {name}",
+        "v_dlcoll_done": "pulled {ok}/{total}",
+        "v_dlcoll_fail_item": "❌ {name}: {reason}",
+        "v_dlcoll_empty": "empty collection",
+        "v_dlcoll_not_found": "404 collection",
+        "v_dlcoll_max_batch": "{total} mods, max {max}. pulling first {max}…",
         "v_upd_cancel": "🚫 abort",
     }
 
@@ -611,6 +671,7 @@ class Vector(loader.Module):
         "v_dl_err": "Не встало!",
         "v_lim_cfg": "Лимиты выдачи.",
         "v_btn_sec": "🛡 Чек кода",
+        "v_max_batch_cfg": "Макс темок за раз.",
         "v_aud_hdr": "Прожарка: {name}",
         "v_aud_req": "Стучимся в API защиты...",
         "v_aud_proc": "Парсим AST...",
@@ -668,6 +729,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Непонятная ошибка: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>У тебя ласт версия. Все равно обновить?</b>",
         "v_upd_force_btn": "🧭 Обнова",
+        "v_dlcoll_hdr": "Подборка: {name}",
+        "v_dlcoll_count": "Темок: {count}",
+        "v_dlcoll_start": "Ща всё встанет…",
+        "v_dlcoll_progress": "[{done}/{total}] {name}",
+        "v_dlcoll_done": "Встало {ok}/{total}",
+        "v_dlcoll_fail_item": "❌ {name}: {reason}",
+        "v_dlcoll_empty": "Подборка пустая",
+        "v_dlcoll_not_found": "Нет такой подборки",
+        "v_dlcoll_max_batch": "Темок {total}, макс {max}. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отбой",
     }
 
@@ -699,6 +769,7 @@ class Vector(loader.Module):
         "v_dl_err": "F41l3d!",
         "v_lim_cfg": "534rch l1m175.",
         "v_btn_sec": "🛡 53cur17y 5c4n",
+        "v_max_batch_cfg": "m4x m0d5 p3r b47ch.",
         "v_aud_hdr": "C0d3 4ud17: {name}",
         "v_aud_req": "C0nn3c71ng 70 53cur17y 4P1...",
         "v_aud_proc": "Pr0c3551ng A57 7r33...",
@@ -756,6 +827,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "unkn0wn 3rr: <code>{detail}</code>",
         "v_upd_same": "🌟 <b>U r 0n 7h3 l47357 v3r510n, pull upd4735 4nyw4y?</b>",
         "v_upd_force_btn": "🧭 Upd473",
+        "v_dlcoll_hdr": "C0ll3c710n: {name}",
+        "v_dlcoll_count": "{count} m0d5",
+        "v_dlcoll_start": "1n574ll1n9…",
+        "v_dlcoll_progress": "[{done}/{total}] {name}",
+        "v_dlcoll_done": "1n574ll3d {ok}/{total}",
+        "v_dlcoll_fail_item": "❌ {name}: {reason}",
+        "v_dlcoll_empty": "3mp7y c0ll3c710n",
+        "v_dlcoll_not_found": "c0ll3c710n n07 f0und",
+        "v_dlcoll_max_batch": "{total} m0d5, m4x {max}. 1n574ll1n9 f1r57 {max}…",
         "v_upd_cancel": "🚫 n0p3",
     }
 
@@ -787,6 +867,7 @@ class Vector(loader.Module):
         "v_dl_err": "Instaww faiwed! ;w;",
         "v_lim_cfg": "Seawch wimits.",
         "v_btn_sec": "🛡 Secuwity Scan",
+        "v_max_batch_cfg": "Max moduwes pew batch.",
         "v_aud_hdr": "Code Audit: {name}",
         "v_aud_req": "Connecting to Secuwity API...",
         "v_aud_proc": "Pwocessing AST twee...",
@@ -844,6 +925,15 @@ class Vector(loader.Module):
         "v_install_fail_unknown": "Unknown ewwow: <code>{detail}</code> >~<",
         "v_upd_same": "🌟 <b>You awe on da watest vewsion, puww updates anyway? (´• ω •`)</b>",
         "v_upd_force_btn": "🧭 Puww Update",
+        "v_dlcoll_hdr": "Cowwection: {name}",
+        "v_dlcoll_count": "{count} moduwes",
+        "v_dlcoll_start": "Instawwing… (・ω・)",
+        "v_dlcoll_progress": "[{done}/{total}] {name}",
+        "v_dlcoll_done": "Instawwed {ok}/{total} (´• ω •`)",
+        "v_dlcoll_fail_item": "❌ {name}: {reason}",
+        "v_dlcoll_empty": "Cowwection is emptyy ;-;",
+        "v_dlcoll_not_found": "Cowwection not found owo",
+        "v_dlcoll_max_batch": "{total} moduwes, max {max}. Instawwing fiwst {max}…",
         "v_upd_cancel": "🚫 Nu ;-;",
     }
 
@@ -987,7 +1077,13 @@ class Vector(loader.Module):
                 30, 
                 lambda: self.strings("v_lim_cfg"), 
                 validator=loader.validators.Integer(minimum=1, maximum=100)
-            )
+            ),
+            loader.ConfigValue(
+                "max_batch",
+                50,
+                lambda: self.strings("v_max_batch_cfg"),
+                validator=loader.validators.Integer(minimum=1, maximum=100)
+            ),
         )
         self.http: Optional[aiohttp.ClientSession] = None
         self._security_cache: Dict[str, Dict[str, Any]] = {}
@@ -1563,6 +1659,82 @@ class Vector(loader.Module):
         else:
             log.warning("_vecupdate_force: force install failed, res=%s", res)
             await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+
+    @loader.command(
+        en_doc="<collection_slug> — download and install entire module collection from Vector.",
+        ru_doc="<slug_коллекции> — скачать и установить всю коллекцию модулей из Vector.",
+        jp_doc="<コレクションslug> — Vectorからコレクション全体をダウンロードしてインストール。",
+        uk_doc="<slug_колекції> — завантажити та встановити всю колекцію модулів із Vector.",
+        de_doc="<Sammlungs-Slug> — gesamte Modulsammlung von Vector herunterladen und installieren.",
+        neofit_doc="<collection_slug> — pull entire module collection from Vector.",
+        tiktok_doc="<slug_подборки> — скачать и вкатить всю подборку темок из Vector.",
+        leet_doc="<c0ll3c710n_5lu9> — pull 3n71r3 m0dul3 c0ll3c710n fr0m V3c70r.",
+        uwu_doc="<cowwection-swug> — downwoad and instaww entiwe moduwe cowwection fwom Vectow (・ω・)."
+    )
+    async def dlcollectioncmd(self, msg: Message):
+        slug = utils.get_args_raw(msg).strip()
+        log.info("dlcollection: slug=%r", slug)
+        if not slug:
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}dlcollection</code>')}</b>")
+
+        form = await self.inline.form(
+            f"{self.ICONS['search']} <b>Fetching collection…</b>",
+            msg,
+            reply_markup=[[{"text": "…", "callback": self.cb_dummy}]],
+            silent=True
+        )
+
+        token = await self._get_active_token()
+        if not token:
+            return await self._safe_edit(form, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", [[{"text": "✖️", "action": "close"}]])
+
+        raw = await self._net_req("GET", f"/api/collections/{quote(slug, safe='')}", token=token)
+        if not raw or not raw.get("ok"):
+            return await self._safe_edit(form, f"{self.ICONS['error']} <b>{self.strings['v_dlcoll_not_found']}</b>", [[{"text": "✖️", "action": "close"}]])
+
+        col = raw["collection"]
+        modules = [entry["module"] for entry in (col.get("modules") or []) if entry.get("module")]
+        total = len(modules)
+        if total == 0:
+            return await self._safe_edit(form, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_empty']}</b>", [[{"text": "✖️", "action": "close"}]])
+
+        max_batch = int(self.config.get("max_batch", 50))
+        if total > max_batch:
+            modules = modules[:max_batch]
+            await self._safe_edit(form, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_max_batch'].format(total=len(col['modules']), max=max_batch)}</b>")
+            await asyncio.sleep(1.5)
+
+        col_name = col.get("name", slug)
+        await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.strings['v_dlcoll_start']}")
+
+        ok = 0
+        failed: List[str] = []
+        for i, mod in enumerate(modules, 1):
+            dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{API_ROOT}/modules/{quote((mod.get('name') or ''), safe='')}/source"
+            m_name = mod.get("name", "?")
+            await self._safe_edit(form, f"{self.ICONS['search']} <b>{self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}</b>\n{self.strings['v_dlcoll_progress'].format(done=i, total=len(modules), name=utils.escape_html(m_name))}")
+
+            res, errors = await self._safe_install(m_name, dl_url, notify=False)
+            if res == 1:
+                ok += 1
+            else:
+                err_text = "unknown"
+                if errors:
+                    err_text = errors[0].get("type", "unknown")
+                elif res == -1:
+                    err_text = self.strings("v_install_fail_not_found")
+                else:
+                    err_text = self.strings("v_dl_err")
+                failed.append(self.strings('v_dlcoll_fail_item').format(name=utils.escape_html(m_name), reason=err_text))
+
+            await asyncio.sleep(2)
+
+        result = f"{self.ICONS['safe']} <b>{self.strings['v_dlcoll_done'].format(ok=ok, total=len(modules))}</b>"
+        if failed:
+            result += "\n\n" + "\n".join(failed[:10])
+            if len(failed) > 10:
+                result += f"\n… +{len(failed) - 10} more"
+        await self._safe_edit(form, result, [[{"text": "✖️", "action": "close"}]])
 
     @loader.watcher(chat_id=OFFICIAL_VECTOR_BOT_ID)
     async def vector_install_payload_watcher(self, msg: Message):
