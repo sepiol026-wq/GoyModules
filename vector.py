@@ -1329,7 +1329,7 @@ class Vector(loader.Module):
         jp_doc="<クエリ> — Vectorでモジュールを検索。",
         uk_doc="<запит> — пошук модулів у Vector.",
         de_doc="<Abfrage> — Suche nach Modulen in Vector.",
-        neofit_doc="<query> — чекни модули во Vector, имба.",
+        neofit_doc="<query> — grep modules in Vector.",
         tiktok_doc="<запрос> — чекнуть темки (модули) в Vector.",
         leet_doc="<qu3ry> — 534rch m0dul35 1n V3c70r.",
         uwu_doc="<quewy> — seawch moduwes in Vectow (´• ω •`)."
@@ -1385,7 +1385,7 @@ class Vector(loader.Module):
         jp_doc="[-f|--force] — Vectorモジュールを更新します。",
         uk_doc="[-f|--force] — оновити модуль Vector.",
         de_doc="[-f|--force] — Vector-Modul aktualisieren.",
-        neofit_doc="[-f|--force] — обнова Vector, без рофла.",
+        neofit_doc="[-f|--force] — git pull Vector.",
         tiktok_doc="[-f|--force] — обновить эту темку.",
         leet_doc="[-f|--force] — Upd473 V3c70r m0dul3.",
         uwu_doc="[-f|--force] — Update Vectow moduwe owo."
