@@ -1346,7 +1346,10 @@ class Vector(loader.Module):
                                 kwargs["photo"] = img
                             await self.inline.form(text, message=chat, **kwargs)
             elif hasattr(target, "edit"):
-                await target.edit(text, reply_markup=kbd)
+                ekw = {}
+                if img and img.startswith("http"):
+                    ekw["photo"] = img
+                await target.edit(text, reply_markup=kbd, **ekw)
             else:
                 await utils.answer(target, text, reply_markup=kbd)
         except Exception as e:
