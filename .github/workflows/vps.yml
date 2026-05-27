@@ -1,0 +1,27 @@
+name: Free VPS
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'  # every 6 hours to stay alive
+
+jobs:
+  vps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Setup SSH
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq openssh-server curl wget
+          sudo service ssh start
+          sudo useradd -m -s /bin/bash vpsuser
+          echo "vpsuser:$(openssl rand -base64 12)" | sudo chpasswd
+          sudo usermod -aG sudo vpsuser
+          echo "SSH ready on port 22"
+          # Install tmate for SSH access
+          curl -fsSL https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-amd64.tar.xz | tar -xJf -
+          ./tmate-2.4.0-static-linux-amd64/tmate -S /tmp/tmate.sock new-session -d
+          ./tmate-2.4.0-static-linux-amd64/tmate -S /tmp/tmate.sock wait tmate-ready
+          ./tmate-2.4.0-static-linux-amd64/tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}'
+          echo "=== VPS IS READY ==="
+          # Keep alive
+          sleep 21000
