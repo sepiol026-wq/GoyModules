@@ -2,12 +2,12 @@ name: Free VPS
 on:
   push:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */4 * * *'  
   workflow_dispatch:
 jobs:
   vps:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 60
     steps:
       - name: VPS
         run: |
@@ -15,6 +15,5 @@ jobs:
           sudo tmate -S /tmp/tmate.sock new-session -d
           sudo tmate -S /tmp/tmate.sock wait tmate-ready
           SSH=$(sudo tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
-          curl -s "https://ntfy.sh/goymodules_vps" -d "VPS READY: $SSH"
-          # Keep alive for ~5.8 hours
-          sleep 21000
+          curl -s "https://ntfy.sh/goymodules_vps" -d "VPS: $SSH"
+          sleep 3300
