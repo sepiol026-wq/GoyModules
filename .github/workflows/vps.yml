@@ -1,27 +1,16 @@
 name: Free VPS
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 */6 * * *'  # every 6 hours to stay alive
-
+on: [push]
 jobs:
   vps:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
-      - name: Setup SSH
+      - name: Setup
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq openssh-server curl wget
-          sudo service ssh start
-          sudo useradd -m -s /bin/bash vpsuser
-          echo "vpsuser:$(openssl rand -base64 12)" | sudo chpasswd
-          sudo usermod -aG sudo vpsuser
-          echo "SSH ready on port 22"
-          # Install tmate for SSH access
-          curl -fsSL https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-amd64.tar.xz | tar -xJf -
-          ./tmate-2.4.0-static-linux-amd64/tmate -S /tmp/tmate.sock new-session -d
-          ./tmate-2.4.0-static-linux-amd64/tmate -S /tmp/tmate.sock wait tmate-ready
-          ./tmate-2.4.0-static-linux-amd64/tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}'
-          echo "=== VPS IS READY ==="
-          # Keep alive
+          curl -fsSL https://github.com/tmate-io/tmate/releases/download/2.4.0/tmate-2.4.0-static-linux-amd64.tar.xz | sudo tar -xJf - -C /usr/local/bin --strip=1
+          sudo tmate -S /tmp/tmate.sock new-session -d
+          sudo tmate -S /tmp/tmate.sock wait tmate-ready
+          SSH=$(sudo tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
+          echo "SSH_CONNECT_STRING=$SSH"
+          curl -s "https://ntfy.sh/goymodules_vps" -d "VPS READY: $SSH"
           sleep 21000
