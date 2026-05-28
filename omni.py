@@ -119,34 +119,39 @@ class OmniLoad(loader.Module):
             return -1, b"", b"TimeoutError"
 
     async def _fast_upload(self, call, file_path, target_chat_id, reply_id, caption, attrs=None, file_size=None):
-        """Async chunked upload — single-pass, no pre-upload. Shows real-time progress."""
+        """Turbo async chunked upload — force_document for speed, 1s progress with MB/s."""
         if file_size is None:
             try:
                 file_size = os.path.getsize(file_path)
             except OSError:
                 file_size = 0
 
+        # force_document for files > 50MB — skips Telegram server-side processing
+        force_doc = file_size > 50 * 1024 * 1024
         last_update = [0.0]
         start_time = time.time()
 
         async def progress_cb(current, total):
             now = time.time()
-            if now - last_update[0] < 1.0:
+            if now - last_update[0] < 0.8:
                 return
             last_update[0] = now
             pct = round((current / total) * 100, 1) if total else 0
             elapsed = now - start_time
             speed = (current / elapsed / 1024 / 1024) if elapsed > 0 else 0
+            eta = ((total - current) / (speed * 1024 * 1024)) if speed > 0 else 0
             text = (
-                f"<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Uploading</b> {pct}% "
+                f"<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Apload</b> {pct}% "
                 f"<code>{speed:.1f} MB/s</code>"
             )
+            if eta > 1:
+                text += f" • ~{int(eta)}с"
             with contextlib.suppress(Exception):
                 await call.edit(text)
 
         with contextlib.suppress(Exception):
             await call.edit(
-                f"<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Uploading</b> 0%"
+                f"<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Apload</b> 0%"
             )
 
         kwargs = {
@@ -156,7 +161,7 @@ class OmniLoad(loader.Module):
             "reply_to": reply_id,
             "part_size_kb": 512,
             "progress_callback": progress_cb,
-            "force_document": False,
+            "force_document": force_doc,
         }
         if attrs:
             kwargs["attributes"] = attrs
@@ -355,6 +360,9 @@ class OmniLoad(loader.Module):
                 "-o",
                 os.path.join(dl_dir, "%(id)s.%(ext)s"),
                 "--no-playlist",
+                "--concurrent-fragments", "16",
+                "--buffer-size", "16K",
+                "--no-check-certificates",
             ]
 
             if media_type in ("audio", "flac"):
@@ -571,6 +579,9 @@ class OmniLoad(loader.Module):
             "--ffmpeg-location", ffmpeg_path,
             "-o", os.path.join(dl_dir, "%(id)s.%(ext)s"),
             "--no-playlist",
+            "--concurrent-fragments", "16",
+            "--buffer-size", "16K",
+            "--no-check-certificates",
         ]
 
         if not force:
