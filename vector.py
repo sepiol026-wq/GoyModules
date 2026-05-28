@@ -1567,8 +1567,8 @@ class Vector(loader.Module):
 
         m_owner = "sepiol026-wq"
         m_name = "Vector"
-        dl_path = f"/api/modules/{m_owner}/{quote(m_name, safe='')}/source/raw"
-        dl_url = f"{API_ROOT}/api/modules/{m_owner}/{quote(m_name, safe='')}/source/raw"
+        dl_path = f"/modules/{m_owner}/{quote(m_name, safe='')}/source"
+        dl_url = f"{API_ROOT}/modules/{m_owner}/{quote(m_name, safe='')}/source"
         log.debug("vecupdate: dl_url=%s", dl_url)
 
         if force:
