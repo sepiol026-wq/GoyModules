@@ -17,10 +17,10 @@
 # requires: yt-dlp imageio-ffmpeg
 # meta developer: @goymodules
 # authors: @goymodules
-# Description: Universal media downloader.
+# Description: Universal media downloader — async chunked upload, instant.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/omniload.png
 
-__version__ = (1, 7, 1)
+__version__ = (1, 7, 2)
 import asyncio
 import contextlib
 import json
@@ -117,6 +117,58 @@ class OmniLoad(loader.Module):
             with contextlib.suppress(ProcessLookupError):
                 proc.kill()
             return -1, b"", b"TimeoutError"
+
+    async def _fast_upload(self, call, file_path, target_chat_id, reply_id, caption, attrs=None, file_size=None):
+        """Async chunked upload — single-pass, no pre-upload. Shows real-time progress."""
+        if file_size is None:
+            try:
+                file_size = os.path.getsize(file_path)
+            except OSError:
+                file_size = 0
+
+        last_update = [0.0]
+        start_time = time.time()
+
+        async def progress_cb(current, total):
+            now = time.time()
+            if now - last_update[0] < 1.0:
+                return
+            last_update[0] = now
+            pct = round((current / total) * 100, 1) if total else 0
+            elapsed = now - start_time
+            speed = (current / elapsed / 1024 / 1024) if elapsed > 0 else 0
+            text = (
+                f"<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Uploading</b> {pct}% "
+                f"<code>{speed:.1f} MB/s</code>"
+            )
+            with contextlib.suppress(Exception):
+                await call.edit(text)
+
+        with contextlib.suppress(Exception):
+            await call.edit(
+                f"<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Uploading</b> 0%"
+            )
+
+        kwargs = {
+            "entity": target_chat_id,
+            "file": file_path,
+            "caption": caption,
+            "reply_to": reply_id,
+            "part_size_kb": 512,
+            "progress_callback": progress_cb,
+            "force_document": False,
+        }
+        if attrs:
+            kwargs["attributes"] = attrs
+
+        try:
+            await self._client.send_file(**kwargs)
+        except Exception as e:
+            if "reply" in str(e).lower():
+                kwargs.pop("reply_to", None)
+                await self._client.send_file(**kwargs)
+            else:
+                raise e
 
     @loader.inline_handler(
         ru_doc="<ссылка> — быстрое скачивание через inline",
@@ -305,9 +357,7 @@ class OmniLoad(loader.Module):
                 "--no-playlist",
             ]
 
-            if media_type == "video":
-                pass
-            elif media_type in ("audio", "flac"):
+            if media_type in ("audio", "flac"):
                 ext = "flac" if media_type == "flac" else "mp3"
                 cmd.extend(["-x", "--audio-format", ext])
 
@@ -345,12 +395,6 @@ class OmniLoad(loader.Module):
 
             final_path = os.path.join(dl_dir, files[0])
 
-            with contextlib.suppress(Exception):
-                await call.edit(
-                    text=f"<b>📤 Uploading to Telegram...</b>\n🎬 {utils.escape_html(info.get('title', 'Unknown')[:40])}",
-                    parse_mode="HTML",
-                )
-
             title = info.get("title", "Unknown")
             author = info.get("uploader", info.get("channel", "Unknown User"))
             duration = int(info.get("duration") or 0)
@@ -378,11 +422,8 @@ class OmniLoad(loader.Module):
                     )
                 ]
 
-            await self._client.send_file(
-                user_id,
-                final_path,
-                caption=caption,
-                attributes=attrs,
+            await self._fast_upload(
+                call, final_path, user_id, None, caption, attrs
             )
 
             with contextlib.suppress(Exception):
@@ -557,32 +598,6 @@ class OmniLoad(loader.Module):
 
             final_path = os.path.join(dl_dir, target_file)
 
-            last_edit_time = 0
-
-            async def upload_progress(current, total):
-                nonlocal last_edit_time
-                now = time.time()
-                if now - last_edit_time > 4:
-                    percent = round((current / total) * 100, 1) if total else 0
-                    with contextlib.suppress(Exception):
-                        text = self.strings("uploading").replace("...", f" {percent}%")
-                        await call.edit(text)
-                    last_edit_time = now
-
-            with contextlib.suppress(Exception):
-                await call.edit(self.strings("uploading").replace("...", " 0%"))
-
-            try:
-                uploaded_file = await self._client.upload_file(
-                    final_path,
-                    part_size_kb=512,
-                    progress_callback=upload_progress
-                )
-            except Exception as e:
-                with contextlib.suppress(Exception):
-                    await call.edit(self.strings("error").format(error=f"Upload Error: {str(e)[:100]}"))
-                return
-
             title = info.get("title", "Unknown")
             author = info.get("uploader", info.get("channel", "Unknown User"))
             duration = int(info.get("duration") or 0)
@@ -615,34 +630,19 @@ class OmniLoad(loader.Module):
                     performer=author
                 )]
 
-            upload_kwargs = {
-                "entity": target_chat_id,
-                "file": uploaded_file,
-                "caption": caption,
-                "reply_to": reply_id
-            }
-            if attrs:
-                upload_kwargs["attributes"] = attrs
+            await self._fast_upload(
+                call, final_path, target_chat_id, reply_id, caption, attrs
+            )
 
+            with contextlib.suppress(Exception):
+                await call.delete()
+
+        except Exception as upload_err:
+            err_msg = self.strings("error").format(error=f"Send Error: {upload_err}")
             try:
-                try:
-                    await self._client.send_file(**upload_kwargs)
-                except Exception as e:
-                    if "reply" in str(e).lower():
-                        upload_kwargs.pop("reply_to", None)
-                        await self._client.send_file(**upload_kwargs)
-                    else:
-                        raise e
-
-                with contextlib.suppress(Exception):
-                    await call.delete()
-
-            except Exception as upload_err:
-                err_msg = self.strings("error").format(error=f"TG Send Error: {upload_err}")
-                try:
-                    await call.edit(err_msg)
-                except Exception:
-                    await self._client.send_message(target_chat_id, err_msg)
+                await call.edit(err_msg)
+            except Exception:
+                await self._client.send_message(target_chat_id, err_msg)
 
         finally:
             shutil.rmtree(dl_dir, ignore_errors=True)
@@ -672,5 +672,3 @@ class OmniLoad(loader.Module):
             await call.answer("Canceled")
         with contextlib.suppress(Exception):
             await call.delete()
-
-
