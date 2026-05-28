@@ -2095,7 +2095,7 @@ class Vector(loader.Module):
         
         await asyncio.sleep(1.5)
         
-        await self.cb_comments(cb, m_name, i, group, q)
+        await self.cb_comments(cb, m_owner, m_name, i, group, q)
 
     def _fmt_comments(self, comments: list, m_name: str) -> str:
         log.debug("_fmt_comments: name=%s count=%d", m_name, len(comments) if comments else 0)
