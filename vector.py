@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 3, 0)
+__version__ = (2, 3, 1)
 
 import asyncio
 import base64
@@ -1172,6 +1172,7 @@ class Vector(loader.Module):
         
         return {
             "name": name,
+            "owner": raw.get("source_owner") or "unknown",
             "version": raw.get("version") or "?.?.?",
             "author": dev,
             "description": raw.get("description") or "",
@@ -1386,15 +1387,16 @@ class Vector(loader.Module):
     def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False) -> list:
         log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
         m_name = str(item.get("name", ""))
+        m_owner = str(item.get("owner", "unknown"))
         kbd = [
             [
                 {"text": self.strings["v_btn_copy"], "copy": search_phrase},
-                {"text": self.strings["v_btn_dl"], "callback": self.cb_install, "args": (m_name, idx, group, search_phrase)},
+                {"text": self.strings["v_btn_dl"], "callback": self.cb_install, "args": (m_owner, m_name, idx, group, search_phrase)},
                 {"text": self.strings["v_btn_code"], "url": item.get("source_url")},
             ],
             [
-                {"text": f"👍 {item.get('likes', 0)}", "callback": self.cb_rate, "args": (m_name, "like", idx, group, search_phrase)},
-                {"text": f"👎 {item.get('dislikes', 0)}", "callback": self.cb_rate, "args": (m_name, "dislike", idx, group, search_phrase)},
+                {"text": f"👍 {item.get('likes', 0)}", "callback": self.cb_rate, "args": (m_owner, m_name, "like", idx, group, search_phrase)},
+                {"text": f"👎 {item.get('dislikes', 0)}", "callback": self.cb_rate, "args": (m_owner, m_name, "dislike", idx, group, search_phrase)},
             ]
         ]
         
@@ -1410,13 +1412,13 @@ class Vector(loader.Module):
         kbd.append([{
             "text": self.strings["v_btn_col" if is_expanded else "v_btn_exp"],
             "callback": self.cb_toggle,
-            "args": (m_name, idx, group, search_phrase, not is_expanded)
+            "args": (m_owner, m_name, idx, group, search_phrase, not is_expanded)
         }])
         
         if is_expanded:
             kbd.append([
-                {"text": self.strings["v_btn_talk"], "callback": self.cb_comments, "args": (m_name, idx, group, search_phrase)},
-                {"text": self.strings["v_btn_sec"], "callback": self.cb_sec_check, "args": (m_name, idx, group, search_phrase)},
+                {"text": self.strings["v_btn_talk"], "callback": self.cb_comments, "args": (m_owner, m_name, idx, group, search_phrase)},
+                {"text": self.strings["v_btn_sec"], "callback": self.cb_sec_check, "args": (m_owner, m_name, idx, group, search_phrase)},
             ])
             
         return kbd
@@ -1726,7 +1728,7 @@ class Vector(loader.Module):
         ok = 0
         failed: List[str] = []
         for mod in modules:
-            dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{API_ROOT}/modules/{quote((mod.get('name') or ''), safe='')}/source"
+            dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{API_ROOT}/modules/{quote(str(mod.get('source_owner', 'unknown')), safe='')}/{quote((mod.get('name') or ''), safe='')}/source"
             m_name = mod.get("name", "?")
             res, errors = await self._safe_install(m_name, dl_url, notify=False)
             if res == 1:
@@ -1829,7 +1831,7 @@ class Vector(loader.Module):
 
         if action == "install":
             log.info("vector_install_payload_watcher: install action for %s", module_name)
-            dl_url = f"{API_ROOT}/modules/{quote(module_name, safe='')}/source"
+            dl_url = f"{API_ROOT}/modules/unknown/{quote(module_name, safe='')}/source"
             res, _ = await self._safe_install(module_name, dl_url, notify=False)
             if res == -1:
                 log.error("vector_install_payload_watcher: install failed (no loader)")
@@ -1841,7 +1843,7 @@ class Vector(loader.Module):
 
         log.info("vector_install_payload_watcher: rate action %s for %s", action, module_name)
         uid = self._parse_jwt(token).get("sub", "")
-        res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(module_name, safe='')}/{action}", token=token)
+        res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/unknown/{quote(module_name, safe='')}/{action}", token=token)
         if not res and self._last_http_code in {401, 403}:
             log.warning("vector_install_payload_watcher: banned (401/403)")
             await send_feedback("banned", "User is banned", "permanent")
@@ -1887,13 +1889,13 @@ class Vector(loader.Module):
         kb.append([{"text": "✖️", "callback": self.cb_nav, "args": (orig_i, group, q)}])
         await self._safe_edit(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", kb)
 
-    async def cb_toggle(self, cb: Any, m_name: str, i: int, group: list, q: str, exp: bool):
+    async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
         log.debug("cb_toggle: name=%s idx=%d exp=%s", m_name, i, exp)
         with suppress(Exception): await cb.answer()
-        item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{API_ROOT}/modules/{m_name}/source"}
+        item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{API_ROOT}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
         await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q, exp), item.get("banner"))
 
-    async def cb_rate(self, cb: Any, m_name: str, action: str, i: int, group: list, q: str):
+    async def cb_rate(self, cb: Any, m_owner: str, m_name: str, action: str, i: int, group: list, q: str):
         log.info("cb_rate: name=%s action=%s", m_name, action)
         token = await self._get_active_token()
         if not token:
@@ -1901,11 +1903,11 @@ class Vector(loader.Module):
             return
             
         uid = self._parse_jwt(token).get("sub", "")
-        res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(m_name, safe='')}/{action}", token=token)
+        res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/{action}", token=token)
         if not res or not res.get("ok"):
             token = await self._get_active_token(force=True)
             uid = self._parse_jwt(token).get("sub", "")
-            res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(m_name, safe='')}/{action}", token=token)
+            res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/{action}", token=token)
             if not res or not res.get("ok"):
                 with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
                 return
@@ -1919,13 +1921,13 @@ class Vector(loader.Module):
                 group[i]["dislikes"] = new_dislikes
             item = group[i]
         else:
-            item = {"name": m_name, "likes": new_likes or 0, "dislikes": new_dislikes or 0, "source_url": f"{API_ROOT}/modules/{m_name}/source"}
+            item = {"name": m_name, "likes": new_likes or 0, "dislikes": new_dislikes or 0, "source_url": f"{API_ROOT}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
             
         await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q), item.get("banner"))
         s_val = res.get("rating", {}).get("state")
         with suppress(Exception): await cb.answer(self.strings["v_fb_rm" if s_val == "removed" else "v_fb_add"], show_alert=True)
 
-    async def cb_install(self, cb: Any, m_name: str, i: int, group: list, q: str):
+    async def cb_install(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
         log.info("cb_install: name=%s", m_name)
         token = await self._get_active_token()
         if not token:
@@ -1933,7 +1935,7 @@ class Vector(loader.Module):
             with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
 
-        dl_url = f"{API_ROOT}/modules/{quote(m_name, safe='')}/source"
+        dl_url = f"{API_ROOT}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"
         log.debug("cb_install: dl_url=%s", dl_url)
         res, errors = await self._safe_install(m_name, dl_url)
         log.info("cb_install: result=%s errors=%d", res, len(errors) if errors else 0)
@@ -1951,14 +1953,14 @@ class Vector(loader.Module):
         else:
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
 
-    async def cb_sec_check(self, cb: Any, m_name: str, i: int, group: list, q: str):
+    async def cb_sec_check(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
         log.info("cb_sec_check: name=%s", m_name)
         def _get_sec_kb(has_run: bool):
             k = [[
                 {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
-                {"text": self.strings["v_btn_code"], "url": f"{API_ROOT}/modules/{m_name}/source"},
+                {"text": self.strings["v_btn_code"], "url": f"{API_ROOT}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"},
             ]]
-            if not has_run: k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_name, i, group, q)}])
+            if not has_run: k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q)}])
             return k
 
         cached = self._security_cache.get(m_name)
@@ -1971,7 +1973,7 @@ class Vector(loader.Module):
         if not token:
             with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
-        res = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/security-check", token=token)
+        res = await self._net_req("GET", f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/security-check", token=token)
         
         if not res or self._last_http_code >= 400:
             log.warning("cb_sec_check: API error for %s, http=%s", m_name, self._last_http_code)
@@ -1982,14 +1984,14 @@ class Vector(loader.Module):
             log.debug("cb_sec_check: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), _get_sec_kb(bool(res.get("checked"))))
 
-    async def cb_sec_run(self, cb: Any, m_name: str, i: int, group: list, q: str):
+    async def cb_sec_run(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
         log.info("cb_sec_run: name=%s", m_name)
         await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
         token = await self._get_active_token()
         if not token:
             with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
-        res = await self._net_req("POST", f"/api/modules/{quote(m_name, safe='')}/security-check", token=token, timeout=120)
+        res = await self._net_req("POST", f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/security-check", token=token, timeout=120)
         
         if self._last_http_code == 429:
             log.warning("cb_sec_run: rate limited (429)")
@@ -2038,7 +2040,7 @@ class Vector(loader.Module):
         lines.append(f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=qta.get('remaining', '?'), limit=qta.get('limit', '?'))}</i>")
         return "\n".join(lines)
 
-    async def cb_comments(self, cb: Any, m_name: str, i: int, group: list, q: str):
+    async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
         log.info("cb_comments: name=%s", m_name)
         with suppress(Exception): await cb.answer()
         token = await self._get_active_token()
@@ -2046,7 +2048,7 @@ class Vector(loader.Module):
             log.warning("cb_comments: no token")
             with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
             return
-        res = await self._net_req("GET", f"/api/modules/{quote(m_name, safe='')}/comments", token=token)
+        res = await self._net_req("GET", f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/comments", token=token)
         
         if not res or not isinstance(res, dict):
             log.warning("cb_comments: bad response for %s", m_name)
