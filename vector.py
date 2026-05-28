@@ -2058,14 +2058,14 @@ class Vector(loader.Module):
             
         kb = [[
             {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
-            {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_name, i, group, q)},
+            {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q)},
             {"text": self.strings["v_btn_site"], "url": f"{API_ROOT}/modules/{m_name}/source"},
         ]]
         
         item = group[i] if group and 0 <= i < len(group) else {}
         await self._safe_edit(cb, self._fmt_comments(res.get("comments", []), m_name), kb, item.get("banner"))
 
-    async def cb_post_comment(self, cb: Any, text: str, m_name: str, i: int, group: list, q: str):
+    async def cb_post_comment(self, cb: Any, text: str, m_owner: str, m_name: str, i: int, group: list, q: str):
         log.info("cb_post_comment: name=%s text_len=%d", m_name, len(text) if text else 0)
         token = await self._get_active_token()
         if not token:
@@ -2082,7 +2082,7 @@ class Vector(loader.Module):
             return
 
         with suppress(Exception): await cb.answer(self.strings["v_rep_snt"], show_alert=True)
-        res = await self._net_req("POST", f"/api/modules/{quote(m_name, safe='')}/comments", token=token, json_data={"body": c_txt})
+        res = await self._net_req("POST", f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/comments", token=token, json_data={"body": c_txt})
         
         if not res:
             log.warning("cb_post_comment: API error posting to %s", m_name)
