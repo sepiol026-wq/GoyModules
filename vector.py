@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 2, 9)
+__version__ = (2, 3, 0)
 
 import asyncio
 import base64
@@ -1181,8 +1181,8 @@ class Vector(loader.Module):
             "likes": int(raw.get("likes") or 0),
             "dislikes": int(raw.get("dislikes") or 0),
             "banner": raw.get("banner"),
-            "source_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(name, safe='')}/source",
-            "dl_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(name, safe='')}/source",
+            "source_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
+            "dl_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
         }
 
     @staticmethod
@@ -1565,9 +1565,10 @@ class Vector(loader.Module):
         force = "-f" in args or "--force" in args
         log.info("vecupdate: force=%s args=%r", force, args)
 
+        m_owner = "sepiol026-wq"
         m_name = "Vector"
-        dl_path = f"/modules/{quote(m_name, safe='')}/source"
-        dl_url = f"{API_ROOT}{dl_path}"
+        dl_path = f"/api/modules/{m_owner}/{quote(m_name, safe='')}/source/raw"
+        dl_url = f"{API_ROOT}/api/modules/{m_owner}/{quote(m_name, safe='')}/source/raw"
         log.debug("vecupdate: dl_url=%s", dl_url)
 
         if force:
