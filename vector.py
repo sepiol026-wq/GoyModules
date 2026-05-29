@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 3, 6)
+__version__ = (2, 3, 7)
 
 import asyncio
 import base64
@@ -1333,6 +1333,36 @@ class Vector(loader.Module):
         term = utils.escape_html(term_raw or "permanent")
         return self.strings["v_ban_notice"].format(reason=reason, term=term)
 
+    @staticmethod
+    def _tag_safe_truncate(text: str, cap: int) -> str:
+        """Truncate text without breaking HTML tags."""
+        if len(text) <= cap:
+            return text
+        plain = ""
+        inside = False
+        tag = ""
+        last_close = 0
+        for i, ch in enumerate(text):
+            if ch == "<":
+                inside = True
+                tag = "<"
+            elif ch == ">" and inside:
+                inside = False
+                if tag.startswith("</"):
+                    last_close = i + 1
+                tag = ""
+            elif inside:
+                tag += ch
+            else:
+                plain += ch
+            if len(plain) >= cap and not inside:
+                raw = text[:i + 1]
+                # close any still-open tags
+                if tag.startswith("</"):
+                    raw = text[:last_close or i + 1]
+                return raw.rstrip() + "..."
+        return text
+
     def _build_html(self, m_data: dict, current_idx: int, total_cnt: int) -> str:
         log.debug("_build_html: name=%s idx=%d/%d", m_data.get("name", "?"), current_idx, total_cnt)
         CAP = 900
@@ -1409,7 +1439,7 @@ class Vector(loader.Module):
                 if dl:
                     dep_block = f"{hdr}{', '.join(dl)}{ftr}"
 
-        return ("\n".join(pfx) + desc_block + cmd_block + dep_block).rstrip()[:CAP]
+        return self._tag_safe_truncate(("\n".join(pfx) + desc_block + cmd_block + dep_block).rstrip(), CAP)
 
     def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False) -> list:
         log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
