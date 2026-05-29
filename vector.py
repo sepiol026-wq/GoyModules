@@ -1395,21 +1395,19 @@ class Vector(loader.Module):
         deps = m_data.get("dependencies", [])
         dep_block = ""
         if deps:
-            est = used + len(desc_block) + len(cmd_block) + 20
-            if est < CAP - 15:
-                hdr = f"\n\n{self.ICONS['dependency']} <b>{self.strings.get('v_deps', 'Dependencies')}:</b>\n<blockquote expandable>"
-                ftr = "</blockquote>"
-                room = CAP - used - len(desc_block) - len(cmd_block) - len(hdr) - len(ftr) - 3
-                if room > 0:
-                    dl = []
-                    for d in deps:
-                        dt = utils.escape_html(str(d))
-                        if room - len(dt) - 3 < 0:
-                            break
-                        dl.append(f"<code>{dt}</code>")
-                        room -= len(dt) + 3
-                    if dl:
-                        dep_block = f"{hdr}{', '.join(dl)}{ftr}"
+            hdr = f"\n\n{self.ICONS['dependency']} <b>{self.strings.get('v_deps', 'Dependencies')}</b>\n<blockquote expandable>"
+            ftr = "</blockquote>"
+            room = CAP - used - len(desc_block) - len(cmd_block) - len(hdr) - len(ftr) - 3
+            if room > 0:
+                dl = []
+                for d in deps:
+                    dt = utils.escape_html(str(d))
+                    if room - len(dt) - 3 < 0:
+                        break
+                    dl.append(f"<code>{dt}</code>")
+                    room -= len(dt) + 3
+                if dl:
+                    dep_block = f"{hdr}{', '.join(dl)}{ftr}"
 
         return f"{'\n'.join(pfx)}{desc_block}{cmd_block}{dep_block}".rstrip()[:CAP]
 
