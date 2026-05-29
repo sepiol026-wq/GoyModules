@@ -1839,9 +1839,13 @@ class Vector(loader.Module):
         if len(parts) != 5:
             log.debug("vector_install_payload_watcher: invalid parts count=%d", len(parts))
             return
-        _, module_name, action, ts_raw, signature = parts
-        log.info("vector_install_payload_watcher: module=%s action=%s", module_name, action)
-        if not module_name or not action or not ts_raw or not signature:
+        _, owner_module, action, ts_raw, signature = parts
+        if "|" in owner_module:
+            owner, module_name = owner_module.split("|", 1)
+        else:
+            owner, module_name = "unknown", owner_module
+        log.info("vector_install_payload_watcher: owner=%s module=%s action=%s", owner, module_name, action)
+        if not owner_module or not action or not ts_raw or not signature:
             return
         if action not in {"install", "like", "dislike"}:
             return
@@ -1855,7 +1859,7 @@ class Vector(loader.Module):
         if abs(now - ts) > 60:
             return
 
-        local_payload = f"{module_name}:{action}:{ts}"
+        local_payload = f"{owner_module}:{action}:{ts}"
         local_signature = hmac.new(
             AUTH_SALT.encode("utf-8"),
             local_payload.encode("utf-8"),
@@ -1868,7 +1872,7 @@ class Vector(loader.Module):
             feedback_ts = int(time.time())
             safe_reason = (reason or "").replace(":", " ").strip()
             safe_until = (banned_until or "").replace(":", " ").strip()
-            feedback_payload = f"{module_name}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}"
+            feedback_payload = f"{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}"
             feedback_signature = hmac.new(
                 AUTH_SALT.encode("utf-8"),
                 feedback_payload.encode("utf-8"),
@@ -1877,7 +1881,7 @@ class Vector(loader.Module):
             with suppress(Exception):
                 await self._client.send_message(
                     msg.chat_id,
-                    f"#v_feedback:{module_name}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}:{feedback_signature}",
+                    f"#v_feedback:{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}:{feedback_signature}",
                 )
 
         token = await self._get_active_token()
@@ -1887,8 +1891,8 @@ class Vector(loader.Module):
             return
 
         if action == "install":
-            log.info("vector_install_payload_watcher: install action for %s", module_name)
-            dl_url = f"{API_ROOT}/modules/unknown/{quote(module_name, safe='')}/source"
+            log.info("vector_install_payload_watcher: install action for %s/%s", owner, module_name)
+            dl_url = f"{API_ROOT}/modules/{quote(owner, safe='')}/{quote(module_name, safe='')}/source"
             res, _ = await self._safe_install(module_name, dl_url, notify=False)
             if res == -1:
                 log.error("vector_install_payload_watcher: install failed (no loader)")
@@ -1898,9 +1902,9 @@ class Vector(loader.Module):
                 await send_feedback("ok" if res == 1 else "error")
             return
 
-        log.info("vector_install_payload_watcher: rate action %s for %s", action, module_name)
+        log.info("vector_install_payload_watcher: rate action %s for %s/%s", action, owner, module_name)
         uid = self._parse_jwt(token).get("sub", "")
-        res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/unknown/{quote(module_name, safe='')}/{action}", token=token)
+        res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(owner, safe='')}/{quote(module_name, safe='')}/{action}", token=token)
         if not res and self._last_http_code in {401, 403}:
             log.warning("vector_install_payload_watcher: banned (401/403)")
             await send_feedback("banned", "User is banned", "permanent")
