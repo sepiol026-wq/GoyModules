@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 3, 5)
+__version__ = (2, 3, 6)
 
 import asyncio
 import base64
@@ -1409,7 +1409,7 @@ class Vector(loader.Module):
                 if dl:
                     dep_block = f"{hdr}{', '.join(dl)}{ftr}"
 
-        return f"{'\n'.join(pfx)}{desc_block}{cmd_block}{dep_block}".rstrip()[:CAP]
+        return ("\n".join(pfx) + desc_block + cmd_block + dep_block).rstrip()[:CAP]
 
     def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False) -> list:
         log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
