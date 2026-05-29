@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 3, 4)
+__version__ = (2, 3, 5)
 
 import asyncio
 import base64
@@ -569,7 +569,7 @@ class Vector(loader.Module):
         "v_dev_unofc": "3rd-party",
         "v_info": "info",
         "v_cmds": "usage",
-        "v_deps": "Зависимости, брат:",
+        "v_deps": "deps:",
         "v_reqs": "deps",
         "v_hid_cmd": "+ {rem} hidden cmds.",
         "v_hid_req": "+ {rem} hidden deps.",
