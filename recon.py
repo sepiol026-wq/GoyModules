@@ -17,7 +17,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/recon.png
 # meta developer: @goymodules
 # requires: aiohttp beautifulsoup4
-__version__ = (1, 2)
+__version__ = (1, 2, 1)
 
 import aiohttp
 import asyncio
@@ -1128,7 +1128,12 @@ class Recon(loader.Module):
             return await utils.answer(message, "<b><tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> sqlmap-dev не найден. Клонируй sqlmap вручную в папку sqlmap-dev.</b>")
         await self.rtc(cid, uid, message, f"python3 {sp} {args}", "<tg-emoji emoji-id=5256054356913957552>🎙</tg-emoji> SQLMap")
 
+    @loader.watcher(ignore_edited=True)
     async def watcher(self, message: Message):
+        if hasattr(message, "message") and not hasattr(message, "get_sender"):
+            message = getattr(message, "message", message)
+        if not hasattr(message, "chat_id"):
+            return
         sender_id = getattr(message, "sender_id", None)
 
         if sender_id is None:
