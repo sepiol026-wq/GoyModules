@@ -82,6 +82,7 @@ class Vector(loader.Module):
         "v_dl_err": "Installation failed!",
         "v_lim_cfg": "Search output limits.",
         "v_max_batch_cfg": "Max modules per batch install.",
+        "v_payload_cfg": "Remote install & rate via bot payloads.",
         "v_btn_sec": "🛡 Security Scan",
         "v_aud_hdr": "Code Audit: {name}",
         "v_aud_req": "Connecting to Security API...",
@@ -185,6 +186,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Лимиты вывода поиска.",
         "v_btn_sec": "🛡 Проверка кода",
         "v_max_batch_cfg": "Макс модулей за одну установку.",
+        "v_payload_cfg": "Удалённая установка и оценка через бота.",
         "v_aud_hdr": "Аудит кода: {name}",
         "v_aud_req": "Соединение с Security API...",
         "v_aud_proc": "Анализ AST дерева...",
@@ -287,6 +289,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "検索出力制限。",
         "v_btn_sec": "🛡 セキュリティスキャン",
         "v_max_batch_cfg": "一括インストールの最大モジュール数。",
+        "v_payload_cfg": "ボット経由のリモートインストールと評価。",
         "v_aud_hdr": "コード監査: {name}",
         "v_aud_req": "セキュリティAPIに接続中...",
         "v_aud_proc": "ASTツリーを処理中...",
@@ -389,6 +392,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Ліміти виводу пошуку.",
         "v_btn_sec": "🛡 Перевірка коду",
         "v_max_batch_cfg": "Макс модулів за одну установку.",
+        "v_payload_cfg": "Віддалене встановлення та оцінка через бота.",
         "v_aud_hdr": "Аудит коду: {name}",
         "v_aud_req": "З'єднання з Security API...",
         "v_aud_proc": "Аналіз AST дерева...",
@@ -491,6 +495,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Suchausgabe-Limits.",
         "v_btn_sec": "🛡 Sicherheits-Scan",
         "v_max_batch_cfg": "Max Module pro Batch-Installation.",
+        "v_payload_cfg": "Remote-Installation & Bewertung via Bot.",
         "v_aud_hdr": "Code-Audit: {name}",
         "v_aud_req": "Verbindung zur Security-API...",
         "v_aud_proc": "Verarbeite AST-Baum...",
@@ -593,6 +598,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Search output limits.",
         "v_btn_sec": "🛡 Security scan",
         "v_max_batch_cfg": "max mods per batch install.",
+        "v_payload_cfg": "Remote install & rate via bot payloads.",
         "v_aud_hdr": "Code audit: {name}",
         "v_aud_req": "Connecting to security API...",
         "v_aud_proc": "Parsing AST...",
@@ -695,6 +701,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Лимиты выдачи.",
         "v_btn_sec": "🛡 Чек кода",
         "v_max_batch_cfg": "Макс темок за раз.",
+        "v_payload_cfg": "Удалённая установка и оценка темок через бота.",
         "v_aud_hdr": "Прожарка: {name}",
         "v_aud_req": "Стучимся в API защиты...",
         "v_aud_proc": "Парсим AST...",
@@ -797,6 +804,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "534rch l1m175.",
         "v_btn_sec": "🛡 53cur17y 5c4n",
         "v_max_batch_cfg": "m4x m0d5 p3r b47ch.",
+        "v_payload_cfg": "R3m073 1n574ll & r473 v14 b07.",
         "v_aud_hdr": "C0d3 4ud17: {name}",
         "v_aud_req": "C0nn3c71ng 70 53cur17y 4P1...",
         "v_aud_proc": "Pr0c3551ng A57 7r33...",
@@ -899,6 +907,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Seawch wimits.",
         "v_btn_sec": "🛡 Secuwity Scan",
         "v_max_batch_cfg": "Max moduwes pew batch.",
+        "v_payload_cfg": "Wemote instaww & wate via bot. (・ω・)",
         "v_aud_hdr": "Code Audit: {name}",
         "v_aud_req": "Connecting to Secuwity API...",
         "v_aud_proc": "Pwocessing AST twee...",
@@ -1114,6 +1123,12 @@ class Vector(loader.Module):
                 50,
                 lambda: self.strings("v_max_batch_cfg"),
                 validator=loader.validators.Integer(minimum=1, maximum=100)
+            ),
+            loader.ConfigValue(
+                "remote_install",
+                True,
+                lambda: self.strings("v_payload_cfg"),
+                validator=loader.validators.Boolean()
             ),
         )
         self.http: Optional[aiohttp.ClientSession] = None
@@ -1849,6 +1864,8 @@ class Vector(loader.Module):
     @loader.watcher()
     async def vector_install_payload_watcher(self, msg: Message):
         if getattr(msg, "out", False):
+            return
+        if not self.config.get("remote_install", True):
             return
         if not self.btid:
             try:
