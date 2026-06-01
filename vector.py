@@ -1399,7 +1399,7 @@ class Vector(loader.Module):
         desc = m_data.get("description")
         desc_block = ""
         if desc and used < CAP - 20:
-            desc_raw = utils.escape_html(str(desc))
+            desc_raw = re.sub(r'(https?://\S+|www\.\S+)', r'<code>\1</code>', utils.escape_html(str(desc)))
             hdr = f"\n{self.ICONS['description']} <b>{self.strings['v_info']}</b>\n<blockquote expandable>"
             ftr = "</blockquote>"
             room = CAP - used - len(hdr) - len(ftr) - 8
@@ -1565,9 +1565,11 @@ class Vector(loader.Module):
                             try:
                                 await self.inline.form(text, message=chat, **kwargs)
                             except WebpageMediaEmptyError:
-                                log.info("_safe_edit: inline.form WebpageMediaEmptyError, retry no photo")
+                                log.info("_safe_edit: inline.form WebpageMediaEmptyError, retry clean")
                                 kwargs.pop("photo", None)
-                                await self.inline.form(text, message=chat, **kwargs)
+                                ct = re.sub(r'(?:https?://|www\.)\S+', '', text)
+                                ct = re.sub(r'<a\s[^>]*>[^<]*</a>', '', ct).strip()
+                                await self.inline.form(ct, message=chat, **kwargs)
             elif hasattr(target, "edit"):
                 ekw = {}
                 if img and img.startswith("http"):
