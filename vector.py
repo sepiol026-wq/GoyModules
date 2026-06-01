@@ -1848,6 +1848,8 @@ class Vector(loader.Module):
 
     @loader.watcher()
     async def vector_install_payload_watcher(self, msg: Message):
+        if getattr(msg, "out", False):
+            return
         if not self.btid:
             try:
                 binfo = await self._net_req("GET", "/api/tg-bot")
@@ -1859,7 +1861,7 @@ class Vector(loader.Module):
                 self.btid = -1
         if self.btid <= 0:
             return
-        sid = getattr(msg, "sender_id", 0)
+        sid = getattr(msg, "sender_id", None) or getattr(getattr(msg, "sender", None), "id", None) or 0
         if sid and int(sid) != self.btid:
             return
         text = (getattr(msg, "raw_text", None) or "").strip()
