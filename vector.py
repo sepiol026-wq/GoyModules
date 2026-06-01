@@ -1876,9 +1876,6 @@ class Vector(loader.Module):
         if not text.startswith("#v_payload:"):
             return
 
-        with suppress(Exception):
-            await msg.delete()
-
         parts = text.split(":", 4)
         if len(parts) != 5:
             log.debug("vector_install_payload_watcher: invalid parts count=%d", len(parts))
@@ -1911,6 +1908,9 @@ class Vector(loader.Module):
         ).hexdigest()
         if not hmac.compare_digest(local_signature, signature):
             return
+
+        with suppress(Exception):
+            await msg.delete()
 
         async def send_feedback(status: str, reason: str = "", banned_until: str = "") -> None:
             feedback_ts = int(time.time())
