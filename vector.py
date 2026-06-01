@@ -1552,6 +1552,27 @@ class Vector(loader.Module):
                             await bot.edit_message(imid, None, text, **ekw2)
                         except Exception:
                             log.debug("_safe_edit: fallback banner also failed")
+                    except RuntimeError:
+                        log.info("_safe_edit: no bot/imid/buttons, send via inline.bot")
+                        with suppress(Exception):
+                            await target.delete()
+                        unit = target._units.get(uid, {})
+                        chat = unit.get("chat")
+                        if chat:
+                            ibot = getattr(self.inline, "bot", None)
+                            if ibot and btns:
+                                try:
+                                    await ibot.send_message(chat.id, text, parse_mode="HTML", reply_markup=btns, link_preview=False)
+                                except Exception:
+                                    log.debug("_safe_edit: inline.bot send also failed")
+                    except WebpageMediaEmptyError:
+                        log.info("_safe_edit: bot edit WebpageMediaEmptyError, fallback banner")
+                        ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
+                        ekw2["file"] = fb
+                        try:
+                            await bot.edit_message(imid, None, text, **ekw2)
+                        except Exception:
+                            log.debug("_safe_edit: fallback banner also failed")
                     except Exception as e2:
                         log.debug("_safe_edit: direct bot edit failed: %r", e2)
                         with suppress(Exception):
@@ -1590,6 +1611,14 @@ class Vector(loader.Module):
                             if img and img.startswith("http"):
                                 ekw2["file"] = img
                             await bot.edit_message(imid, None, text, **ekw2)
+                    except RuntimeError:
+                        log.info("_safe_edit: InlineCall no bot/imid/buttons, send via inline.bot")
+                        ibot = getattr(self.inline, "bot", None)
+                        if ibot and btns:
+                            try:
+                                await ibot.send_message(imid.chat.id if hasattr(imid, 'chat') else target.chat.id, text, parse_mode="HTML", reply_markup=btns, link_preview=False)
+                            except Exception:
+                                log.debug("_safe_edit: InlineCall inline.bot send also failed")
                     except WebpageMediaEmptyError:
                         log.info("_safe_edit: InlineCall bot edit WebpageMediaEmptyError, fallback banner")
                         ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
