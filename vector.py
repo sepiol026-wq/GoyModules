@@ -991,14 +991,12 @@ class Vector(loader.Module):
         "modules_list": '<tg-emoji emoji-id="5883973610606956186">🗂</tg-emoji>',
         "shield": '<tg-emoji emoji-id="5926783847453692661">🛡</tg-emoji>',
         "safe": '<tg-emoji emoji-id="5776375003280838798">✅</tg-emoji>',
-        "unsafe": '<tg-emoji emoji-id="5778527486270770928">❌</tg-emoji>',
         "stats": '<tg-emoji emoji-id="5877485980901971030">📊</tg-emoji>',
         "quota": '<tg-emoji emoji-id="6311858554944888333">⌚️</tg-emoji>',
         "verified": '<tg-emoji emoji-id="5958376256788502078">⭐️</tg-emoji>',
         "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
         "reply": "↳",
         "broken": '<tg-emoji emoji-id="5877260593903177342">💥</tg-emoji>',
-        "globe": '<tg-emoji emoji-id="5877485980901971030">🌐</tg-emoji>',
     }
 
     _ierrs = [
