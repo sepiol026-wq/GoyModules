@@ -29,6 +29,7 @@ import time
 import unicodedata
 from contextlib import suppress
 from typing import Any, Dict, List, Optional
+from herokutl.errors.rpcerrorlist import WebpageMediaEmptyError
 from urllib.parse import quote, urljoin
 
 import aiohttp
@@ -1515,9 +1516,9 @@ class Vector(loader.Module):
         return kbd
 
 
-    async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
+    async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None, _retry: bool = False) -> None:
         tname = type(target).__name__
-        log.debug("_safe_edit: kbd_rows=%d target=%s", len(kbd) if kbd else 0, tname)
+        log.debug("_safe_edit: kbd_rows=%d target=%s retry=%s", len(kbd) if kbd else 0, tname, _retry)
 
         try:
             if "Message" in tname and hasattr(target, "unit_id"):
@@ -1577,6 +1578,17 @@ class Vector(loader.Module):
                         log.debug("_safe_edit: InlineCall bot fallback failed: %r", e3)
             else:
                 await utils.answer(target, text, reply_markup=kbd)
+        except WebpageMediaEmptyError:
+            if _retry:
+                raise
+            log.info("_safe_edit: WebpageMediaEmptyError, stripping links + banner")
+            clean = re.sub(r'<a\s[^>]*>[^<]*</a>', '', text).strip()
+            clean = re.sub(r'https?://\S+', '', clean)
+            try:
+                await self._safe_edit(target, clean, kbd, None, _retry=True)
+            except Exception:
+                with suppress(Exception):
+                    await target.answer(self.strings["v_err_gui"], show_alert=True)
         except Exception as e:
             log.warning("_safe_edit: edit failed: %r", e)
             with suppress(Exception):
