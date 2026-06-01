@@ -1559,12 +1559,19 @@ class Vector(loader.Module):
                         unit = target._units.get(uid, {})
                         chat = unit.get("chat")
                         if chat:
+                            cid = getattr(chat, "id", None) or getattr(chat, "chat_id", None)
                             ibot = getattr(self.inline, "bot", None)
-                            if ibot and btns:
+                            if ibot and btns and cid:
                                 try:
-                                    await ibot.send_message(chat.id, text, parse_mode="HTML", reply_markup=btns, link_preview=False)
-                                except Exception:
-                                    log.debug("_safe_edit: inline.bot send also failed")
+                                    await ibot.send_message(cid, text, parse_mode="HTML", reply_markup=btns, link_preview=False)
+                                except Exception as e3:
+                                    log.warning("_safe_edit: inline.bot send failed: %r", e3)
+                                    with suppress(Exception):
+                                        await utils.answer(chat, text)
+                            else:
+                                log.warning("_safe_edit: no ibot=%s btns=%s cid=%s", bool(ibot), bool(btns), cid)
+                                with suppress(Exception):
+                                    await utils.answer(chat, text)
                     except WebpageMediaEmptyError:
                         log.info("_safe_edit: bot edit WebpageMediaEmptyError, fallback banner")
                         ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
@@ -1615,10 +1622,18 @@ class Vector(loader.Module):
                         log.info("_safe_edit: InlineCall no bot/imid/buttons, send via inline.bot")
                         ibot = getattr(self.inline, "bot", None)
                         if ibot and btns:
-                            try:
-                                await ibot.send_message(imid.chat.id if hasattr(imid, 'chat') else target.chat.id, text, parse_mode="HTML", reply_markup=btns, link_preview=False)
-                            except Exception:
-                                log.debug("_safe_edit: InlineCall inline.bot send also failed")
+                            cid = None
+                            if imid and hasattr(imid, "chat"):
+                                cid = getattr(imid.chat, "id", None) or getattr(imid.chat, "chat_id", None)
+                            if not cid and hasattr(target, "chat"):
+                                cid = getattr(target.chat, "id", None) or getattr(target.chat, "chat_id", None)
+                            if cid:
+                                try:
+                                    await ibot.send_message(cid, text, parse_mode="HTML", reply_markup=btns, link_preview=False)
+                                except Exception as e3:
+                                    log.warning("_safe_edit: InlineCall inline.bot send failed: %r", e3)
+                            else:
+                                log.warning("_safe_edit: InlineCall no cid from imid or target")
                     except WebpageMediaEmptyError:
                         log.info("_safe_edit: InlineCall bot edit WebpageMediaEmptyError, fallback banner")
                         ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
