@@ -1581,11 +1581,10 @@ class Vector(loader.Module):
         except WebpageMediaEmptyError:
             if _retry:
                 raise
-            log.info("_safe_edit: WebpageMediaEmptyError, stripping links + banner")
-            clean = re.sub(r'<a\s[^>]*>[^<]*</a>', '', text).strip()
-            clean = re.sub(r'https?://\S+', '', clean)
+            log.info("_safe_edit: WebpageMediaEmptyError, fallback banner")
+            fb = "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vec404.png"
             try:
-                await self._safe_edit(target, clean, kbd, None, _retry=True)
+                await self._safe_edit(target, text, kbd, fb, _retry=True)
             except Exception:
                 with suppress(Exception):
                     await target.answer(self.strings["v_err_gui"], show_alert=True)
