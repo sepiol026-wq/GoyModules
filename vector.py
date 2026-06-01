@@ -1516,9 +1516,10 @@ class Vector(loader.Module):
         return kbd
 
 
-    async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None, _retry: bool = False) -> None:
+    async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
         tname = type(target).__name__
-        log.debug("_safe_edit: kbd_rows=%d target=%s retry=%s", len(kbd) if kbd else 0, tname, _retry)
+        log.debug("_safe_edit: kbd_rows=%d target=%s", len(kbd) if kbd else 0, tname)
+        fb = "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vec404.png"
 
         try:
             if "Message" in tname and hasattr(target, "unit_id"):
@@ -1543,6 +1544,14 @@ class Vector(loader.Module):
                             await bot.edit_message(imid, None, text, **ekw2)
                         else:
                             raise RuntimeError("no bot/imid/buttons")
+                    except WebpageMediaEmptyError:
+                        log.info("_safe_edit: bot edit WebpageMediaEmptyError, fallback banner")
+                        ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
+                        ekw2["file"] = fb
+                        try:
+                            await bot.edit_message(imid, None, text, **ekw2)
+                        except Exception:
+                            log.debug("_safe_edit: fallback banner also failed")
                     except Exception as e2:
                         log.debug("_safe_edit: direct bot edit failed: %r", e2)
                         with suppress(Exception):
@@ -1553,7 +1562,12 @@ class Vector(loader.Module):
                             kwargs = {"reply_markup": kbd}
                             if img and img.startswith("http"):
                                 kwargs["photo"] = img
-                            await self.inline.form(text, message=chat, **kwargs)
+                            try:
+                                await self.inline.form(text, message=chat, **kwargs)
+                            except WebpageMediaEmptyError:
+                                log.info("_safe_edit: inline.form WebpageMediaEmptyError, retry no photo")
+                                kwargs.pop("photo", None)
+                                await self.inline.form(text, message=chat, **kwargs)
             elif hasattr(target, "edit"):
                 ekw = {}
                 if img and img.startswith("http"):
@@ -1574,17 +1588,22 @@ class Vector(loader.Module):
                             if img and img.startswith("http"):
                                 ekw2["file"] = img
                             await bot.edit_message(imid, None, text, **ekw2)
+                    except WebpageMediaEmptyError:
+                        log.info("_safe_edit: InlineCall bot edit WebpageMediaEmptyError, fallback banner")
+                        ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
+                        ekw2["file"] = fb
+                        try:
+                            await bot.edit_message(imid, None, text, **ekw2)
+                        except Exception:
+                            log.debug("_safe_edit: InlineCall fallback banner also failed")
                     except Exception as e3:
                         log.debug("_safe_edit: InlineCall bot fallback failed: %r", e3)
             else:
                 await utils.answer(target, text, reply_markup=kbd)
         except WebpageMediaEmptyError:
-            if _retry:
-                raise
-            log.info("_safe_edit: WebpageMediaEmptyError, fallback banner")
-            fb = "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vec404.png"
+            log.info("_safe_edit: top-level WebpageMediaEmptyError, fallback banner")
             try:
-                await self._safe_edit(target, text, kbd, fb, _retry=True)
+                await self._safe_edit(target, text, kbd, fb)
             except Exception:
                 with suppress(Exception):
                     await target.answer(self.strings["v_err_gui"], show_alert=True)
