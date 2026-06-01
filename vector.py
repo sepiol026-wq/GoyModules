@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 3, 8)
+__version__ = (2, 3, 9)
 
 import asyncio
 import base64
@@ -41,15 +41,14 @@ from .. import loader, utils
 log = logging.getLogger("VectorMonolith")
 log.setLevel(logging.DEBUG)
 
-API_ROOT = "https://vector-three-sooty.vercel.app"
-JWT_REGEX = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
-AUTH_SALT = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
-OFFICIAL_CREATORS = {"@goymodules", "@samsepi0l_ovf"}
-OFFICIAL_VECTOR_BOT_ID = int(os.getenv("VECTOR_OFFICIAL_BOT_ID", "0"))
-LANG_PING_PAYLOAD = "#v_lang_ping"
-LANG_PONG_PREFIX = "#v_lang:"
-BAN_REASON_RE = re.compile(r"(?:Причина|Reason|理由|Grund|R3450n|Weason|Charge):\s*(.+)", re.IGNORECASE)
-BAN_TERM_RE = re.compile(r"(?:Срок|Term|期間|Dauer|73rm|Tewm):\s*(.+)", re.IGNORECASE)
+apirt = "https://vector-three-sooty.vercel.app"
+jwtrx = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
+auths = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
+botid = int(os.getenv("VECTOR_OFFICIAL_BOT_ID", "0"))
+lping = "#v_lang_ping"
+lpong = "#v_lang:"
+brrx = re.compile(r"(?:Причина|Reason|理由|Grund|R3450n|Weason|Charge):\s*(.+)", re.IGNORECASE)
+btrx = re.compile(r"(?:Срок|Term|期間|Dauer|73rm|Tewm):\s*(.+)", re.IGNORECASE)
 
 @loader.tds
 class Vector(loader.Module):
@@ -1002,7 +1001,7 @@ class Vector(loader.Module):
         "globe": '<tg-emoji emoji-id="5877485980901971030">🌐</tg-emoji>',
     }
 
-    _INSTALL_ERR_PATTERNS = [
+    _ierrs = [
         ("forbidden", re.compile(r"uses forbidden method:\s*(.+)")),
         ("requirements", re.compile(r"requirements.*failed to install:\s*(.+)", re.DOTALL)),
         ("dependency", re.compile(r"requires missing dependency\s+(.+)")),
@@ -1015,7 +1014,7 @@ class Vector(loader.Module):
         ("download", re.compile(r"Failed to download module")),
     ]
 
-    class _InstallLogCapture(logging.Handler):
+    class _ILog(logging.Handler):
         def __init__(self):
             super().__init__()
             self.records: List[logging.LogRecord] = []
@@ -1030,7 +1029,7 @@ class Vector(loader.Module):
             if rec.levelno < logging.WARNING:
                 continue
             msg = rec.getMessage()
-            for err_type, pattern in self._INSTALL_ERR_PATTERNS:
+            for err_type, pattern in self._ierrs:
                 m = pattern.search(msg)
                 if m:
                     if err_type == "core_overwrite":
@@ -1080,7 +1079,7 @@ class Vector(loader.Module):
             log.error("_safe_install: no Loader or download_and_install missing")
             return -1, []
 
-        cap = self._InstallLogCapture()
+        cap = self._ILog()
         cap.setLevel(logging.WARNING)
         for lg_name in ("heroku.modules.loader", "heroku", ""):
             logging.getLogger(lg_name).addHandler(cap)
@@ -1122,9 +1121,9 @@ class Vector(loader.Module):
             ),
         )
         self.http: Optional[aiohttp.ClientSession] = None
-        self._security_cache: Dict[str, Dict[str, Any]] = {}
-        self._last_http_code = 0
-        self._last_ban_notice = ""
+        self.seccache: Dict[str, Dict[str, Any]] = {}
+        self.httpc = 0
+        self.bannote = ""
 
     async def client_ready(self, client: "herokutl.TelegramClient", database: "loader.Database") -> None:
         self.client = client
@@ -1145,15 +1144,15 @@ class Vector(loader.Module):
             self.http = aiohttp.ClientSession()
             log.debug("_net_req: created new aiohttp ClientSession")
             
-        url = urljoin(API_ROOT + "/", path.lstrip("/"))
+        url = urljoin(apirt + "/", path.lstrip("/"))
         headers = {"User-Agent": "VectorUserbotClient/2.0"}
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        self._last_http_code = 0
+        self.httpc = 0
         try:
             async with self.http.request(method, url, params=params, json=json_data, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as r:
-                self._last_http_code = r.status
+                self.httpc = r.status
                 log.debug("HTTP %s %s -> %s", method, path, r.status)
                 if r.status >= 300:
                     return None
@@ -1176,16 +1175,14 @@ class Vector(loader.Module):
                 })
 
         dev = str(raw.get("developer") or raw.get("author") or "@Unknown")
-        clean_dev = dev.strip().lower().lstrip('@')
-        is_official = bool(
+        ioff = bool(
             raw.get("official") 
             or raw.get("is_official") 
             or raw.get("verified") 
             or raw.get("is_verified") 
             or raw.get("telegram_verified") 
             or raw.get("official_developer") 
-            or raw.get("is_official_developer") 
-            or clean_dev in {"goymodules", "samsepi0l_ovf"}
+            or raw.get("is_official_developer")
         )
         name = str(raw.get("name") or raw.get("class_name") or "Unknown")
         
@@ -1197,13 +1194,13 @@ class Vector(loader.Module):
             "description": raw.get("description") or "",
             "commands": cmds,
             "dependencies": [str(d) for d in (raw.get("dependencies") or [])],
-            "official": is_official,
+            "official": ioff,
             "likes": int(raw.get("likes") or 0),
             "dislikes": int(raw.get("dislikes") or 0),
             "banner": raw.get("banner"),
             "placeholders": [str(p) for p in (raw.get("placeholders") or [])],
-            "source_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
-            "dl_url": raw.get("source_url") or f"{API_ROOT}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
+            "source_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
+            "dl_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
         }
 
     @staticmethod
@@ -1287,7 +1284,7 @@ class Vector(loader.Module):
         ban_notice = ""
         for attempt in range(2):
             b_stamp = int(time.time() // 10) - attempt
-            cmd_hash = hashlib.sha256(f"vector-token-v2|{uid}|{b_stamp}|{AUTH_SALT}".encode()).hexdigest()[:32]
+            cmd_hash = hashlib.sha256(f"vector-token-v2|{uid}|{b_stamp}|{auths}".encode()).hexdigest()[:32]
             cmd_str = f"/{cmd_hash}"
 
             try:
@@ -1296,7 +1293,7 @@ class Vector(loader.Module):
                     try:
                         resp = await asyncio.wait_for(conv.get_response(), timeout=10)
                         txt = getattr(resp, "raw_text", getattr(resp, "text", ""))
-                        match = JWT_REGEX.search(txt)
+                        match = jwtrx.search(txt)
                         if match:
                             new_jwt = match.group(0)
                         elif "заблок" in txt.lower() or "⛔" in txt:
@@ -1310,10 +1307,10 @@ class Vector(loader.Module):
 
         if new_jwt:
             self.set("auth_token", new_jwt)
-            self._last_ban_notice = ""
+            self.bannote = ""
             log.info("_get_active_token: new token obtained")
-        elif ban_notice:
-            self._last_ban_notice = ban_notice
+        elif bn:
+            self.bannote = bn
             log.warning("_get_active_token: user banned")
         else:
             log.warning("_get_active_token: no token obtained")
@@ -1322,8 +1319,8 @@ class Vector(loader.Module):
     def _format_ban_notice(self, raw_text: str) -> str:
         log.debug("_format_ban_notice: raw_len=%d", len(raw_text) if raw_text else 0)
         txt = str(raw_text or "").strip()
-        reason_match = BAN_REASON_RE.search(txt)
-        term_match = BAN_TERM_RE.search(txt)
+        reason_match = brrx.search(txt)
+        term_match = btrx.search(txt)
 
         reason_raw = reason_match.group(1).strip() if reason_match else ""
         term_raw = term_match.group(1).strip() if term_match else ""
@@ -1616,12 +1613,12 @@ class Vector(loader.Module):
         token = await self._get_active_token()
         if not token:
             log.warning("vectorcmd: no token, aborting")
-            return await self._safe_edit(form, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", [[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+            return await self._safe_edit(form, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", [[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
 
         log.info("Vector search request q=%r token=%s", q, bool(token))
         raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
 
-        if self._last_http_code == 401:
+        if self.httpc == 401:
             log.info("vectorcmd: got 401, forcing token refresh")
             token = await self._get_active_token(force=True)
             raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
@@ -1661,7 +1658,7 @@ class Vector(loader.Module):
         m_owner = "sepiol026-wq"
         m_name = "Vector"
         dl_path = f"/modules/{m_owner}/{quote(m_name, safe='')}/source"
-        dl_url = f"{API_ROOT}/modules/{m_owner}/{quote(m_name, safe='')}/source"
+        dl_url = f"{apirt}/modules/{m_owner}/{quote(m_name, safe='')}/source"
         log.debug("vecupdate: dl_url=%s", dl_url)
 
         if force:
@@ -1684,7 +1681,7 @@ class Vector(loader.Module):
         token = await self._get_active_token()
         if not token:
             log.warning("vecupdate: no token, aborting")
-            return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+            return await utils.answer(msg, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
 
         src_bytes = await self._net_req("GET", dl_path, token=token, as_bytes=True)
         if not src_bytes:
@@ -1792,7 +1789,7 @@ class Vector(loader.Module):
 
         token = await self._get_active_token()
         if not token:
-            return await utils.answer(msg, self._last_ban_notice or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+            return await utils.answer(msg, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
 
         raw = await self._net_req("GET", f"/api/collections/{quote(slug, safe='')}", token=token)
         if not raw or not raw.get("ok"):
@@ -1819,7 +1816,7 @@ class Vector(loader.Module):
         ok = 0
         failed: List[str] = []
         for mod in modules:
-            dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{API_ROOT}/modules/{quote(str(mod.get('source_owner', 'unknown')), safe='')}/{quote((mod.get('name') or ''), safe='')}/source"
+            dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{apirt}/modules/{quote(str(mod.get('source_owner', 'unknown')), safe='')}/{quote((mod.get('name') or ''), safe='')}/source"
             m_name = mod.get("name", "?")
             res, errors = await self._safe_install(m_name, dl_url, notify=False)
             if res == 1:
@@ -1852,14 +1849,14 @@ class Vector(loader.Module):
 
         await self._safe_edit(form, result, [[{"text": "✖️", "action": "close"}]])
 
-    @loader.watcher(chat_id=OFFICIAL_VECTOR_BOT_ID)
+    @loader.watcher(chat_id=botid)
     async def vector_install_payload_watcher(self, msg: Message):
         text = (getattr(msg, "raw_text", None) or "").strip()
         log.debug("vector_install_payload_watcher: text_len=%d starts_with_payload=%s", len(text), text.startswith("#v_payload:") if len(text) > 5 else False)
-        if text == LANG_PING_PAYLOAD:
+        if text == lping:
             log.debug("vector_install_payload_watcher: lang ping received")
             with suppress(Exception):
-                await self._client.send_message(msg.chat_id, f"{LANG_PONG_PREFIX}{self._detect_lang_suffix()}")
+                await self._client.send_message(msg.chat_id, f"{lpong}{self._detect_lang_suffix()}")
             with suppress(Exception):
                 await msg.delete()
             return
@@ -1895,7 +1892,7 @@ class Vector(loader.Module):
 
         local_payload = f"{owner_module}:{action}:{ts}"
         local_signature = hmac.new(
-            AUTH_SALT.encode("utf-8"),
+            auths.encode("utf-8"),
             local_payload.encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
@@ -1908,7 +1905,7 @@ class Vector(loader.Module):
             safe_until = (banned_until or "").replace(":", " ").strip()
             feedback_payload = f"{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}"
             feedback_signature = hmac.new(
-                AUTH_SALT.encode("utf-8"),
+                auths.encode("utf-8"),
                 feedback_payload.encode("utf-8"),
                 hashlib.sha256,
             ).hexdigest()
@@ -1920,13 +1917,13 @@ class Vector(loader.Module):
 
         token = await self._get_active_token()
         if not token:
-            reason = "User is banned" if not self._last_ban_notice else self._last_ban_notice
+            reason = "User is banned" if not self.bannote else self.bannote
             await send_feedback("banned", reason, "permanent")
             return
 
         if action == "install":
             log.info("vector_install_payload_watcher: install action for %s/%s", owner, module_name)
-            dl_url = f"{API_ROOT}/modules/{quote(owner, safe='')}/{quote(module_name, safe='')}/source"
+            dl_url = f"{apirt}/modules/{quote(owner, safe='')}/{quote(module_name, safe='')}/source"
             res, _ = await self._safe_install(module_name, dl_url, notify=False)
             if res == -1:
                 log.error("vector_install_payload_watcher: install failed (no loader)")
@@ -1939,7 +1936,7 @@ class Vector(loader.Module):
         log.info("vector_install_payload_watcher: rate action %s for %s/%s", action, owner, module_name)
         uid = self._parse_jwt(token).get("sub", "")
         res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(owner, safe='')}/{quote(module_name, safe='')}/{action}", token=token)
-        if not res and self._last_http_code in {401, 403}:
+        if not res and self.httpc in {401, 403}:
             log.warning("vector_install_payload_watcher: banned (401/403)")
             await send_feedback("banned", "User is banned", "permanent")
             return
@@ -1987,14 +1984,14 @@ class Vector(loader.Module):
     async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
         log.debug("cb_toggle: name=%s idx=%d exp=%s", m_name, i, exp)
         with suppress(Exception): await cb.answer()
-        item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{API_ROOT}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
+        item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
         await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q, exp), item.get("banner"))
 
     async def cb_rate(self, cb: Any, m_owner: str, m_name: str, action: str, i: int, group: list, q: str):
         log.info("cb_rate: name=%s action=%s", m_name, action)
         token = await self._get_active_token()
         if not token:
-            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
             return
             
         uid = self._parse_jwt(token).get("sub", "")
@@ -2016,7 +2013,7 @@ class Vector(loader.Module):
                 group[i]["dislikes"] = new_dislikes
             item = group[i]
         else:
-            item = {"name": m_name, "likes": new_likes or 0, "dislikes": new_dislikes or 0, "source_url": f"{API_ROOT}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
+            item = {"name": m_name, "likes": new_likes or 0, "dislikes": new_dislikes or 0, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
             
         await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q), item.get("banner"))
         s_val = res.get("rating", {}).get("state")
@@ -2027,10 +2024,10 @@ class Vector(loader.Module):
         token = await self._get_active_token()
         if not token:
             log.warning("cb_install: no token")
-            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
             return
 
-        dl_url = f"{API_ROOT}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"
+        dl_url = f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"
         log.debug("cb_install: dl_url=%s", dl_url)
         res, errors = await self._safe_install(m_name, dl_url)
         log.info("cb_install: result=%s errors=%d", res, len(errors) if errors else 0)
@@ -2053,12 +2050,12 @@ class Vector(loader.Module):
         def _get_sec_kb(has_run: bool):
             k = [[
                 {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
-                {"text": self.strings["v_btn_code"], "url": f"{API_ROOT}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"},
+                {"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"},
             ]]
             if not has_run: k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q)}])
             return k
 
-        cached = self._security_cache.get(m_name)
+        cached = self.seccache.get(m_name)
         if cached and cached.get("check"):
             log.debug("cb_sec_check: cache hit for %s", m_name)
             return await self._safe_edit(cb, f"{self.ICONS['safe']} <i>{self.strings['v_aud_mem']}</i>\n\n{self._fmt_sec(m_name, cached)}", _get_sec_kb(True))
@@ -2066,16 +2063,16 @@ class Vector(loader.Module):
         await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_req']}</b>", _get_sec_kb(True))
         token = await self._get_active_token()
         if not token:
-            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
             return
         res = await self._net_req("GET", f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/security-check", token=token)
         
-        if not res or self._last_http_code >= 400:
-            log.warning("cb_sec_check: API error for %s, http=%s", m_name, self._last_http_code)
+        if not res or self.httpc >= 400:
+            log.warning("cb_sec_check: API error for %s, http=%s", m_name, self.httpc)
             return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", _get_sec_kb(True))
 
         if res.get("check"):
-            self._security_cache[m_name] = res
+            self.seccache[m_name] = res
             log.debug("cb_sec_check: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), _get_sec_kb(bool(res.get("checked"))))
 
@@ -2084,24 +2081,24 @@ class Vector(loader.Module):
         await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
         token = await self._get_active_token()
         if not token:
-            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
             return
         res = await self._net_req("POST", f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/security-check", token=token, timeout=120)
         
-        if self._last_http_code == 429:
+        if self.httpc == 429:
             log.warning("cb_sec_run: rate limited (429)")
             return await self._safe_edit(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
-        if not res or self._last_http_code >= 400:
-            log.warning("cb_sec_run: API error, http=%s", self._last_http_code)
+        if not res or self.httpc >= 400:
+            log.warning("cb_sec_run: API error, http=%s", self.httpc)
             return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
 
         log.info("cb_sec_run: scan complete for %s", m_name)
         if res.get("check"):
-            self._security_cache[m_name] = res
+            self.seccache[m_name] = res
             log.debug("cb_sec_run: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), [[
             {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
-            {"text": self.strings["v_btn_code"], "url": f"{API_ROOT}/modules/{m_name}/source"},
+            {"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{m_name}/source"},
         ]])
 
     def _fmt_sec(self, m_name: str, payload: dict) -> str:
@@ -2141,7 +2138,7 @@ class Vector(loader.Module):
         token = await self._get_active_token()
         if not token:
             log.warning("cb_comments: no token")
-            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
             return
         res = await self._net_req("GET", f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/comments", token=token)
         
@@ -2154,7 +2151,7 @@ class Vector(loader.Module):
         kb = [[
             {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
             {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q)},
-            {"text": self.strings["v_btn_site"], "url": f"{API_ROOT}/modules/{m_name}/source"},
+            {"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{m_name}/source"},
         ]]
         
         item = group[i] if group and 0 <= i < len(group) else {}
@@ -2165,7 +2162,7 @@ class Vector(loader.Module):
         token = await self._get_active_token()
         if not token:
             log.warning("cb_post_comment: no token")
-            with suppress(Exception): await cb.answer(self._last_ban_notice or self.strings["v_err_api"], show_alert=True)
+            with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
             return
         c_txt = str(text or "").strip()
         if not c_txt:
