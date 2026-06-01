@@ -2165,21 +2165,22 @@ class Vector(loader.Module):
         roots = [c for c in comments if not c.get("parent_id")]
         total_pages = max(1, (len(roots) + 4) // 5)
         pg = max(0, min(pg, total_pages - 1))
+
+        prev_pg = (pg - 1) % total_pages if total_pages > 1 else 0
+        next_pg = (pg + 1) % total_pages if total_pages > 1 else 0
             
         kb = [[
-            {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
             {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q, pg)},
-            {"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{m_name}/source"},
         ]]
 
         if total_pages > 1:
-            nav = []
-            if pg > 0:
-                nav.append({"text": "◀️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, pg - 1)})
-            nav.append({"text": self.strings["v_page"].format(idx=pg + 1, total=total_pages), "callback": self.cb_dummy})
-            if pg < total_pages - 1:
-                nav.append({"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, pg + 1)})
-            kb.append(nav)
+            kb.append([
+                {"text": "◀️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, prev_pg)},
+                {"text": self.strings["v_page"].format(idx=pg + 1, total=total_pages), "callback": self.cb_dummy},
+                {"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, next_pg)},
+            ])
+
+        kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
         await self._safe_edit(cb, self._fmt_comments(comments, m_name, pg), kb, item.get("banner"))
