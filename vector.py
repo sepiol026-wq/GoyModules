@@ -24,7 +24,6 @@ import hashlib
 import hmac
 import json
 import logging
-import os
 import re
 import time
 import unicodedata
@@ -44,7 +43,6 @@ log.setLevel(logging.DEBUG)
 apirt = "https://vector-three-sooty.vercel.app"
 jwtrx = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 auths = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
-botid = int(os.getenv("VECTOR_OFFICIAL_BOT_ID", "0"))
 lping = "#v_lang_ping"
 lpong = "#v_lang:"
 brrx = re.compile(r"(?:Причина|Reason|理由|Grund|R3450n|Weason|Charge):\s*(.+)", re.IGNORECASE)
@@ -1122,6 +1120,7 @@ class Vector(loader.Module):
         self.seccache: Dict[str, Dict[str, Any]] = {}
         self.httpc = 0
         self.bannote = ""
+        self.btid = 0
 
     async def client_ready(self, client: "herokutl.TelegramClient", database: "loader.Database") -> None:
         self.client = client
@@ -1847,8 +1846,22 @@ class Vector(loader.Module):
 
         await self._safe_edit(form, result, [[{"text": "✖️", "action": "close"}]])
 
-    @loader.watcher(chat_id=botid)
+    @loader.watcher()
     async def vector_install_payload_watcher(self, msg: Message):
+        if not self.btid:
+            try:
+                binfo = await self._net_req("GET", "/api/tg-bot")
+                buname = (binfo or {}).get("username", "").strip().lstrip("@")
+                if buname:
+                    ent = await self.client.get_entity(buname)
+                    self.btid = getattr(ent, "id", 0)
+            except Exception:
+                self.btid = -1
+        if self.btid <= 0:
+            return
+        sid = getattr(msg, "sender_id", 0)
+        if sid and int(sid) != self.btid:
+            return
         text = (getattr(msg, "raw_text", None) or "").strip()
         log.debug("vector_install_payload_watcher: text_len=%d starts_with_payload=%s", len(text), text.startswith("#v_payload:") if len(text) > 5 else False)
         if text == lping:
