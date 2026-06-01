@@ -1531,6 +1531,10 @@ class Vector(loader.Module):
                     ekw["photo"] = img
                 result = await target.edit(text, reply_markup=kbd, **ekw)
                 log.debug("_safe_edit: target.edit() returned %r", result)
+                if not result and ekw:
+                    log.info("_safe_edit: target.edit() failed with photo, retry without")
+                    result = await target.edit(text, reply_markup=kbd)
+                    log.debug("_safe_edit: target.edit() naked ret=%r", result)
                 if not result:
                     log.debug("_safe_edit: target.edit() returned False (text_len=%d), trying direct bot edit", len(text))
                     try:
