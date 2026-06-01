@@ -2145,8 +2145,8 @@ class Vector(loader.Module):
         lines.append(f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=qta.get('remaining', '?'), limit=qta.get('limit', '?'))}</i>")
         return "\n".join(lines)
 
-    async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
-        log.info("cb_comments: name=%s", m_name)
+    async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0):
+        log.info("cb_comments: name=%s pg=%d", m_name, pg)
         with suppress(Exception): await cb.answer()
         token = await self._get_active_token()
         if not token:
@@ -2159,18 +2159,32 @@ class Vector(loader.Module):
             log.warning("cb_comments: bad response for %s", m_name)
             with suppress(Exception): await cb.answer(self.strings["v_talk_err"], show_alert=True)
             return
-        log.debug("cb_comments: %d comments for %s", len(res.get("comments", [])), m_name)
+        comments = res.get("comments", [])
+        log.debug("cb_comments: %d comments for %s", len(comments), m_name)
+
+        roots = [c for c in comments if not c.get("parent_id")]
+        total_pages = max(1, (len(roots) + 4) // 5)
+        pg = max(0, min(pg, total_pages - 1))
             
         kb = [[
             {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
-            {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q)},
+            {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q, pg)},
             {"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{m_name}/source"},
         ]]
+
+        if total_pages > 1:
+            nav = []
+            if pg > 0:
+                nav.append({"text": "◀️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, pg - 1)})
+            nav.append({"text": self.strings["v_page"].format(idx=pg + 1, total=total_pages), "callback": self.cb_dummy})
+            if pg < total_pages - 1:
+                nav.append({"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, pg + 1)})
+            kb.append(nav)
         
         item = group[i] if group and 0 <= i < len(group) else {}
-        await self._safe_edit(cb, self._fmt_comments(res.get("comments", []), m_name), kb, item.get("banner"))
+        await self._safe_edit(cb, self._fmt_comments(comments, m_name, pg), kb, item.get("banner"))
 
-    async def cb_post_comment(self, cb: Any, text: str, m_owner: str, m_name: str, i: int, group: list, q: str):
+    async def cb_post_comment(self, cb: Any, text: str, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0):
         log.info("cb_post_comment: name=%s text_len=%d", m_name, len(text) if text else 0)
         token = await self._get_active_token()
         if not token:
@@ -2200,10 +2214,10 @@ class Vector(loader.Module):
         
         await asyncio.sleep(1.5)
         
-        await self.cb_comments(cb, m_owner, m_name, i, group, q)
+        await self.cb_comments(cb, m_owner, m_name, i, group, q, pg)
 
-    def _fmt_comments(self, comments: list, m_name: str) -> str:
-        log.debug("_fmt_comments: name=%s count=%d", m_name, len(comments) if comments else 0)
+    def _fmt_comments(self, comments: list, m_name: str, pg: int = 0, pp: int = 5) -> str:
+        log.debug("_fmt_comments: name=%s count=%d pg=%d", m_name, len(comments) if comments else 0, pg)
         h = f"{self.strings['v_talk_hdr'].format(emoji=self.ICONS['comments'], name=m_name)}\n<b>{self.strings['v_talk_desc']}</b>\n<i>{self.strings['v_talk_num'].format(count=len(comments))}</i>"
         if not comments: return f"{h}\n\n{self.strings['v_talk_0']}"
         
@@ -2214,8 +2228,15 @@ class Vector(loader.Module):
             else: roots.append(c)
             if c.get("replies"): chmap.setdefault(str(c.get("id")), []).extend(c["replies"])
 
+        total_pages = max(1, (len(roots) + pp - 1) // pp)
+        pg = max(0, min(pg, total_pages - 1))
+        start, end = pg * pp, min((pg + 1) * pp, len(roots))
+        page_roots = roots[start:end]
+
         blks = [h]
-        for r in roots[:10]:
+        if total_pages > 1:
+            blks.append(f"<i>{self.strings['v_page'].format(idx=pg + 1, total=total_pages)}</i>")
+        for r in page_roots:
             rid = str(r.get("id"))
             
             uname = str(r.get("author_username", "")).strip().lstrip("@")
@@ -2226,7 +2247,7 @@ class Vector(loader.Module):
             edit_mark = " *" if r.get("can_edit") else ""
             
             auth = f"<b>{utils.escape_html(r.get('author_name') or r.get('author_username') or 'Unknown')}</b>{edit_mark}{meta_str}"
-            blks.append(f"╭─ {auth}\n╰─\n<blockquote>{utils.escape_html(r.get('body', ''))}</blockquote>")
+            blks.append(f"╭─ {auth}\n╰─\n<blockquote>{r.get('body', '')}</blockquote>")
             
             subs = chmap.get(rid, [])
             for s in subs[:4]:
@@ -2238,11 +2259,8 @@ class Vector(loader.Module):
                 s_edit_mark = " *" if s.get("can_edit") else ""
                 
                 s_auth = f"<b>{utils.escape_html(s.get('author_name') or s.get('author_username') or 'Unknown')}</b>{s_edit_mark}{s_meta_str}"
-                blks.append(f"  {self.ICONS['reply']} {s_auth}\n<blockquote>{utils.escape_html(s.get('body', ''))}</blockquote>")
+                blks.append(f"  {self.ICONS['reply']} {s_auth}\n<blockquote>{s.get('body', '')}</blockquote>")
                 
             if len(subs) > 4: blks.append(f"  <i>{self.strings['v_more_replies'].format(count=len(subs)-4)}</i>")
-            
-        if len(comments) > sum(1 + len(chmap.get(str(r.get("id")), [])[:4]) for r in roots[:10]):
-            blks.append(f"<i>{self.strings['v_more_comments']}</i>")
             
         return "\n\n".join(blks)
