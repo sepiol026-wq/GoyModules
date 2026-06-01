@@ -1553,25 +1553,12 @@ class Vector(loader.Module):
                         except Exception:
                             log.debug("_safe_edit: fallback banner also failed")
                     except RuntimeError:
-                        log.info("_safe_edit: no bot/imid/buttons, send via inline.bot")
-                        with suppress(Exception):
-                            await target.delete()
+                        log.info("_safe_edit: no bot/imid/buttons, fallback to utils.answer")
                         unit = target._units.get(uid, {})
                         chat = unit.get("chat")
                         if chat:
-                            cid = getattr(chat, "id", None) or getattr(chat, "chat_id", None)
-                            ibot = getattr(self.inline, "bot", None)
-                            if ibot and btns and cid:
-                                try:
-                                    await ibot.send_message(cid, text, parse_mode="HTML", reply_markup=btns, link_preview=False)
-                                except Exception as e3:
-                                    log.warning("_safe_edit: inline.bot send failed: %r", e3)
-                                    with suppress(Exception):
-                                        await utils.answer(chat, text)
-                            else:
-                                log.warning("_safe_edit: no ibot=%s btns=%s cid=%s", bool(ibot), bool(btns), cid)
-                                with suppress(Exception):
-                                    await utils.answer(chat, text)
+                            with suppress(Exception):
+                                await utils.answer(chat, text)
                     except WebpageMediaEmptyError:
                         log.info("_safe_edit: bot edit WebpageMediaEmptyError, fallback banner")
                         ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
