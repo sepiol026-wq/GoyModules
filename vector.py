@@ -1619,12 +1619,12 @@ class Vector(loader.Module):
             return await self._safe_edit(form, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", [[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
 
         log.info("Vector search request q=%r token=%s", q, bool(token))
-        raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"]), "lang": self._detect_lang_suffix()})
+        raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
 
         if self.httpc == 401:
             log.info("vectorcmd: got 401, forcing token refresh")
             token = await self._get_active_token(force=True)
-            raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"]), "lang": self._detect_lang_suffix()})
+            raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"])})
             
         log.debug("vectorcmd: raw response type=%s", type(raw_res).__name__)
         m_list = []
