@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 3, 9)
+__version__ = (2, 3, 10)
 
 import asyncio
 import base64
@@ -54,7 +54,7 @@ class Vector(loader.Module):
     strings = {
         "lang": "en",
         "name": "Vector",
-        "_cls_doc": "Vector module registry browser for Heroku.",
+        "_cls_doc": "Vector module registry browser for Heroku.\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "Author:",
         "v_dev_str": "Dev:",
         "v_dev_ofc": "official",
@@ -156,7 +156,7 @@ class Vector(loader.Module):
 
     strings_ru = {
         "lang": "ru",
-        "_cls_doc": "Обозреватель реестра модулей Vector для Heroku.",
+        "_cls_doc": "Обозреватель реестра модулей Vector для Heroku.\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "Автор:",
         "v_dev_str": "Разраб:",
         "v_dev_ofc": "офиц",
@@ -258,7 +258,7 @@ class Vector(loader.Module):
 
     strings_jp = {
         "lang": "jp",
-        "_cls_doc": "Heroku用Vectorモジュールレジストリブラウザ。",
+        "_cls_doc": "Heroku用Vectorモジュールレジストリブラウザ。\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "作成者:",
         "v_dev_str": "開発:",
         "v_dev_ofc": "公式",
@@ -360,7 +360,7 @@ class Vector(loader.Module):
 
     strings_uk = {
         "lang": "uk",
-        "_cls_doc": "Оглядач реєстру модулів Vector для Heroku.",
+        "_cls_doc": "Оглядач реєстру модулів Vector для Heroku.\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "Автор:",
         "v_dev_str": "Розроб:",
         "v_dev_ofc": "офіц",
@@ -462,7 +462,7 @@ class Vector(loader.Module):
 
     strings_de = {
         "lang": "de",
-        "_cls_doc": "Vector-Modul-Registry-Browser für Heroku.",
+        "_cls_doc": "Vector-Modul-Registry-Browser für Heroku.\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "Autor:",
         "v_dev_str": "Entwickler:",
         "v_dev_ofc": "offiziell",
@@ -564,7 +564,7 @@ class Vector(loader.Module):
 
     strings_neofit = {
         "lang": "neofit",
-        "_cls_doc": "Vector module registry browser for Heroku.",
+        "_cls_doc": "Vector module registry browser for Heroku.\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "by",
         "v_dev_str": "dev",
         "v_dev_ofc": "verified",
@@ -666,7 +666,7 @@ class Vector(loader.Module):
 
     strings_tiktok = {
         "lang": "tiktok",
-        "_cls_doc": "Темка для поиска модулей Vector под Heroku.",
+        "_cls_doc": "Темка для поиска модулей Vector под Heroku.\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "Кодер:",
         "v_dev_str": "дев:",
         "v_dev_ofc": "офиц",
@@ -768,7 +768,7 @@ class Vector(loader.Module):
 
     strings_leet = {
         "lang": "leet",
-        "_cls_doc": "V3c70r m0dul3 r3g157ry br0ws3r f0r H3r0ku.",
+        "_cls_doc": "V3c70r m0dul3 r3g157ry br0ws3r f0r H3r0ku.\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "4u7h0r:",
         "v_dev_str": "d3v:",
         "v_dev_ofc": "0ff1c14l",
@@ -870,7 +870,7 @@ class Vector(loader.Module):
 
     strings_uwu = {
         "lang": "uwu",
-        "_cls_doc": "Vectow moduwe wegistwy bwowsew fow Hewoku >w<",
+        "_cls_doc": "Vectow moduwe wegistwy bwowsew fow Hewoku >w<\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "Authow:",
         "v_dev_str": "dev:",
         "v_dev_ofc": "officiaw",
