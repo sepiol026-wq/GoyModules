@@ -119,6 +119,7 @@ class Vector(loader.Module):
         "v_rep_max": "Limit exceeded.",
         "v_rep_cncl": "Cancelled.",
         "v_loading_ui": "Searching Vector database...",
+        "v_sending": "Loading...",
         "v_more_replies": "...and {count} more replies on the site.",
         "v_more_comments": "...and more comments on the site.",
         "v_upd_req": "Updating Vector...",
@@ -219,6 +220,7 @@ class Vector(loader.Module):
         "v_rep_max": "Превышен лимит длины.",
         "v_rep_cncl": "Отменено.",
         "v_loading_ui": "Ищем по базе Vector...",
+        "v_sending": "Загрузка...",
         "v_more_replies": "...и ещё {count} ответов на сайте.",
         "v_more_comments": "...и ещё комментарии на сайте.",
         "v_upd_req": "Обновляем Vector...",
@@ -319,6 +321,7 @@ class Vector(loader.Module):
         "v_rep_max": "制限を超過しました。",
         "v_rep_cncl": "キャンセルされました。",
         "v_loading_ui": "Vectorデータベースを検索中...",
+        "v_sending": "読み込み中...",
         "v_more_replies": "...サイトにはさらに{count}件の返信があります。",
         "v_more_comments": "...サイトにはさらにコメントがあります。",
         "v_upd_req": "Vectorを更新中...",
@@ -419,6 +422,7 @@ class Vector(loader.Module):
         "v_rep_max": "Перевищено ліміт довжини.",
         "v_rep_cncl": "Скасовано.",
         "v_loading_ui": "Шукаємо по базі Vector...",
+        "v_sending": "Завантаження...",
         "v_more_replies": "...і ще {count} відповідей на сайті.",
         "v_more_comments": "...і ще коментарі на сайті.",
         "v_upd_req": "Оновлюємо Vector...",
@@ -519,6 +523,7 @@ class Vector(loader.Module):
         "v_rep_max": "Limit überschritten.",
         "v_rep_cncl": "Abgebrochen.",
         "v_loading_ui": "Durchsuche Vector-Datenbank...",
+        "v_sending": "Laden...",
         "v_more_replies": "...und {count} weitere Antworten auf der Seite.",
         "v_more_comments": "...und weitere Kommentare auf der Seite.",
         "v_upd_req": "Vector wird aktualisiert...",
@@ -619,6 +624,7 @@ class Vector(loader.Module):
         "v_rep_max": "Limit exceeded.",
         "v_rep_cncl": "Cancelled.",
         "v_loading_ui": "Searching Vector database...",
+        "v_sending": "Loading...",
         "v_more_replies": "...and {count} more replies.",
         "v_more_comments": "...and more comments.",
         "v_upd_req": "Updating Vector...",
@@ -719,6 +725,7 @@ class Vector(loader.Module):
         "v_rep_max": "Дохрена букав.",
         "v_rep_cncl": "Забили.",
         "v_loading_ui": "Ищем по базе Vector...",
+        "v_sending": "Грузим...",
         "v_more_replies": "...и ещё {count} комментов.",
         "v_more_comments": "...и ещё спам на сайте.",
         "v_upd_req": "Качаем обнову...",
@@ -819,6 +826,7 @@ class Vector(loader.Module):
         "v_rep_max": "L1m17 3xc33d3d.",
         "v_rep_cncl": "C4nc3ll3d.",
         "v_loading_ui": "534rch1ng V3c70r d474b453...",
+        "v_sending": "L04d1ng...",
         "v_more_replies": "...4nd {count} m0r3 r3pl135.",
         "v_more_comments": "...4nd m0r3 c0mm3n75.",
         "v_upd_req": "Upd471ng V3c70r...",
@@ -919,6 +927,7 @@ class Vector(loader.Module):
         "v_rep_max": "Wimit exceeded.",
         "v_rep_cncl": "Cancewwed.",
         "v_loading_ui": "Seawching Vectow database...",
+        "v_sending": "Woading... (´• ω •`)",
         "v_more_replies": "...and {count} mowe wepwies on site.",
         "v_more_comments": "...and mowe comments on site.",
         "v_upd_req": "Updating Vectow...",
@@ -1629,6 +1638,7 @@ class Vector(loader.Module):
         if len(q) > 120:
             return await utils.answer(msg, f"{self.ICONS['warn']} <b>{self.strings['v_err_len']}</b>")
 
+        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_sending']}</b>")
         log.debug("vectorcmd: sending loading form")
         form = await self.inline.form(
             f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>",
@@ -1827,6 +1837,8 @@ class Vector(loader.Module):
         modules = [entry["module"] for entry in (col.get("modules") or []) if entry.get("module")]
         if not modules:
             return await utils.answer(msg, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_empty']}</b>")
+
+        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_sending']}</b>")
 
         max_batch = int(self.config.get("max_batch", 50))
         total_orig = len(modules)
