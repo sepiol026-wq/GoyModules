@@ -112,7 +112,6 @@ class Vector(loader.Module):
         "v_rep_ok": "Posted!",
         "v_rep_err": "Request failed.",
         "v_btn_bck": "⬅️ Back",
-        "v_btn_site": "Source",
         "v_btn_wrt": "✍️ Post Reply",
         "v_rep_ask": "Reply to post message.\n2-1800 chars.",
         "v_rep_snt": "Uploading...",
@@ -213,7 +212,6 @@ class Vector(loader.Module):
         "v_rep_ok": "Опубликовано!",
         "v_rep_err": "Сбой запроса.",
         "v_btn_bck": "⬅️ Назад",
-        "v_btn_site": "Source",
         "v_btn_wrt": "✍️ Написать",
         "v_rep_ask": "Отправьте текст ответом.\nОт 2 до 1800 символов.",
         "v_rep_snt": "Выгрузка...",
@@ -314,7 +312,6 @@ class Vector(loader.Module):
         "v_rep_ok": "投稿されました！",
         "v_rep_err": "リクエストに失敗しました。",
         "v_btn_bck": "⬅️ 戻る",
-        "v_btn_site": "Source",
         "v_btn_wrt": "✍️ 返信を書く",
         "v_rep_ask": "メッセージに返信してください。\n2〜1800文字。",
         "v_rep_snt": "アップロード中...",
@@ -415,7 +412,6 @@ class Vector(loader.Module):
         "v_rep_ok": "Опубліковано!",
         "v_rep_err": "Збій запиту.",
         "v_btn_bck": "⬅️ Назад",
-        "v_btn_site": "Source",
         "v_btn_wrt": "✍️ Написати",
         "v_rep_ask": "Відправте текст відповіддю.\nВід 2 до 1800 символов.",
         "v_rep_snt": "Вивантаження...",
@@ -516,7 +512,6 @@ class Vector(loader.Module):
         "v_rep_ok": "Gepostet!",
         "v_rep_err": "Anfrage fehlgeschlagen.",
         "v_btn_bck": "⬅️ Zurück",
-        "v_btn_site": "Source",
         "v_btn_wrt": "✍️ Antworten",
         "v_rep_ask": "Auf Beitrag antworten.\n2-1800 Zeichen.",
         "v_rep_snt": "Wird hochgeladen...",
@@ -617,7 +612,6 @@ class Vector(loader.Module):
         "v_rep_ok": "Posted.",
         "v_rep_err": "Request failed.",
         "v_btn_bck": "⬅️ Back",
-        "v_btn_site": "Source",
         "v_btn_wrt": "✍️ Reply",
         "v_rep_ask": "Reply to post.\n2–1800 chars.",
         "v_rep_snt": "Uploading...",
@@ -718,7 +712,6 @@ class Vector(loader.Module):
         "v_rep_ok": "Улетело!",
         "v_rep_err": "Фейл.",
         "v_btn_bck": "⬅️ Назад",
-        "v_btn_site": "Source",
         "v_btn_wrt": "✍️ Ответ",
         "v_rep_ask": "Реплай на сообщение.\nОт 2 до 1800 симв.",
         "v_rep_snt": "Пушим...",
@@ -819,7 +812,6 @@ class Vector(loader.Module):
         "v_rep_ok": "P0573d!",
         "v_rep_err": "R3qu357 f41l3d.",
         "v_btn_bck": "⬅️ B4ck",
-        "v_btn_site": "Source",
         "v_btn_wrt": "✍️ R3ply",
         "v_rep_ask": "R3ply 70 p057.\n2-1800 ch4r5.",
         "v_rep_snt": "Upl04d1ng...",
@@ -920,7 +912,6 @@ class Vector(loader.Module):
         "v_rep_ok": "Posted! (≧◡≦)",
         "v_rep_err": "Wequest faiwed T_T.",
         "v_btn_bck": "⬅️ Back",
-        "v_btn_site": "Source",
         "v_btn_wrt": "✍️ Wepwy",
         "v_rep_ask": "Wepwy to post.\n2-1800 chaws uwu.",
         "v_rep_snt": "Upwoading...",
@@ -2109,7 +2100,7 @@ class Vector(loader.Module):
                 static = chk.get("details", {}).get("static", {})
                 if not (static.get("score", "?") == "?" and static.get("risk", "unknown") == "unknown"):
                     k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q, expanded)}])
-            k.append([{"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}])
+            k.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}])
             k.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}])
             return k
 
@@ -2155,7 +2146,7 @@ class Vector(loader.Module):
             self.seccache[m_name] = res
             log.debug("cb_sec_run: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), [
-            [{"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}],
+            [{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}],
             [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}],
         ])
 
@@ -2220,7 +2211,6 @@ class Vector(loader.Module):
         kb = [[
             {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q, pg)},
         ], [
-            {"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"},
         ]]
 
         if total_pages > 1:
@@ -2230,6 +2220,7 @@ class Vector(loader.Module):
                 {"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, next_pg, expanded)},
             ])
 
+        kb.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}])
         kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded, pg)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
