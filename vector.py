@@ -1193,7 +1193,6 @@ class Vector(loader.Module):
             "likes": int(raw.get("likes") or 0),
             "dislikes": int(raw.get("dislikes") or 0),
             "banner": raw.get("banner"),
-            "placeholders": [],
             "source_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
             "dl_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
         }
