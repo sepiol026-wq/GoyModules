@@ -63,7 +63,6 @@ class Vector(loader.Module):
         "v_info": "Info:",
         "v_cmds": "Usage:",
         "v_deps": "Dependencies:",
-        "v_placeholders": "Placeholders:",
         "v_reqs": "Libs:",
         "v_hid_cmd": "+ {rem} hidden cmds.",
         "v_hid_req": "+ {rem} hidden libs.",
@@ -165,7 +164,6 @@ class Vector(loader.Module):
         "v_info": "Инфо:",
         "v_cmds": "Использование:",
         "v_deps": "Зависимости:",
-        "v_placeholders": "Плейсхолдеры:",
         "v_reqs": "Библиотеки:",
         "v_hid_cmd": "+ скрыто команд: {rem}.",
         "v_hid_req": "+ скрыто либ: {rem}.",
@@ -267,7 +265,6 @@ class Vector(loader.Module):
         "v_info": "情報:",
         "v_cmds": "使い方:",
         "v_deps": "依存関係:",
-        "v_placeholders": "プレースホルダー:",
         "v_reqs": "ライブラリ:",
         "v_hid_cmd": "+ 非表示コマンド: {rem}。",
         "v_hid_req": "+ 非表示ライブラリ: {rem}。",
@@ -369,7 +366,6 @@ class Vector(loader.Module):
         "v_info": "Інфо:",
         "v_cmds": "Використання:",
         "v_deps": "Залежності:",
-        "v_placeholders": "Заповнювачі:",
         "v_reqs": "Бібліотеки:",
         "v_hid_cmd": "+ приховано команд: {rem}.",
         "v_hid_req": "+ приховано ліб: {rem}.",
@@ -471,7 +467,6 @@ class Vector(loader.Module):
         "v_info": "Info:",
         "v_cmds": "Verwendung:",
         "v_deps": "Abhängigkeiten:",
-        "v_placeholders": "Platzhalter:",
         "v_reqs": "Bibliotheken:",
         "v_hid_cmd": "+ {rem} versteckte Befehle.",
         "v_hid_req": "+ {rem} versteckte Bibliotheken.",
@@ -573,7 +568,6 @@ class Vector(loader.Module):
         "v_info": "info",
         "v_cmds": "usage",
         "v_deps": "deps:",
-        "v_placeholders": "placeholders:",
         "v_reqs": "deps",
         "v_hid_cmd": "+ {rem} hidden cmds.",
         "v_hid_req": "+ {rem} hidden deps.",
@@ -675,7 +669,6 @@ class Vector(loader.Module):
         "v_info": "Инфа:",
         "v_cmds": "Команды:",
         "v_deps": "Deps:",
-        "v_placeholders": "Знычки:",
         "v_reqs": "Либы:",
         "v_hid_cmd": "+ заныкано: {rem}",
         "v_hid_req": "+ заныкано либ: {rem}",
@@ -777,7 +770,6 @@ class Vector(loader.Module):
         "v_info": "1nf0:",
         "v_cmds": "U54g3:",
         "v_deps": "d3pz:",
-        "v_placeholders": "pl4c3h0ld3rz:",
         "v_reqs": "L1b5:",
         "v_hid_cmd": "+ {rem} h1dd3n cmd5.",
         "v_hid_req": "+ {rem} h1dd3n l1b5.",
@@ -879,7 +871,6 @@ class Vector(loader.Module):
         "v_info": "Info:",
         "v_cmds": "Usage:",
         "v_deps": "Dependencies~ :3",
-        "v_placeholders": "Pwacehowdews~ :3",
         "v_reqs": "Wibs:",
         "v_hid_cmd": "+ {rem} hidden cmds.",
         "v_hid_req": "+ {rem} hidden wibs.",
@@ -1202,7 +1193,7 @@ class Vector(loader.Module):
             "likes": int(raw.get("likes") or 0),
             "dislikes": int(raw.get("dislikes") or 0),
             "banner": raw.get("banner"),
-            "placeholders": [str(p) for p in (raw.get("placeholders") or [])],
+            "placeholders": [],
             "source_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
             "dl_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
         }
@@ -1369,7 +1360,6 @@ class Vector(loader.Module):
                 plain += ch
             if len(plain) >= cap and not inside:
                 raw = text[:i + 1]
-                # close any still-open tags
                 if tag.startswith("</"):
                     raw = text[:last_close or i + 1]
                 return raw.rstrip() + "..."
@@ -1395,7 +1385,6 @@ class Vector(loader.Module):
             pfx.append(page)
         used = len("\n".join(pfx))
 
-        # --- description ---
         desc = m_data.get("description")
         desc_block = ""
         if desc and used < CAP - 20:
@@ -1409,7 +1398,6 @@ class Vector(loader.Module):
                 if desc_raw:
                     desc_block = f"{hdr}{desc_raw}{ftr}"
 
-        # --- commands ---
         cmds = m_data.get("commands", [])
         cmd_block = ""
         if cmds:
@@ -1437,7 +1425,6 @@ class Vector(loader.Module):
                             cl.append(f"... +{len(cmds) - len(cl)} more")
                         cmd_block = f"{hdr}{chr(10).join(cl)}{ftr}"
 
-        # --- dependencies ---
         deps = m_data.get("dependencies", [])
         dep_block = ""
         if deps:
@@ -1455,26 +1442,7 @@ class Vector(loader.Module):
                 if dl:
                     dep_block = f"{hdr}{', '.join(dl)}{ftr}"
 
-        # --- placeholders ---
-        phs = m_data.get("placeholders", [])
-        ph_block = ""
-        if phs:
-            hdr = f"\n\n🔄 <b>{self.strings.get('v_placeholders', 'Placeholders')}</b>\n<blockquote expandable>"
-            ftr = "</blockquote>"
-            room = CAP - used - len(desc_block) - len(cmd_block) - len(dep_block) - len(hdr) - len(ftr) - 3
-            if room > 0:
-                pl = []
-                for p in phs:
-                    pt = utils.escape_html(str(p))
-                    line = f"<code>{'{'}{pt}{'}'}</code>"
-                    if room - len(line) - 1 < 0:
-                        break
-                    pl.append(line)
-                    room -= len(line) + 1
-                if pl:
-                    ph_block = f"{hdr}{', '.join(pl)}{ftr}"
-
-        return self._tag_safe_truncate(("\n".join(pfx) + desc_block + cmd_block + dep_block + ph_block).rstrip(), CAP)
+        return self._tag_safe_truncate(("\n".join(pfx) + desc_block + cmd_block + dep_block).rstrip(), CAP)
 
     def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False) -> list:
         log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
