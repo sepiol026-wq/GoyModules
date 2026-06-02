@@ -2102,18 +2102,22 @@ class Vector(loader.Module):
 
     async def cb_sec_check(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
         log.info("cb_sec_check: name=%s", m_name)
-        def _get_sec_kb(has_run: bool):
+        def _get_sec_kb(has_run: bool, payload: dict = None):
             k = [[
                 {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
                 {"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"},
             ]]
-            if not has_run: k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q)}])
+            if not has_run:
+                chk = (payload or {}).get("check") or {}
+                static = chk.get("details", {}).get("static", {})
+                if not (static.get("score", "?") == "?" and static.get("risk", "unknown") == "unknown"):
+                    k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q)}])
             return k
 
         cached = self.seccache.get(m_name)
         if cached and cached.get("check"):
             log.debug("cb_sec_check: cache hit for %s", m_name)
-            return await self._safe_edit(cb, f"{self.ICONS['safe']} <i>{self.strings['v_aud_mem']}</i>\n\n{self._fmt_sec(m_name, cached)}", _get_sec_kb(True))
+            return await self._safe_edit(cb, f"{self.ICONS['safe']} <i>{self.strings['v_aud_mem']}</i>\n\n{self._fmt_sec(m_name, cached)}", _get_sec_kb(True, cached))
 
         await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_req']}</b>", _get_sec_kb(True))
         token = await self._get_active_token()
@@ -2129,7 +2133,7 @@ class Vector(loader.Module):
         if res.get("check"):
             self.seccache[m_name] = res
             log.debug("cb_sec_check: cached result for %s", m_name)
-        await self._safe_edit(cb, self._fmt_sec(m_name, res), _get_sec_kb(bool(res.get("checked"))))
+        await self._safe_edit(cb, self._fmt_sec(m_name, res), _get_sec_kb(bool(res.get("checked")), res))
 
     async def cb_sec_run(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
         log.info("cb_sec_run: name=%s", m_name)
@@ -2173,9 +2177,10 @@ class Vector(loader.Module):
         lines = [
             f"{v_icon} <b>{self.strings['v_aud_hdr'].format(name=m_name)}</b>\n",
             f"{self.ICONS['shield']} <b>{self.strings['v_aud_lvl']}:</b> <code>{chk.get('label', v)}</code> (<code>{chk.get('confidence', 0)}%</code>)",
-            f"{self.ICONS['stats']} <b>{self.strings['v_aud_stat']}:</b> risk <code>{static.get('risk', 'unknown')}</code>, score <code>{static.get('score', '?')}</code>",
-            f"{self.ICONS['description']} <b>{self.strings['v_aud_out']}:</b>\n<blockquote expandable>{chk.get('summary', self.strings['v_aud_no_txt'])}</blockquote>"
         ]
+        if static.get("score", "?") != "?" or static.get("risk", "unknown") != "unknown":
+            lines.append(f"{self.ICONS['stats']} <b>{self.strings['v_aud_stat']}:</b> risk <code>{static.get('risk', 'unknown')}</code>, score <code>{static.get('score', '?')}</code>")
+        lines.append(f"{self.ICONS['description']} <b>{self.strings['v_aud_out']}:</b>\n<blockquote expandable>{chk.get('summary', self.strings['v_aud_no_txt'])}</blockquote>")
         
         f_blocks = []
         for hdr, key in [(self.strings["v_sig_crit"], "critical"), (self.strings["v_sig_warn"], "warning"), (self.strings["v_sig_info"], "info")]:
@@ -2184,7 +2189,9 @@ class Vector(loader.Module):
         if f_blocks:
             lines.append(f"{self.ICONS['search']} <b>{self.strings['v_aud_sigs']}:</b>\n<blockquote expandable>{chr(10).join(f_blocks)}</blockquote>")
             
-        lines.append(f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=qta.get('remaining', '?'), limit=qta.get('limit', '?'))}</i>")
+        remaining = qta.get("remaining", "?")
+        if remaining != "?":
+            lines.append(f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=remaining, limit=qta.get('limit', '?'))}</i>")
         return "\n".join(lines)
 
     async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0):
@@ -2213,6 +2220,8 @@ class Vector(loader.Module):
             
         kb = [[
             {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q, pg)},
+        ], [
+            {"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"},
         ]]
 
         if total_pages > 1:
@@ -2290,7 +2299,7 @@ class Vector(loader.Module):
             edit_mark = " *" if r.get("can_edit") else ""
             
             auth = f"<b>{utils.escape_html(r.get('author_name') or r.get('author_username') or 'Unknown')}</b>{edit_mark}{meta_str}"
-            blks.append(f"╭─ {auth}\n╰─\n<blockquote>{r.get('body', '')}</blockquote>")
+            blks.append(f"╭─ {auth}\n╰─\n<blockquote>{utils.escape_html(str(r.get('body', '')))}</blockquote>")
             
             subs = chmap.get(rid, [])
             for s in subs[:4]:
@@ -2302,7 +2311,7 @@ class Vector(loader.Module):
                 s_edit_mark = " *" if s.get("can_edit") else ""
                 
                 s_auth = f"<b>{utils.escape_html(s.get('author_name') or s.get('author_username') or 'Unknown')}</b>{s_edit_mark}{s_meta_str}"
-                blks.append(f"  {self.ICONS['reply']} {s_auth}\n<blockquote>{s.get('body', '')}</blockquote>")
+                blks.append(f"  {self.ICONS['reply']} {s_auth}\n<blockquote>{utils.escape_html(str(s.get('body', '')))}</blockquote>")
                 
             if len(subs) > 4: blks.append(f"  <i>{self.strings['v_more_replies'].format(count=len(subs)-4)}</i>")
             
