@@ -2126,7 +2126,7 @@ class Vector(loader.Module):
                 static = chk.get("details", {}).get("static", {})
                 if not (static.get("score", "?") == "?" and static.get("risk", "unknown") == "unknown"):
                     k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q, expanded)}])
-            k.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}])
+            k.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}])
             k.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}])
             return k
 
@@ -2172,7 +2172,7 @@ class Vector(loader.Module):
             self.seccache[m_name] = res
             log.debug("cb_sec_run: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), [
-            [{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}],
+            [{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}],
             [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}],
         ])
 
@@ -2246,7 +2246,7 @@ class Vector(loader.Module):
                 {"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, next_pg, expanded)},
             ])
 
-        kb.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}])
+        kb.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}])
         kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded, pg)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
