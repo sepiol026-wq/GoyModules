@@ -1846,12 +1846,26 @@ class Vector(loader.Module):
             modules = modules[:max_batch]
 
         col_name = col.get("name", slug)
-        form = await self.inline.form(
-            f"{self.ICONS['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.ICONS['search']} {self.strings['v_dlcoll_start']}",
+        await self.inline.form(
+            f"{self.ICONS['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}",
             msg,
-            reply_markup=[[{"text": "…", "callback": self.cb_dummy}]],
+            reply_markup=[[
+                {"text": self.strings["v_btn_dl"], "callback": self._vecdl_install, "args": (modules, col_name)},
+                {"text": self.strings["v_upd_cancel"], "action": "close"},
+            ]],
             silent=True
         )
+        return
+
+    async def _vecdl_install(self, cb: Any, modules: list, col_name: str):
+        log.info("_vecdl_install: count=%d name=%r", len(modules), col_name)
+        with suppress(Exception): await cb.answer()
+        max_batch = int(self.config.get("max_batch", 50))
+        total_orig = len(modules)
+        if total_orig > max_batch:
+            modules = modules[:max_batch]
+
+        await self._safe_edit(cb, f"{self.ICONS['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.ICONS['search']} {self.strings['v_dlcoll_start']}", [[{"text": "…", "callback": self.cb_dummy}]])
 
         ok = 0
         failed: List[str] = []
@@ -1887,7 +1901,7 @@ class Vector(loader.Module):
         if total_orig > max_batch:
             result += f"\n\n<i>{self.strings['v_dlcoll_max_batch'].format(total=total_orig, max=max_batch)}</i>"
 
-        await self._safe_edit(form, result, [[{"text": "✖️", "action": "close"}]])
+        await self._safe_edit(cb, result, [[{"text": "✖️", "action": "close"}]])
 
     @loader.watcher()
     async def vector_install_payload_watcher(self, msg: Message):
@@ -2293,7 +2307,8 @@ class Vector(loader.Module):
         for r in page_roots:
             rid = str(r.get("id"))
             
-            uname = str(r.get("author_username", "")).strip().lstrip("@")
+            raw_uname = r.get("author_username")
+            uname = (str(raw_uname).strip() if raw_uname else "").lstrip("@")
             meta = [f"@{utils.escape_html(uname)}"] if uname else []
             ts = str(r.get("created_at", "")).replace("T", " ").replace("Z", "").strip()
             if ts: meta.append(utils.escape_html(ts[:16]))
@@ -2305,7 +2320,8 @@ class Vector(loader.Module):
             
             subs = chmap.get(rid, [])
             for s in subs[:4]:
-                s_uname = str(s.get("author_username", "")).strip().lstrip("@")
+                raw_s_uname = s.get("author_username")
+                s_uname = (str(raw_s_uname).strip() if raw_s_uname else "").lstrip("@")
                 s_meta = [f"@{utils.escape_html(s_uname)}"] if s_uname else []
                 s_ts = str(s.get("created_at", "")).replace("T", " ").replace("Z", "").strip()
                 if s_ts: s_meta.append(utils.escape_html(s_ts[:16]))
