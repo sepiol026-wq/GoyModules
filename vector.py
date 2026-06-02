@@ -1463,9 +1463,9 @@ class Vector(loader.Module):
             prev_i = (idx - 1) % len(group)
             next_i = (idx + 1) % len(group)
             kbd.append([
-                {"text": "◀️", "callback": self.cb_nav, "args": (prev_i, group, search_phrase)},
+                {"text": "◀️", "callback": self.cb_nav, "args": (prev_i, group, search_phrase, True)},
                 {"text": self.strings["v_page"].format(idx=idx + 1, total=len(group)), "callback": self.cb_list, "args": (idx, group, search_phrase)},
-                {"text": "▶️", "callback": self.cb_nav, "args": (next_i, group, search_phrase)},
+                {"text": "▶️", "callback": self.cb_nav, "args": (next_i, group, search_phrase, True)},
             ])
             
         kbd.append([{
@@ -2001,12 +2001,12 @@ class Vector(loader.Module):
         log.debug("cb_dummy: no-op callback")
         with suppress(Exception): await cb.answer()
 
-    async def cb_nav(self, cb: Any, target_i: int, group: list, q: str):
-        log.debug("cb_nav: target_i=%d group_len=%d", target_i, len(group) if group else 0)
+    async def cb_nav(self, cb: Any, target_i: int, group: list, q: str, expanded: bool = False):
+        log.debug("cb_nav: target_i=%d group_len=%d expanded=%s", target_i, len(group) if group else 0, expanded)
         with suppress(Exception): await cb.answer()
         if 0 <= target_i < len(group):
             item = group[target_i]
-            await self._safe_edit(cb, self._build_html(item, target_i + 1, len(group)), self._build_kbd(item, target_i, group, q), item.get("banner"))
+            await self._safe_edit(cb, self._build_html(item, target_i + 1, len(group)), self._build_kbd(item, target_i, group, q, expanded), item.get("banner"))
 
     async def cb_list(self, cb: Any, curr_i: int, group: list, q: str):
         log.debug("cb_list: curr_i=%d group_len=%d", curr_i, len(group) if group else 0)
@@ -2110,7 +2110,7 @@ class Vector(loader.Module):
                 if not (static.get("score", "?") == "?" and static.get("risk", "unknown") == "unknown"):
                     k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q)}])
             k.append([{"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}])
-            k.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}])
+            k.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}])
             return k
 
         cached = self.seccache.get(m_name)
@@ -2136,7 +2136,7 @@ class Vector(loader.Module):
 
     async def cb_sec_run(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
         log.info("cb_sec_run: name=%s", m_name)
-        await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
+        await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}]])
         token = await self._get_active_token()
         if not token:
             with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
@@ -2145,10 +2145,10 @@ class Vector(loader.Module):
         
         if self.httpc == 429:
             log.warning("cb_sec_run: rate limited (429)")
-            return await self._safe_edit(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
+            return await self._safe_edit(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}]])
         if not res or self.httpc >= 400:
             log.warning("cb_sec_run: API error, http=%s", self.httpc)
-            return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}]])
+            return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}]])
 
         log.info("cb_sec_run: scan complete for %s", m_name)
         if res.get("check"):
@@ -2156,7 +2156,7 @@ class Vector(loader.Module):
             log.debug("cb_sec_run: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), [
             [{"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}],
-            [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}],
+            [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}],
         ])
 
     def _fmt_sec(self, m_name: str, payload: dict) -> str:
@@ -2230,7 +2230,7 @@ class Vector(loader.Module):
                 {"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, next_pg)},
             ])
 
-        kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}])
+        kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
         await self._safe_edit(cb, self._fmt_comments(comments, m_name, pg), kb, item.get("banner"))
