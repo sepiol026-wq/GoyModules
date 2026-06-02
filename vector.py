@@ -1463,9 +1463,9 @@ class Vector(loader.Module):
             prev_i = (idx - 1) % len(group)
             next_i = (idx + 1) % len(group)
             kbd.append([
-                {"text": "◀️", "callback": self.cb_nav, "args": (prev_i, group, search_phrase, True)},
+                {"text": "◀️", "callback": self.cb_nav, "args": (prev_i, group, search_phrase, is_expanded)},
                 {"text": self.strings["v_page"].format(idx=idx + 1, total=len(group)), "callback": self.cb_list, "args": (idx, group, search_phrase)},
-                {"text": "▶️", "callback": self.cb_nav, "args": (next_i, group, search_phrase, True)},
+                {"text": "▶️", "callback": self.cb_nav, "args": (next_i, group, search_phrase, is_expanded)},
             ])
             
         kbd.append([{
@@ -1476,8 +1476,8 @@ class Vector(loader.Module):
         
         if is_expanded:
             kbd.append([
-                {"text": self.strings["v_btn_talk"], "callback": self.cb_comments, "args": (m_owner, m_name, idx, group, search_phrase, comments_pg)},
-                {"text": self.strings["v_btn_sec"], "callback": self.cb_sec_check, "args": (m_owner, m_name, idx, group, search_phrase)},
+                {"text": self.strings["v_btn_talk"], "callback": self.cb_comments, "args": (m_owner, m_name, idx, group, search_phrase, comments_pg, is_expanded)},
+                {"text": self.strings["v_btn_sec"], "callback": self.cb_sec_check, "args": (m_owner, m_name, idx, group, search_phrase, is_expanded)},
             ])
             
         return kbd
@@ -2100,7 +2100,7 @@ class Vector(loader.Module):
         else:
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
 
-    async def cb_sec_check(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
+    async def cb_sec_check(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, expanded: bool = False):
         log.info("cb_sec_check: name=%s", m_name)
         def _get_sec_kb(has_run: bool, payload: dict = None):
             k = []
@@ -2108,9 +2108,9 @@ class Vector(loader.Module):
                 chk = (payload or {}).get("check") or {}
                 static = chk.get("details", {}).get("static", {})
                 if not (static.get("score", "?") == "?" and static.get("risk", "unknown") == "unknown"):
-                    k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q)}])
+                    k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q, expanded)}])
             k.append([{"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}])
-            k.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}])
+            k.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}])
             return k
 
         cached = self.seccache.get(m_name)
@@ -2134,9 +2134,9 @@ class Vector(loader.Module):
             log.debug("cb_sec_check: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), _get_sec_kb(bool(res.get("checked")), res))
 
-    async def cb_sec_run(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
+    async def cb_sec_run(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, expanded: bool = False):
         log.info("cb_sec_run: name=%s", m_name)
-        await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}]])
+        await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
         token = await self._get_active_token()
         if not token:
             with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
@@ -2145,10 +2145,10 @@ class Vector(loader.Module):
         
         if self.httpc == 429:
             log.warning("cb_sec_run: rate limited (429)")
-            return await self._safe_edit(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}]])
+            return await self._safe_edit(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
         if not res or self.httpc >= 400:
             log.warning("cb_sec_run: API error, http=%s", self.httpc)
-            return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}]])
+            return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
 
         log.info("cb_sec_run: scan complete for %s", m_name)
         if res.get("check"):
@@ -2156,7 +2156,7 @@ class Vector(loader.Module):
             log.debug("cb_sec_run: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), [
             [{"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}],
-            [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}],
+            [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}],
         ])
 
     def _fmt_sec(self, m_name: str, payload: dict) -> str:
@@ -2193,7 +2193,7 @@ class Vector(loader.Module):
             lines.append(f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=remaining, limit=qta.get('limit', '?'))}</i>")
         return "\n".join(lines)
 
-    async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0):
+    async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False):
         log.info("cb_comments: name=%s pg=%d", m_name, pg)
         with suppress(Exception): await cb.answer()
         token = await self._get_active_token()
@@ -2225,12 +2225,12 @@ class Vector(loader.Module):
 
         if total_pages > 1:
             kb.append([
-                {"text": "◀️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, prev_pg)},
+                {"text": "◀️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, prev_pg, expanded)},
                 {"text": self.strings["v_page"].format(idx=pg + 1, total=total_pages), "callback": self.cb_dummy},
-                {"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, next_pg)},
+                {"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, next_pg, expanded)},
             ])
 
-        kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True, pg)}])
+        kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded, pg)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
         await self._safe_edit(cb, self._fmt_comments(comments, m_name, pg), kb, item.get("banner"))
@@ -2265,7 +2265,7 @@ class Vector(loader.Module):
         
         await asyncio.sleep(1.5)
         
-        await self.cb_comments(cb, m_owner, m_name, i, group, q, pg)
+        await self.cb_comments(cb, m_owner, m_name, i, group, q, pg, expanded)
 
     def _fmt_comments(self, comments: list, m_name: str, pg: int = 0, pp: int = 5) -> str:
         log.debug("_fmt_comments: name=%s count=%d pg=%d", m_name, len(comments) if comments else 0, pg)
