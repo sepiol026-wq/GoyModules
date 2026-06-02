@@ -1443,7 +1443,7 @@ class Vector(loader.Module):
 
         return self._tag_safe_truncate(("\n".join(pfx) + desc_block + cmd_block + dep_block).rstrip(), CAP)
 
-    def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False) -> list:
+    def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False, comments_pg: int = 0) -> list:
         log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
         m_name = str(item.get("name", ""))
         m_owner = str(item.get("owner", "unknown"))
@@ -1476,7 +1476,7 @@ class Vector(loader.Module):
         
         if is_expanded:
             kbd.append([
-                {"text": self.strings["v_btn_talk"], "callback": self.cb_comments, "args": (m_owner, m_name, idx, group, search_phrase)},
+                {"text": self.strings["v_btn_talk"], "callback": self.cb_comments, "args": (m_owner, m_name, idx, group, search_phrase, comments_pg)},
                 {"text": self.strings["v_btn_sec"], "callback": self.cb_sec_check, "args": (m_owner, m_name, idx, group, search_phrase)},
             ])
             
@@ -2001,12 +2001,12 @@ class Vector(loader.Module):
         log.debug("cb_dummy: no-op callback")
         with suppress(Exception): await cb.answer()
 
-    async def cb_nav(self, cb: Any, target_i: int, group: list, q: str, expanded: bool = False):
+    async def cb_nav(self, cb: Any, target_i: int, group: list, q: str, expanded: bool = False, comments_pg: int = 0):
         log.debug("cb_nav: target_i=%d group_len=%d expanded=%s", target_i, len(group) if group else 0, expanded)
         with suppress(Exception): await cb.answer()
         if 0 <= target_i < len(group):
             item = group[target_i]
-            await self._safe_edit(cb, self._build_html(item, target_i + 1, len(group)), self._build_kbd(item, target_i, group, q, expanded), item.get("banner"))
+            await self._safe_edit(cb, self._build_html(item, target_i + 1, len(group)), self._build_kbd(item, target_i, group, q, expanded, comments_pg), item.get("banner"))
 
     async def cb_list(self, cb: Any, curr_i: int, group: list, q: str):
         log.debug("cb_list: curr_i=%d group_len=%d", curr_i, len(group) if group else 0)
@@ -2230,7 +2230,7 @@ class Vector(loader.Module):
                 {"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, next_pg)},
             ])
 
-        kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True)}])
+        kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, True, pg)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
         await self._safe_edit(cb, self._fmt_comments(comments, m_name, pg), kb, item.get("banner"))
