@@ -2103,15 +2103,14 @@ class Vector(loader.Module):
     async def cb_sec_check(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str):
         log.info("cb_sec_check: name=%s", m_name)
         def _get_sec_kb(has_run: bool, payload: dict = None):
-            k = [[
-                {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
-                {"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"},
-            ]]
+            k = []
             if not has_run:
                 chk = (payload or {}).get("check") or {}
                 static = chk.get("details", {}).get("static", {})
                 if not (static.get("score", "?") == "?" and static.get("risk", "unknown") == "unknown"):
                     k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q)}])
+            k.append([{"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}])
+            k.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}])
             return k
 
         cached = self.seccache.get(m_name)
@@ -2155,10 +2154,10 @@ class Vector(loader.Module):
         if res.get("check"):
             self.seccache[m_name] = res
             log.debug("cb_sec_run: cached result for %s", m_name)
-        await self._safe_edit(cb, self._fmt_sec(m_name, res), [[
-            {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
-            {"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"},
-        ]])
+        await self._safe_edit(cb, self._fmt_sec(m_name, res), [
+            [{"text": self.strings["v_btn_site"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}"}],
+            [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)}],
+        ])
 
     def _fmt_sec(self, m_name: str, payload: dict) -> str:
         log.debug("_fmt_sec: name=%s has_check=%s", m_name, bool(payload.get("check")))
