@@ -2153,7 +2153,7 @@ class Vector(loader.Module):
             log.debug("cb_sec_run: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), [[
             {"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q)},
-            {"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{m_name}/source"},
+            {"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"},
         ]])
 
     def _fmt_sec(self, m_name: str, payload: dict) -> str:
