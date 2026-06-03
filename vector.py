@@ -1167,6 +1167,7 @@ class Vector(loader.Module):
                     "name": c.get("name") or c.get("cmd") or "",
                     "description": c.get("description") or c.get("desc") or "",
                     "is_inline": bool(c.get("is_inline")),
+                    "is_placeholder": bool(c.get("is_placeholder")),
                 })
 
         dev = str(raw.get("developer") or raw.get("author") or "@Unknown")
@@ -1410,7 +1411,9 @@ class Vector(loader.Module):
                     for c in cmds:
                         cn = utils.escape_html(str(c.get("name", "")))
                         cd = utils.escape_html(str(c.get("description", ""))).split("\n")[0]
-                        if c.get("is_inline"):
+                        if c.get("is_placeholder"):
+                            line = f"<code>{{{cn}}}</code> {cd}"
+                        elif c.get("is_inline"):
                             bot = getattr(getattr(self, "inline", None), "bot_username", None) or "bot"
                             line = f"<code>@{utils.escape_html(bot)} {cn}</code> {cd}"
                         else:
