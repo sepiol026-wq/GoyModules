@@ -1161,12 +1161,13 @@ class Vector(loader.Module):
     def _normalize_module(self, raw: dict) -> dict:
         log.debug("_normalize_module: name=%s version=%s", raw.get("name", "?"), raw.get("version", "?"))
         lang = self._detect_lang_suffix()
-        # Meme locales use ru content
-        content_lang = "ru" if lang in ("ru", "neofit", "tiktok", "leet", "uwu") else ("ua" if lang == "uk" else lang)
+        # Map lang to DB suffix (uk→ua, en→"")
+        db_suffix = {"en": "", "uk": "_ua"}.get(lang, f"_{lang}")
         cmds = []
         for c in (raw.get("commands") or []):
             if isinstance(c, dict):
-                cmd_desc = c.get(f"desc_{content_lang}") or c.get("description") or c.get("desc") or ""
+                cmd_desc_key = f"desc{db_suffix}"
+                cmd_desc = (c.get(cmd_desc_key) if cmd_desc_key != "desc" else None) or c.get("description") or c.get("desc") or ""
                 cmds.append({
                     "name": c.get("name") or c.get("cmd") or "",
                     "description": cmd_desc,
@@ -1186,11 +1187,11 @@ class Vector(loader.Module):
         )
         name = str(raw.get("name") or raw.get("class_name") or "Unknown")
         
-        # Localized description: use locales.description_ru etc if available
+        # Localized description: use locales.description<db_suffix> if available
         locales = raw.get("locales")
         desc = raw.get("description") or ""
         if isinstance(locales, dict):
-            loc_key = f"description_{content_lang}"
+            loc_key = f"description{db_suffix}"
             loc_val = locales.get(loc_key)
             if isinstance(loc_val, str) and loc_val.strip():
                 desc = loc_val
