@@ -356,8 +356,8 @@ class Vector(loader.Module):
         "v_upd_cancel": "🚫 キャンセル",
     }
 
-    strings_uk = {
-        "lang": "uk",
+    strings_ua = {
+        "lang": "ua",
         "_cls_doc": "Оглядач реєстру модулів Vector для Heroku.\nhttps://vector-three-sooty.vercel.app",
         "v_dev_lbl": "Автор:",
         "v_dev_str": "Розроб:",
@@ -963,7 +963,7 @@ class Vector(loader.Module):
     }
 
     def _detect_lang_suffix(self) -> str:
-        variants = {"en", "ru", "jp", "ua", "uk", "de", "neofit", "tiktok", "leet", "uwu"}
+        variants = {"en", "ru", "jp", "ua", "de", "neofit", "tiktok", "leet", "uwu"}
         lang = str(self.strings.get("lang", "en")).strip().lower()
         result = lang if lang in variants else "en"
         log.debug("_detect_lang_suffix: raw=%r -> %s", lang, result)
@@ -1162,7 +1162,7 @@ class Vector(loader.Module):
         log.debug("_normalize_module: name=%s version=%s", raw.get("name", "?"), raw.get("version", "?"))
         lang = self._detect_lang_suffix()
         # Map lang to DB suffix (uk→ua, en→"")
-        db_suffix = {"en": "", "ua": "_ua", "uk": "_ua"}.get(lang, f"_{lang}")
+        db_suffix = {"en": "", "ua": "_ua"}.get(lang, f"_{lang}")
         cmds = []
         for c in (raw.get("commands") or []):
             if isinstance(c, dict):
@@ -1639,7 +1639,7 @@ class Vector(loader.Module):
         en_doc="<query> — search modules in Vector.",
         ru_doc="<запрос> — поиск модулей в Vector.",
         jp_doc="<クエリ> — Vectorでモジュールを検索。",
-        uk_doc="<запит> — пошук модулів у Vector.",
+        ua_doc="<запит> — пошук модулів у Vector.",
         de_doc="<Abfrage> — Suche nach Modulen in Vector.",
         neofit_doc="<query> — grep modules in Vector.",
         tiktok_doc="<запрос> — чекнуть темки (модули) в Vector.",
@@ -1699,7 +1699,7 @@ class Vector(loader.Module):
         en_doc="[-f|--force] — update Vector module.",
         ru_doc="[-f|--force] — обновить модуль Vector.",
         jp_doc="[-f|--force] — Vectorモジュールを更新します。",
-        uk_doc="[-f|--force] — оновити модуль Vector.",
+        ua_doc="[-f|--force] — оновити модуль Vector.",
         de_doc="[-f|--force] — Vector-Modul aktualisieren.",
         neofit_doc="[-f|--force] — git pull Vector.",
         tiktok_doc="[-f|--force] — обновить эту темку.",
@@ -1829,7 +1829,7 @@ class Vector(loader.Module):
         en_doc="<slug or URL> — download and install entire module collection from Vector.",
         ru_doc="<slug_или_ссылка> — скачать и установить всю коллекцию модулей из Vector.",
         jp_doc="<slugかURL> — Vectorからコレクション全体をダウンロードしてインストール。",
-        uk_doc="<slug_або_посилання> — завантажити та встановити всю колекцію модулів із Vector.",
+        ua_doc="<slug_або_посилання> — завантажити та встановити всю колекцію модулів із Vector.",
         de_doc="<slug_oder_url> — gesamte Modulsammlung von Vector herunterladen und installieren.",
         neofit_doc="<slug or URL> — pull entire module collection from Vector.",
         tiktok_doc="<slug_или_ссылка> — скачать и вкатить всю подборку темок из Vector.",
