@@ -963,7 +963,7 @@ class Vector(loader.Module):
     }
 
     def _detect_lang_suffix(self) -> str:
-        variants = {"en", "ru", "jp", "uk", "de", "neofit", "tiktok", "leet", "uwu"}
+        variants = {"en", "ru", "jp", "ua", "uk", "de", "neofit", "tiktok", "leet", "uwu"}
         lang = str(self.strings.get("lang", "en")).strip().lower()
         result = lang if lang in variants else "en"
         log.debug("_detect_lang_suffix: raw=%r -> %s", lang, result)
@@ -1162,7 +1162,7 @@ class Vector(loader.Module):
         log.debug("_normalize_module: name=%s version=%s", raw.get("name", "?"), raw.get("version", "?"))
         lang = self._detect_lang_suffix()
         # Map lang to DB suffix (uk→ua, en→"")
-        db_suffix = {"en": "", "uk": "_ua"}.get(lang, f"_{lang}")
+        db_suffix = {"en": "", "ua": "_ua", "uk": "_ua"}.get(lang, f"_{lang}")
         cmds = []
         for c in (raw.get("commands") or []):
             if isinstance(c, dict):
