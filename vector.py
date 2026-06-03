@@ -1160,12 +1160,16 @@ class Vector(loader.Module):
 
     def _normalize_module(self, raw: dict) -> dict:
         log.debug("_normalize_module: name=%s version=%s", raw.get("name", "?"), raw.get("version", "?"))
+        lang = self._detect_lang_suffix()
+        # Meme locales use ru content
+        content_lang = "ru" if lang in ("ru", "neofit", "tiktok", "leet", "uwu") else ("ua" if lang == "uk" else lang)
         cmds = []
         for c in (raw.get("commands") or []):
             if isinstance(c, dict):
+                cmd_desc = c.get(f"desc_{content_lang}") or c.get("description") or c.get("desc") or ""
                 cmds.append({
                     "name": c.get("name") or c.get("cmd") or "",
-                    "description": c.get("description") or c.get("desc") or "",
+                    "description": cmd_desc,
                     "is_inline": bool(c.get("is_inline")),
                     "is_placeholder": bool(c.get("is_placeholder")),
                 })
@@ -1183,11 +1187,10 @@ class Vector(loader.Module):
         name = str(raw.get("name") or raw.get("class_name") or "Unknown")
         
         # Localized description: use locales.description_ru etc if available
-        lang = self._detect_lang_suffix()
         locales = raw.get("locales")
         desc = raw.get("description") or ""
         if isinstance(locales, dict):
-            loc_key = f"description_{lang}"
+            loc_key = f"description_{content_lang}"
             loc_val = locales.get(loc_key)
             if isinstance(loc_val, str) and loc_val.strip():
                 desc = loc_val
