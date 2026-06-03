@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 3, 9)
+__version__ = (2, 3, 10)
 
 import asyncio
 import base64
@@ -1182,12 +1182,22 @@ class Vector(loader.Module):
         )
         name = str(raw.get("name") or raw.get("class_name") or "Unknown")
         
+        # Localized description: use locales.description_ru etc if available
+        lang = self._detect_lang_suffix()
+        locales = raw.get("locales")
+        desc = raw.get("description") or ""
+        if isinstance(locales, dict):
+            loc_key = f"description_{lang}"
+            loc_val = locales.get(loc_key)
+            if isinstance(loc_val, str) and loc_val.strip():
+                desc = loc_val
+        
         return {
             "name": name,
             "owner": raw.get("source_owner") or "unknown",
             "version": raw.get("version") or "?.?.?",
             "author": dev,
-            "description": raw.get("description") or "",
+            "description": desc,
             "commands": cmds,
             "dependencies": [str(d) for d in (raw.get("dependencies") or [])],
             "official": ioff,
