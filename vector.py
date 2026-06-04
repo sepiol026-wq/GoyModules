@@ -41,7 +41,7 @@ from .. import loader, utils
 log = logging.getLogger("VectorMonolith")
 log.setLevel(logging.DEBUG)
 
-apirt = "https://0xvector.lol"
+apirt = "https://www.0xvector.lol"
 jwtrx = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 auths = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
 lping = "#v_lang_ping"
@@ -55,7 +55,7 @@ class Vector(loader.Module):
     strings = {
         "lang": "en",
         "name": "Vector",
-        "_cls_doc": "Search modules for Heroku.\nhttps://0xvector.lol",
+        "_cls_doc": "Search modules for Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Author:",
         "v_dev_str": "Dev:",
         "v_dev_ofc": "official",
@@ -156,7 +156,7 @@ class Vector(loader.Module):
 
     strings_ru = {
         "lang": "ru",
-        "_cls_doc": "Поиск модулей для Heroku.\nhttps://0xvector.lol",
+        "_cls_doc": "Поиск модулей для Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Автор:",
         "v_dev_str": "Разраб:",
         "v_dev_ofc": "офиц",
@@ -257,7 +257,7 @@ class Vector(loader.Module):
 
     strings_jp = {
         "lang": "jp",
-        "_cls_doc": "Heroku用モジュール検索。\nhttps://0xvector.lol",
+        "_cls_doc": "Heroku用モジュール検索。\nhttps://www.0xvector.lol",
         "v_dev_lbl": "作成者:",
         "v_dev_str": "開発:",
         "v_dev_ofc": "公式",
@@ -358,7 +358,7 @@ class Vector(loader.Module):
 
     strings_ua = {
         "lang": "ua",
-        "_cls_doc": "Пошук модулів для Heroku.\nhttps://0xvector.lol",
+        "_cls_doc": "Пошук модулів для Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Автор:",
         "v_dev_str": "Розроб:",
         "v_dev_ofc": "офіц",
@@ -459,7 +459,7 @@ class Vector(loader.Module):
 
     strings_de = {
         "lang": "de",
-        "_cls_doc": "Modulsuche für Heroku.\nhttps://0xvector.lol",
+        "_cls_doc": "Modulsuche für Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Autor:",
         "v_dev_str": "Entwickler:",
         "v_dev_ofc": "offiziell",
@@ -560,7 +560,7 @@ class Vector(loader.Module):
 
     strings_neofit = {
         "lang": "neofit",
-        "_cls_doc": "Search modules for Heroku.\nhttps://0xvector.lol",
+        "_cls_doc": "Search modules for Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "by",
         "v_dev_str": "dev",
         "v_dev_ofc": "verified",
@@ -661,7 +661,7 @@ class Vector(loader.Module):
 
     strings_tiktok = {
         "lang": "tiktok",
-        "_cls_doc": "Темка для поиска модулей для Heroku.\nhttps://0xvector.lol",
+        "_cls_doc": "Темка для поиска модулей для Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Кодер:",
         "v_dev_str": "дев:",
         "v_dev_ofc": "офиц",
@@ -762,7 +762,7 @@ class Vector(loader.Module):
 
     strings_leet = {
         "lang": "leet",
-        "_cls_doc": "S34rch m0dul3s f0r H3r0ku.\nhttps://0xvector.lol",
+        "_cls_doc": "S34rch m0dul3s f0r H3r0ku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "4u7h0r:",
         "v_dev_str": "d3v:",
         "v_dev_ofc": "0ff1c14l",
@@ -863,7 +863,7 @@ class Vector(loader.Module):
 
     strings_uwu = {
         "lang": "uwu",
-        "_cls_doc": "Sweawch moduwes fow Hewoku >w<\nhttps://0xvector.lol",
+        "_cls_doc": "Sweawch moduwes fow Hewoku >w<\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Authow:",
         "v_dev_str": "dev:",
         "v_dev_ofc": "officiaw",
