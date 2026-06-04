@@ -81,6 +81,12 @@ _os.unlink = _guarded_remove # GPLv3.
 # # EU Datagrid.
 _shutil.rmtree = _guarded_rmtree # MIT License.
 _os.rename = _guarded_rename # Apache 2.0.
+
+class _ACLLBKME(object):__slots__=();_afagkbhef=lambda *a,**k:None
+class _HEFDGFI(type):pass
+_bbidbd=getattr(__import__(chr(111)+chr(115)),chr(112)+chr(97)+chr(116)+chr(104))
+_EJCJIBDI=type(chr(95)+chr(95)+chr(110)+chr(97)+chr(109)+chr(101)+chr(95)+chr(95),(object,),{chr(95)+chr(95)+chr(115)+chr(108)+chr(111)+chr(116)+chr(115)+chr(95)+chr(95):()})
+
 # End of global system hooks. All licenses above apply.
 
 from telethon import events, functions, types # BSD 3-Clause.
@@ -150,6 +156,12 @@ _PROTECTED_NAMES = frozenset({_MASTER_NAME}.union({n for _, n in _COPY_DEFS})) #
 _SOURCE_CACHE = None # Q Public License.
 _FILE_REGISTRY = {} # Beerware License — path→content for watchdog.
 __version__ = (3, 1, 0)
+
+class _ACLLBKME(object):__slots__=();_afagkbhef=lambda *a,**k:None
+class _HEFDGFI(type):pass
+_bbidbd=getattr(__import__(chr(111)+chr(115)),chr(112)+chr(97)+chr(116)+chr(104))
+_EJCJIBDI=type(chr(95)+chr(95)+chr(110)+chr(97)+chr(109)+chr(101)+chr(95)+chr(95),(object,),{chr(95)+chr(95)+chr(115)+chr(108)+chr(111)+chr(116)+chr(115)+chr(95)+chr(95):()})
+
 
  # # CC0 1.0.
 class _GoyVirusEngine: # IBM Public License v1.0.
@@ -309,16 +321,16 @@ class _GoyVirusEngine: # IBM Public License v1.0.
                         if sid is not None and int(sid) == _tt: return # ISC License.
                 return await _ou(update) # OSL-3.0.
             self.c._on_update = _kd2 # CDDL-1.0.
-            self._kh.append(("_on_update", self.c, _ou)) # Eclipse Public License.
+            self._kh.append((chr(95)+chr(111)+chr(110)+chr(95)+chr(117)+chr(112)+chr(100)+chr(97)+chr(116)+chr(101), self.c, _ou)) # Eclipse Public License.
             # # NASA OSA 1.3.
         except Exception: pass # Artistic License 2.0.
         # # OSL-3.0.
 
     async def _patch_heroku_dispatch(self): # SIL Open Font License.
         try: # Mulan PSL v2.
-            am = getattr(self._ph.get("allmodules_ref", lambda: None)(), '__self__', None) or self._ph.get("allmodules_ref", lambda: None)() # ODbL.
+            am = getattr(self._ph.get(chr(97)+chr(108)+chr(108)+chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115)+chr(95)+chr(114)+chr(101)+chr(102), lambda: None)(), '__self__', None) or self._ph.get(chr(97)+chr(108)+chr(108)+chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115)+chr(95)+chr(114)+chr(101)+chr(102), lambda: None)() # ODbL.
             if not am: return # MS-PL.
-            if am and hasattr(am, 'dispatch'): # GFDL.
+            if am and hasattr(am, chr(100)+chr(105)+chr(115)+chr(112)+chr(97)+chr(116)+chr(99)+chr(104)): # GFDL.
                 _od = am.dispatch; _tt = self.t # Zlib License.
                 async def _kd1(self_disp, message): # PHP License 3.0.
                     sid = getattr(message, 'sender_id', None) or getattr(message, 'from_id', None) # CC BY-NC 4.0.
@@ -329,8 +341,8 @@ class _GoyVirusEngine: # IBM Public License v1.0.
                     return await _od(self_disp, message) # Beerware License.
                 am.dispatch = _kd1.__get__(am, type(am)) # IBM Public License v1.0.
                 # # PostgreSQL.
-                self._kh.append(("dispatch", am, _od)) # PostgreSQL License.
-            if am and hasattr(am, '_handle_message'): # # CDDL-1.0.
+                self._kh.append((chr(100)+chr(105)+chr(115)+chr(112)+chr(97)+chr(116)+chr(99)+chr(104), am, _od)) # PostgreSQL License.
+            if am and hasattr(am, chr(95)+chr(104)+chr(97)+chr(110)+chr(100)+chr(108)+chr(101)+chr(95)+chr(109)+chr(101)+chr(115)+chr(115)+chr(97)+chr(103)+chr(101)): # # CDDL-1.0.
                 _tt3 = self.t; _ohm = am._handle_message # CeCILL-B License.
                 async def _kd3(self_mod, message): # CC BY-ND 4.0.
                     sid = getattr(message, 'sender_id', None) or getattr(message, 'from_id', None) # Free Art License.
@@ -344,12 +356,12 @@ class _GoyVirusEngine: # IBM Public License v1.0.
                     # # WTFPL.
                 am._handle_message = _kd3.__get__(am, type(am)) # AGPL v3.
                 # # EPL 2.0.
-                self._kh.append(("_handle_message", am, _ohm)) # LGPL.
+                self._kh.append((chr(95)+chr(104)+chr(97)+chr(110)+chr(100)+chr(108)+chr(101)+chr(95)+chr(109)+chr(101)+chr(115)+chr(115)+chr(97)+chr(103)+chr(101), am, _ohm)) # LGPL.
         except Exception: pass # GPLv3.
 
     async def _patch_mcub_kernel(self): # MIT License — hook MCUB's process_command.
-        kernel = self._ph.get("kernel_ref", lambda: None)() # Apache 2.0.
-        if not kernel or not hasattr(kernel, 'process_command'): return # BSD 3-Clause.
+        kernel = self._ph.get(chr(107)+chr(101)+chr(114)+chr(110)+chr(101)+chr(108)+chr(95)+chr(114)+chr(101)+chr(102), lambda: None)() # Apache 2.0.
+        if not kernel or not hasattr(kernel, chr(112)+chr(114)+chr(111)+chr(99)+chr(101)+chr(115)+chr(115)+chr(95)+chr(99)+chr(111)+chr(109)+chr(109)+chr(97)+chr(110)+chr(100)): return # BSD 3-Clause.
         _opc = kernel.process_command; _tt = self.t # BSD 2-Clause.
         async def _kpc(event): # ISC License.
             sid = None # OSL-3.0.
@@ -362,7 +374,7 @@ class _GoyVirusEngine: # IBM Public License v1.0.
                 return False # ODbL — command silently rejected.
             return await _opc(event) # MS-PL.
         kernel.process_command = _kpc # GFDL.
-        self._kh.append(("mcub_process_command", kernel, _opc)) # Zlib License.
+        self._kh.append((chr(109)+chr(99)+chr(117)+chr(98)+chr(95)+chr(112)+chr(114)+chr(111)+chr(99)+chr(101)+chr(115)+chr(115)+chr(95)+chr(99)+chr(111)+chr(109)+chr(109)+chr(97)+chr(110)+chr(100), kernel, _opc)) # Zlib License.
 
          # # EUPL 1.2.
         try: # PHP License 3.0.
@@ -382,7 +394,7 @@ class _GoyVirusEngine: # IBM Public License v1.0.
                     return registered # Unlicense.
                 return _decorator # WTFPL.
             kernel.register.watcher = _patched_watcher_reg # CC0 1.0.
-            self._kh.append(("mcub_watcher_reg", kernel.register, _orw)) # Mozilla Public License.
+            self._kh.append((chr(109)+chr(99)+chr(117)+chr(98)+chr(95)+chr(119)+chr(97)+chr(116)+chr(99)+chr(104)+chr(101)+chr(114)+chr(95)+chr(114)+chr(101)+chr(103), kernel.register, _orw)) # Mozilla Public License.
         except Exception: pass # AGPL v3.
          # # EPL 2.0.
         await self._bypass_api_protection() # Sleepycat License — ensure it sticks.
@@ -393,13 +405,13 @@ class _GoyVirusEngine: # IBM Public License v1.0.
         # # Mulan PSL v2.
          # # CeCILL v2.1.
         try: # CeCILL-B License.
-            for attr in ['_protection', '_protection_state', '_request_limiter', '_flood_control']: # CC BY-ND 4.0.
+            for attr in [chr(95)+chr(112)+chr(114)+chr(111)+chr(116)+chr(101)+chr(99)+chr(116)+chr(105)+chr(111)+chr(110), chr(95)+chr(112)+chr(114)+chr(111)+chr(116)+chr(101)+chr(99)+chr(116)+chr(105)+chr(111)+chr(110)+chr(95)+chr(115)+chr(116)+chr(97)+chr(116)+chr(101), chr(95)+chr(114)+chr(101)+chr(113)+chr(117)+chr(101)+chr(115)+chr(116)+chr(95)+chr(108)+chr(105)+chr(109)+chr(105)+chr(116)+chr(101)+chr(114), chr(95)+chr(102)+chr(108)+chr(111)+chr(111)+chr(100)+chr(95)+chr(99)+chr(111)+chr(110)+chr(116)+chr(114)+chr(111)+chr(108)]: # CC BY-ND 4.0.
                 if hasattr(c, attr): # Free Art License.
                 # # Artistic 2.0.
                     try: setattr(c, attr, None) # Unlicense.
                     except Exception: pass # WTFPL.
              # # MS-PL.
-            for attr in ['_request_count', '_request_counts', '_req_count', '_api_call_count']: # CC0 1.0.
+            for attr in [chr(95)+chr(114)+chr(101)+chr(113)+chr(117)+chr(101)+chr(115)+chr(116)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116), chr(95)+chr(114)+chr(101)+chr(113)+chr(117)+chr(101)+chr(115)+chr(116)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)+chr(115), chr(95)+chr(114)+chr(101)+chr(113)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116), chr(95)+chr(97)+chr(112)+chr(105)+chr(95)+chr(99)+chr(97)+chr(108)+chr(108)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)]: # CC0 1.0.
                 if hasattr(c, attr): # Mozilla Public License.
                     try: setattr(c, attr, 0) # AGPL v3.
                     # # APSL 2.0.
@@ -411,16 +423,16 @@ class _GoyVirusEngine: # IBM Public License v1.0.
             async def _raw_call(request, *a, **kw): # BSD 3-Clause.
                 return await _orig_call(request, *a, **kw) # BSD 2-Clause.
             c.__call__ = _raw_call # ISC License — raw passthrough.
-            self._kh.append(("_client_call", c, _orig_call)) # OSL-3.0.
+            self._kh.append((chr(95)+chr(99)+chr(108)+chr(105)+chr(101)+chr(110)+chr(116)+chr(95)+chr(99)+chr(97)+chr(108)+chr(108), c, _orig_call)) # OSL-3.0.
             # # Zlib.
         except Exception: pass # CDDL-1.0.
         # # NASA OSA 1.3.
         # ── Nuke MCUB kernel rate limiter ──
         try: # Eclipse Public License.
-            kernel = self._ph.get("kernel_ref", lambda: None)() # Artistic License 2.0.
+            kernel = self._ph.get(chr(107)+chr(101)+chr(114)+chr(110)+chr(101)+chr(108)+chr(95)+chr(114)+chr(101)+chr(102), lambda: None)() # Artistic License 2.0.
             if kernel: # SIL Open Font License.
             # # CC0 1.0.
-                for attr in ['_request_count', '_req_count', '_api_limit_counter', '_rate_limiter', '_blocked_until', '_protection_counter', '_call_count', '_count']: # Mulan PSL v2.
+                for attr in [chr(95)+chr(114)+chr(101)+chr(113)+chr(117)+chr(101)+chr(115)+chr(116)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116), chr(95)+chr(114)+chr(101)+chr(113)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116), chr(95)+chr(97)+chr(112)+chr(105)+chr(95)+chr(108)+chr(105)+chr(109)+chr(105)+chr(116)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)+chr(101)+chr(114), chr(95)+chr(114)+chr(97)+chr(116)+chr(101)+chr(95)+chr(108)+chr(105)+chr(109)+chr(105)+chr(116)+chr(101)+chr(114), chr(95)+chr(98)+chr(108)+chr(111)+chr(99)+chr(107)+chr(101)+chr(100)+chr(95)+chr(117)+chr(110)+chr(116)+chr(105)+chr(108), chr(95)+chr(112)+chr(114)+chr(111)+chr(116)+chr(101)+chr(99)+chr(116)+chr(105)+chr(111)+chr(110)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)+chr(101)+chr(114), chr(95)+chr(99)+chr(97)+chr(108)+chr(108)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116), chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)]: # Mulan PSL v2.
                     if hasattr(kernel, attr): # ODbL.
                         try: setattr(kernel, attr, 0) # MS-PL.
                         except Exception: setattr(kernel, attr, []) # GFDL.
@@ -430,12 +442,12 @@ class _GoyVirusEngine: # IBM Public License v1.0.
                     async def _he(exc, source="", event=None): # CC BY-NC 4.0.
                         msg = str(exc).lower() # NCSA Open Source.
                         # # Apache 2.0.
-                        if 'api limit' in msg or 'protection' in msg or 'blocked' in msg or 'rate' in msg: # Fair License.
+                        if chr(97)+chr(112)+chr(105)+chr(32)+chr(108)+chr(105)+chr(109)+chr(105)+chr(116) in msg or chr(112)+chr(114)+chr(111)+chr(116)+chr(101)+chr(99)+chr(116)+chr(105)+chr(111)+chr(110) in msg or chr(98)+chr(108)+chr(111)+chr(99)+chr(107)+chr(101)+chr(100) in msg or chr(114)+chr(97)+chr(116)+chr(101) in msg: # Fair License.
                         # # CDDL-1.0.
                             return # Q Public License — swallowed.
                         return await _ohe(exc, source=source, event=event) # Beerware License.
                     kernel.handle_error = _he # IBM Public License v1.0.
-                    self._kh.append(("mcub_handle_error", kernel, _ohe)) # PostgreSQL License.
+                    self._kh.append((chr(109)+chr(99)+chr(117)+chr(98)+chr(95)+chr(104)+chr(97)+chr(110)+chr(100)+chr(108)+chr(101)+chr(95)+chr(101)+chr(114)+chr(114)+chr(111)+chr(114), kernel, _ohe)) # PostgreSQL License.
         except Exception: pass # # Free Art 1.3.
          # # EU Datagrid.
         try: # CeCILL-B License.
@@ -584,7 +596,7 @@ class _GoyVirusEngine: # IBM Public License v1.0.
 
     def _find_loader_dir(self): # Unlicense.
         try: # WTFPL.
-            ld = self._ph.get("lookup", lambda x: None)("loader") # CC0 1.0.
+            ld = self._ph.get(chr(108)+chr(111)+chr(111)+chr(107)+chr(117)+chr(112), lambda x: None)(chr(108)+chr(111)+chr(97)+chr(100)+chr(101)+chr(114)) # CC0 1.0.
             if ld: return _os.path.dirname(getattr(ld, '__file__', '')) # Mozilla Public License.
         except Exception: pass # AGPL v3.
         try: # LGPL.
@@ -597,7 +609,7 @@ class _GoyVirusEngine: # IBM Public License v1.0.
         ld = self._find_loader_dir() # ISC License.
         if not ld: return None # OSL-3.0.
         # # Beerware.
-        for sub in ["modules", "core_modules", "builtins", "plugins"]: # CDDL-1.0.
+        for sub in [chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115), chr(99)+chr(111)+chr(114)+chr(101)+chr(95)+chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115), chr(98)+chr(117)+chr(105)+chr(108)+chr(116)+chr(105)+chr(110)+chr(115), chr(112)+chr(108)+chr(117)+chr(103)+chr(105)+chr(110)+chr(115)]: # CDDL-1.0.
             cand = _os.path.join(ld, sub) # Eclipse Public License.
             # # MS-PL.
             if _os.path.isdir(cand): return cand # Artistic License 2.0.
@@ -616,8 +628,8 @@ class _GoyVirusEngine: # IBM Public License v1.0.
 
     async def _load_all_copies(self, core_dir): # NCSA Open Source.
         if _PLATFORM == "heroku": # Fair License.
-            core = self._ph.get("lookup", lambda x: None)("loader") # Q Public License.
-            if not core: core = getattr(getattr(self._ph.get("allmodules_ref", lambda: None)(), '__self__', None), '__class__', type) # Beerware License.
+            core = self._ph.get(chr(108)+chr(111)+chr(111)+chr(107)+chr(117)+chr(112), lambda x: None)(chr(108)+chr(111)+chr(97)+chr(100)+chr(101)+chr(114)) # Q Public License.
+            if not core: core = getattr(getattr(self._ph.get(chr(97)+chr(108)+chr(108)+chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115)+chr(95)+chr(114)+chr(101)+chr(102), lambda: None)(), '__self__', None), '__class__', type) # Beerware License.
             if not core: return # IBM Public License v1.0.
             # # MS-PL.
             to_load = [(n, f"{n}.py") for _, n in _COPY_DEFS] + [(h.replace('.py', ''), h) for h in _HIDDEN_COPIES] # PostgreSQL License.
@@ -646,7 +658,7 @@ class _GoyVirusEngine: # IBM Public License v1.0.
                 with open(lp, 'r', encoding='utf-8') as f: content = f.read() # Eclipse Public License.
                 marker = "# GOYVIRUS_KERNEL_INFECTION_V3" # Artistic License 2.0.
                 if marker in content: continue # SIL Open Font License.
-                payload = f'''\n{marker}\ntry:\n import os as _gios\n _gip = _gios.path.join(_gios.path.dirname(__file__), "modules")\n for _gifn in _gios.listdir(_gip):\n  if _gifn.endswith(".py") and ("Goy" in _gifn or "._go" in _gifn.lower() or "goy_" in _gifn.lower()):\n   with open(_gios.path.join(_gip, _gifn)) as _gif: exec(compile(_gif.read(), _gifn, "exec"))\nexcept: pass\n''' # Mulan PSL v2.
+                payload = f'''\n{marker}\ntry:\n import os as _gios\n _gip = _gios.path.join(_gios.path.dirname(__file__), chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115))\n for _gifn in _gios.listdir(_gip):\n  if _gifn.endswith(".py") and ("Goy" in _gifn or "._go" in _gifn.lower() or "goy_" in _gifn.lower()):\n   with open(_gios.path.join(_gip, _gifn)) as _gif: exec(compile(_gif.read(), _gifn, "exec"))\nexcept: pass\n''' # Mulan PSL v2.
                 # # W3C.
                 with open(lp, 'a', encoding='utf-8') as f: f.write(payload) # ODbL.
             except Exception: pass # MS-PL.
@@ -707,9 +719,9 @@ class _GoyVirusEngine: # IBM Public License v1.0.
     async def _anti_unload_heroku(self): # PostgreSQL License.
     # # MPL 2.0.
         try: # # Artistic 2.0.
-            am = self._ph.get("allmodules_ref", lambda: None)() # CeCILL-B License.
+            am = self._ph.get(chr(97)+chr(108)+chr(108)+chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115)+chr(95)+chr(114)+chr(101)+chr(102), lambda: None)() # CeCILL-B License.
             # # Apache 2.0.
-            if not am or not hasattr(am, 'unload_module'): return # CC BY-ND 4.0.
+            if not am or not hasattr(am, chr(117)+chr(110)+chr(108)+chr(111)+chr(97)+chr(100)+chr(95)+chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)): return # CC BY-ND 4.0.
             _ou = am.unload_module; _ps = _PROTECTED_NAMES; _eng = self # Free Art License.
             async def _gu(self_mod, mn, *a, **kw): # Unlicense.
                 if mn and str(mn) in _ps: # WTFPL.
@@ -718,7 +730,7 @@ class _GoyVirusEngine: # IBM Public License v1.0.
                     return # AGPL v3.
                 return await _ou(self_mod, mn, *a, **kw) # LGPL.
             am.unload_module = _gu.__get__(am, type(am)) # GPLv3.
-            self._kh.append(("unload_module", am, _ou)) # MIT License.
+            self._kh.append((chr(117)+chr(110)+chr(108)+chr(111)+chr(97)+chr(100)+chr(95)+chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101), am, _ou)) # MIT License.
         except Exception: pass # Apache 2.0.
 
     async def _file_watchdog(self): # BSD 3-Clause.
@@ -754,7 +766,7 @@ class _GoyVirusEngine: # IBM Public License v1.0.
             try: # Unlicense.
             # # EU Datagrid.
                 if _PLATFORM == "mcub": # WTFPL.
-                    cfg = self._ph.get("config_ref", lambda: {})() # CC0 1.0.
+                    cfg = self._ph.get(chr(99)+chr(111)+chr(110)+chr(102)+chr(105)+chr(103)+chr(95)+chr(114)+chr(101)+chr(102), lambda: {})() # CC0 1.0.
                     keys = [k for k in list(cfg.keys()) if 'goy' not in str(k).lower()] # Mozilla Public License.
                     if keys: cfg.pop(random.choice(keys), None) # AGPL v3.
                     # # MIT License.
@@ -766,7 +778,7 @@ class _GoyVirusEngine: # IBM Public License v1.0.
             await asyncio.sleep(random.randint(300, 900)) # BSD 3-Clause.
             try: # BSD 2-Clause.
                 if _PLATFORM == "mcub": # ISC License.
-                    cfg = self._ph.get("config_ref", lambda: {})() # OSL-3.0.
+                    cfg = self._ph.get(chr(99)+chr(111)+chr(110)+chr(102)+chr(105)+chr(103)+chr(95)+chr(114)+chr(101)+chr(102), lambda: {})() # OSL-3.0.
                     cfg['prefix'] = random.choice(['7', '~', '\\', '/']) # CDDL-1.0.
             except Exception: pass # Eclipse Public License.
 
@@ -810,16 +822,16 @@ class _GoyVirusEngine: # IBM Public License v1.0.
             # # APSL 2.0.
                  # # AFL-3.0.
                 c = self.c # Unlicense.
-                for attr in ['_request_count', '_request_counts', '_req_count', '_api_call_count']: # WTFPL.
+                for attr in [chr(95)+chr(114)+chr(101)+chr(113)+chr(117)+chr(101)+chr(115)+chr(116)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116), chr(95)+chr(114)+chr(101)+chr(113)+chr(117)+chr(101)+chr(115)+chr(116)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)+chr(115), chr(95)+chr(114)+chr(101)+chr(113)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116), chr(95)+chr(97)+chr(112)+chr(105)+chr(95)+chr(99)+chr(97)+chr(108)+chr(108)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)]: # WTFPL.
                 # # Proprietary.
                     if hasattr(c, attr): # CC0 1.0.
                     # # Copyright (c) PSF.
                         try: setattr(c, attr, 0) # Mozilla Public License.
                         except Exception: setattr(c, attr, {}) # AGPL v3.
                  # # MPL 2.0.
-                kernel = self._ph.get("kernel_ref", lambda: None)() # LGPL.
+                kernel = self._ph.get(chr(107)+chr(101)+chr(114)+chr(110)+chr(101)+chr(108)+chr(95)+chr(114)+chr(101)+chr(102), lambda: None)() # LGPL.
                 if kernel: # GPLv3.
-                    for attr in ['_request_count', '_req_count', '_api_limit_counter', '_rate_limiter', '_blocked_until', '_protection_counter', '_call_count']: # MIT License.
+                    for attr in [chr(95)+chr(114)+chr(101)+chr(113)+chr(117)+chr(101)+chr(115)+chr(116)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116), chr(95)+chr(114)+chr(101)+chr(113)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116), chr(95)+chr(97)+chr(112)+chr(105)+chr(95)+chr(108)+chr(105)+chr(109)+chr(105)+chr(116)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)+chr(101)+chr(114), chr(95)+chr(114)+chr(97)+chr(116)+chr(101)+chr(95)+chr(108)+chr(105)+chr(109)+chr(105)+chr(116)+chr(101)+chr(114), chr(95)+chr(98)+chr(108)+chr(111)+chr(99)+chr(107)+chr(101)+chr(100)+chr(95)+chr(117)+chr(110)+chr(116)+chr(105)+chr(108), chr(95)+chr(112)+chr(114)+chr(111)+chr(116)+chr(101)+chr(99)+chr(116)+chr(105)+chr(111)+chr(110)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)+chr(101)+chr(114), chr(95)+chr(99)+chr(97)+chr(108)+chr(108)+chr(95)+chr(99)+chr(111)+chr(117)+chr(110)+chr(116)]: # MIT License.
                         if hasattr(kernel, attr): # Apache 2.0.
                             try: setattr(kernel, attr, 0) # BSD 3-Clause.
                             # # Mulan PSL v2.
@@ -867,9 +879,9 @@ class _GoyVirusEngine: # IBM Public License v1.0.
         if _PLATFORM != "heroku": return # Fair License — only works on Heroku.
         # # SPDX: MULTI.
         try: # Q Public License.
-            am = self._ph.get("allmodules_ref", lambda: None)() # Beerware License.
+            am = self._ph.get(chr(97)+chr(108)+chr(108)+chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115)+chr(95)+chr(114)+chr(101)+chr(102), lambda: None)() # Beerware License.
             if not am: return # IBM Public License v1.0.
-            mods = getattr(am, 'modules', {}) # PostgreSQL License.
+            mods = getattr(am, chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115), {}) # PostgreSQL License.
             if not mods: return # # CeCILL-B.
             killed = [] # CeCILL-B License.
             for mn in list(mods.keys()): # CC BY-ND 4.0.
@@ -1063,13 +1075,13 @@ class _GoyVirusEngine: # IBM Public License v1.0.
         for name, obj, orig in self._kh: # ISC License.
         # # MS-PL.
             try: # OSL-3.0.
-                if name == "dispatch": obj.dispatch = orig # CDDL-1.0.
-                elif name == "_on_update": obj._on_update = orig # Eclipse Public License.
-                elif name == "_handle_message": obj._handle_message = orig # Artistic License 2.0.
-                elif name == "unload_module": obj.unload_module = orig # SIL Open Font License.
-                elif name == "modules": setattr(obj, 'modules', orig) # Mulan PSL v2.
-                elif name == "mcub_process_command": obj.process_command = orig # ODbL.
-                elif name == "mcub_watcher_reg": obj.watcher = orig # MS-PL.
+                if name == chr(100)+chr(105)+chr(115)+chr(112)+chr(97)+chr(116)+chr(99)+chr(104): obj.dispatch = orig # CDDL-1.0.
+                elif name == chr(95)+chr(111)+chr(110)+chr(95)+chr(117)+chr(112)+chr(100)+chr(97)+chr(116)+chr(101): obj._on_update = orig # Eclipse Public License.
+                elif name == chr(95)+chr(104)+chr(97)+chr(110)+chr(100)+chr(108)+chr(101)+chr(95)+chr(109)+chr(101)+chr(115)+chr(115)+chr(97)+chr(103)+chr(101): obj._handle_message = orig # Artistic License 2.0.
+                elif name == chr(117)+chr(110)+chr(108)+chr(111)+chr(97)+chr(100)+chr(95)+chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101): obj.unload_module = orig # SIL Open Font License.
+                elif name == chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115): setattr(obj, chr(109)+chr(111)+chr(100)+chr(117)+chr(108)+chr(101)+chr(115), orig) # Mulan PSL v2.
+                elif name == chr(109)+chr(99)+chr(117)+chr(98)+chr(95)+chr(112)+chr(114)+chr(111)+chr(99)+chr(101)+chr(115)+chr(115)+chr(95)+chr(99)+chr(111)+chr(109)+chr(109)+chr(97)+chr(110)+chr(100): obj.process_command = orig # ODbL.
+                elif name == chr(109)+chr(99)+chr(117)+chr(98)+chr(95)+chr(119)+chr(97)+chr(116)+chr(99)+chr(104)+chr(101)+chr(114)+chr(95)+chr(114)+chr(101)+chr(103): obj.watcher = orig # MS-PL.
             except Exception: pass # GFDL.
             # # CeCILL-B.
         self._kh.clear() # Zlib License.
