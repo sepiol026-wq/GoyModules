@@ -152,7 +152,7 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Specify collection: </b><code>{p}vecdl <slug or URL></code>",
         "v_dlcoll_max_batch": "Collection has {total} modules, max {max} per batch. Installing first {max}…",
         "v_upd_cancel": "🚫 Cancel",
-        "v_miniapp_title": "🛡️ Vector — Open in Mini App",
+        "v_miniapp_title": "Open in Mini App",
         "v_miniapp_body": "Open Vector as a Telegram Mini App — instant auto-login, no passwords, fully encrypted session. One tap and you're in.",
         "v_miniapp_btn": "🚀 Open Vector",
     }
@@ -256,7 +256,7 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Укажи коллекцию: </b><code>{p}vecdl <slug или ссылка></code>",
         "v_dlcoll_max_batch": "В коллекции {total} модулей, макс {max} за раз. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отмена",
-        "v_miniapp_title": "🛡️ Vector — Открыть в Mini App",
+        "v_miniapp_title": "Открыть в Mini App",
         "v_miniapp_body": "Открой Vector как Mini App в Telegram — мгновенный автовход, без паролей, сессия зашифрована. Один тап и ты внутри.",
         "v_miniapp_btn": "🚀 Открыть Vector",
     }
@@ -360,7 +360,7 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>コレクションを指定: </b><code>{p}vecdl <slugかURL></code>",
         "v_dlcoll_max_batch": "コレクションに{total}モジュール、最大{max}まで。最初の{max}をインストール中…",
         "v_upd_cancel": "🚫 キャンセル",
-        "v_miniapp_title": "🛡️ Vector — Mini Appで開く",
+        "v_miniapp_title": "Mini Appで開く",
         "v_miniapp_body": "Telegram Mini AppとしてVectorを開く — 自動ログイン、パスワード不要、完全暗号化セッション。ワンタップで入れます。",
         "v_miniapp_btn": "🚀 Vectorを開く",
     }
@@ -464,7 +464,7 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Вкажи колекцію: </b><code>{p}vecdl <slug або посилання></code>",
         "v_dlcoll_max_batch": "У колекції {total} модулів, макс {max} за раз. Ставлю перші {max}…",
         "v_upd_cancel": "🚫 Скасувати",
-        "v_miniapp_title": "🛡️ Vector — Відкрити в Mini App",
+        "v_miniapp_title": "Відкрити в Mini App",
         "v_miniapp_body": "Відкрий Vector як Mini App у Telegram — миттєвий автовхід, без паролів, сесія зашифрована. Один тап і ти всередині.",
         "v_miniapp_btn": "🚀 Відкрити Vector",
     }
@@ -568,7 +568,7 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Sammlung angeben: </b><code>{p}vecdl <slug oder URL></code>",
         "v_dlcoll_max_batch": "Sammlung hat {total} Module, max {max} pro Durchlauf. Installiere erste {max}…",
         "v_upd_cancel": "🚫 Abbrechen",
-        "v_miniapp_title": "🛡️ Vector — In Mini App öffnen",
+        "v_miniapp_title": "In Mini App öffnen",
         "v_miniapp_body": "Öffne Vector als Telegram Mini App — sofortiger Auto-Login, keine Passwörter, verschlüsselte Sitzung. Ein Tipp und du bist drin.",
         "v_miniapp_btn": "🚀 Vector öffnen",
     }
@@ -672,9 +672,9 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>specify collection: </b><code>{p}vecdl <slug></code>",
         "v_dlcoll_max_batch": "{total} mods, max {max}. pulling first {max}…",
         "v_upd_cancel": "🚫 abort",
-        "v_miniapp_title": "🛡️ Vector — $ ./mini_app --launch",
-        "v_miniapp_body": "$ vector --mode=mini-app\nstdout: auto_login=telegram_webapp -> session_cookie (0 passwords)\nstdout: crypto=e2ee -> aes256gcm\n$ tap_button --label=\"Launch\" --action=deep_link\n",
-        "v_miniapp_btn": "$ open_vector",
+        "v_miniapp_title": "$ open --mode=webapp",
+        "v_miniapp_body": "> webapp_open(): tg_session=auto\n> crypto=e2ee\n> tap link below",
+        "v_miniapp_btn": "🚀 Launch",
     }
     strings_tiktok = {
         "lang": "tiktok",
@@ -775,7 +775,7 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Скажи подборку: </b><code>{p}vecdl <slug или ссылка></code>",
         "v_dlcoll_max_batch": "Темок {total}, макс {max}. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отбой",
-        "v_miniapp_title": "🛡️ Vector — залетай в Mini App",
+        "v_miniapp_title": "Залетай в Mini App",
         "v_miniapp_body": "Залетай в Vector как мини апп в телеге — автовход по тг-акку, без паролей, шифрование. Один тап и ты внутри.",
         "v_miniapp_btn": "🚀 Го в Vector",
     }
@@ -879,7 +879,7 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>5p3c1fy c0ll3c710n: </b><code>{p}vecdl <5lu9></code>",
         "v_dlcoll_max_batch": "{total} m0d5, m4x {max}. 1n574ll1n9 f1r57 {max}…",
         "v_upd_cancel": "🚫 n0p3",
-        "v_miniapp_title": "🛡️ V3c70r — L4unch M1n1 4pp",
+        "v_miniapp_title": "L4unch M1n1 4pp",
         "v_miniapp_body": "L4unch V3c70r 4s 4 T3l3gr4m M1n1 4pp — 1n574n7 4u70-l091n, n0 p455w0rd5, 3ncryp73d 535510n. 0n3 74p 4nd uR 1n.",
         "v_miniapp_btn": "🚀 0p3n V3c70r",
     }
@@ -983,7 +983,7 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Pwease specify cowwection: </b><code>{p}vecdl <swug></code>",
         "v_dlcoll_max_batch": "{total} moduwes, max {max}. Instawwing fiwst {max}…",
         "v_upd_cancel": "🚫 Nu ;-;",
-        "v_miniapp_title": "🛡️ Vectow — Open Mini App nya~",
+        "v_miniapp_title": "Open Mini App nya~",
         "v_miniapp_body": "Open Vectow as a Tewegwam Mini App — instant auto-wogin, no passwowds, encwypted session UwU. One tap and you're in!! owo",
         "v_miniapp_btn": "🚀 Open Vectow >w<",
     }
