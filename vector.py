@@ -152,8 +152,8 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Specify collection: </b><code>{p}vecdl <slug or URL></code>",
         "v_dlcoll_max_batch": "Collection has {total} modules, max {max} per batch. Installing first {max}…",
         "v_upd_cancel": "🚫 Cancel",
-        "v_miniapp_title": "🛡️ Vector — Open as Mini App",
-        "v_miniapp_body": "Open Vector directly inside Telegram as a Mini App — no browser tabs, no passwords, no login forms.\n\n• <b>Instant auto‑login</b> via your Telegram account\n• <b>End‑to‑end encrypted</b> session — your data stays on your device\n• <b>Full catalog access</b>: search, rate, browse source code, join discussions\n• <b>Faster</b> than bot commands — native WebApp rendering\n\nTap the button below to launch.",
+        "v_miniapp_title": "🛡️ Vector — Open in Mini App",
+        "v_miniapp_body": "Open Vector as a Telegram Mini App — instant auto-login, no passwords, fully encrypted session. One tap and you're in.",
         "v_miniapp_btn": "🚀 Open Vector",
     }
 
@@ -256,8 +256,8 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Укажи коллекцию: </b><code>{p}vecdl <slug или ссылка></code>",
         "v_dlcoll_max_batch": "В коллекции {total} модулей, макс {max} за раз. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отмена",
-        "v_miniapp_title": "🛡️ Vector — Открыть как Mini App",
-        "v_miniapp_body": "Открой Vector прямо в Telegram как Mini App — никаких вкладок браузера, паролей и форм входа.\n\n• <b>Мгновенный автовход</b> через твой Telegram аккаунт\n• <b>Сквозное шифрование</b> сессии — данные только на твоём устройстве\n• <b>Полный каталог</b>: поиск, оценки, исходники, обсуждения\n• <b>Быстрее</b> чем бот‑команды — нативный WebApp рендеринг\n\nЖми кнопку ниже чтобы запустить.",
+        "v_miniapp_title": "🛡️ Vector — Открыть в Mini App",
+        "v_miniapp_body": "Открой Vector как Mini App в Telegram — мгновенный автовход, без паролей, сессия зашифрована. Один тап и ты внутри.",
         "v_miniapp_btn": "🚀 Открыть Vector",
     }
 
@@ -360,8 +360,8 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>コレクションを指定: </b><code>{p}vecdl <slugかURL></code>",
         "v_dlcoll_max_batch": "コレクションに{total}モジュール、最大{max}まで。最初の{max}をインストール中…",
         "v_upd_cancel": "🚫 キャンセル",
-        "v_miniapp_title": "🛡️ Vector — Mini Appを開く",
-        "v_miniapp_body": "VectorをTelegramのMini Appとして直接開きます — ブラウザタブもパスワードもログインフォームも不要。\n\n• <b>自動ログイン</b> — Telegramアカウントで即座に認証\n• <b>エンドツーエンド暗号化</b> — データはあなたの端末のみに保存\n• <b>全機能</b>: モジュール検索・評価・ソースコード閲覧・ディスカッション\n• ボットコマンドより<b>高速</b> — ネイティブWebAppレンダリング\n\n下のボタンで起動。",
+        "v_miniapp_title": "🛡️ Vector — Mini Appで開く",
+        "v_miniapp_body": "Telegram Mini AppとしてVectorを開く — 自動ログイン、パスワード不要、完全暗号化セッション。ワンタップで入れます。",
         "v_miniapp_btn": "🚀 Vectorを開く",
     }
 
@@ -464,8 +464,8 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Вкажи колекцію: </b><code>{p}vecdl <slug або посилання></code>",
         "v_dlcoll_max_batch": "У колекції {total} модулів, макс {max} за раз. Ставлю перші {max}…",
         "v_upd_cancel": "🚫 Скасувати",
-        "v_miniapp_title": "🛡️ Vector — Відкрити як Mini App",
-        "v_miniapp_body": "Відкрий Vector прямо в Telegram як Mini App — без вкладок браузера, паролів і форм входу.\n\n• <b>Миттєвий автовхід</b> через твій Telegram акаунт\n• <b>Наскрізне шифрування</b> сесії — дані лише на твоєму пристрої\n• <b>Повний каталог</b>: пошук, оцінки, сирці, обговорення\n• <b>Швидше</b> ніж бот‑команди — нативний WebApp рендеринг\n\nТисни кнопку нижче щоб запустити.",
+        "v_miniapp_title": "🛡️ Vector — Відкрити в Mini App",
+        "v_miniapp_body": "Відкрий Vector як Mini App у Telegram — миттєвий автовхід, без паролів, сесія зашифрована. Один тап і ти всередині.",
         "v_miniapp_btn": "🚀 Відкрити Vector",
     }
 
@@ -568,8 +568,8 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Sammlung angeben: </b><code>{p}vecdl <slug oder URL></code>",
         "v_dlcoll_max_batch": "Sammlung hat {total} Module, max {max} pro Durchlauf. Installiere erste {max}…",
         "v_upd_cancel": "🚫 Abbrechen",
-        "v_miniapp_title": "🛡️ Vector — Als Mini App öffnen",
-        "v_miniapp_body": "Öffne Vector direkt in Telegram als Mini App — keine Browser-Tabs, keine Passwörter, keine Anmeldeformulare.\n\n• <b>Sofortiger Auto‑Login</b> über dein Telegram‑Konto\n• <b>Ende‑zu‑Ende verschlüsselte</b> Sitzung — Daten bleiben auf deinem Gerät\n• <b>Voller Katalogzugriff</b>: Suche, Bewertungen, Quellcode, Diskussionen\n• <b>Schneller</b> als Bot‑Befehle — natives WebApp‑Rendering\n\nTippe auf die Schaltfläche unten zum Starten.",
+        "v_miniapp_title": "🛡️ Vector — In Mini App öffnen",
+        "v_miniapp_body": "Öffne Vector als Telegram Mini App — sofortiger Auto-Login, keine Passwörter, verschlüsselte Sitzung. Ein Tipp und du bist drin.",
         "v_miniapp_btn": "🚀 Vector öffnen",
     }
 
@@ -673,13 +673,9 @@ class Vector(loader.Module):
         "v_dlcoll_max_batch": "{total} mods, max {max}. pulling first {max}…",
         "v_upd_cancel": "🚫 abort",
         "v_miniapp_title": "🛡️ Vector — $ ./mini_app --launch",
-        "v_miniapp_body": "$ vector --mode=mini-app --target=telegram_webview\n\nSTDOUT:\n  [OK] auto_login: telegram_oidc → session_cookie (0 passwords)\n  [OK] crypto: e2ee_session_init → aes256gcm\n  [OK] catalog: http/2 → /api/search, /api/rate, /api/modules/*/source\n  [OK] ui: webapp_render → 60fps, no polling overhead\n  [OK] threads: /api/modules/*/comments → realtime discussion\n\n  latency: ~80ms vs bot_commands ~1200ms\n  overhead: 1 tcp_tls_session vs N http_polling_requests\n\n$ tap_button --label=\"🚀 Launch\" --action=deep_link\n",
-[SEC] End-to-end encrypted session.
-[PERF] Sub-100ms rendering. No bot polling overhead.
-Rate modules, browse source, join threads — all inside Telegram.",
+        "v_miniapp_body": "$ vector --mode=mini-app\nstdout: auto_login=telegram_webapp -> session_cookie (0 passwords)\nstdout: crypto=e2ee -> aes256gcm\n$ tap_button --label=\"Launch\" --action=deep_link\n",
         "v_miniapp_btn": "$ open_vector",
     }
-
     strings_tiktok = {
         "lang": "tiktok",
         "_cls_doc": "Темка для поиска модулей для Heroku.\nhttps://www.0xvector.lol",
@@ -780,7 +776,7 @@ Rate modules, browse source, join threads — all inside Telegram.",
         "v_dlcoll_max_batch": "Темок {total}, макс {max}. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отбой",
         "v_miniapp_title": "🛡️ Vector — залетай в Mini App",
-        "v_miniapp_body": "Залетай в Vector прям в телеге как мини апп — без браузеров, паролей и вот этого вот всего.\n\n• <b>Автовход</b> по тг‑акку, ваще без напряга\n• <b>Шифрование</b> end‑to‑end, твои данные тока у тебя\n• <b>Фулл доступ</b>: поиск модулей, оценки, код, треды комьюнити\n• <b>Летает</b> быстрее чем команды бота — это WebApp, не poll\n\nЖми кнопку снизу, че ты.",
+        "v_miniapp_body": "Залетай в Vector как мини апп в телеге — автовход по тг-акку, без паролей, шифрование. Один тап и ты внутри.",
         "v_miniapp_btn": "🚀 Го в Vector",
     }
 
@@ -884,7 +880,7 @@ Rate modules, browse source, join threads — all inside Telegram.",
         "v_dlcoll_max_batch": "{total} m0d5, m4x {max}. 1n574ll1n9 f1r57 {max}…",
         "v_upd_cancel": "🚫 n0p3",
         "v_miniapp_title": "🛡️ V3c70r — L4unch M1n1 4pp",
-        "v_miniapp_body": "L4unch V3c70r d1r3c7ly 1n T3l3gr4m — n0 br0w53r 74b5, n0 p455w0rd5, n0 l091n f0rm5.\n\n• <b>1n574n7 4u70-l091n</b> v14 uR T3l3gr4m 4cc0un7\n• <b>3nd-70-3nd 3ncryp73d</b> 535510n — d474 574y5 0n uR d3v1c3\n• <b>Fu11 c474l09</b>: 534rch, r473, c0d3, d15cu5510n5\n• <b>F4573r</b> 7h4n b07 c0mm4nd5 — n471v3 W3b4pp r3nd3r1n9\n\n74p bu770n b3l0w 70 l4unch.",
+        "v_miniapp_body": "L4unch V3c70r 4s 4 T3l3gr4m M1n1 4pp — 1n574n7 4u70-l091n, n0 p455w0rd5, 3ncryp73d 535510n. 0n3 74p 4nd uR 1n.",
         "v_miniapp_btn": "🚀 0p3n V3c70r",
     }
 
@@ -988,7 +984,7 @@ Rate modules, browse source, join threads — all inside Telegram.",
         "v_dlcoll_max_batch": "{total} moduwes, max {max}. Instawwing fiwst {max}…",
         "v_upd_cancel": "🚫 Nu ;-;",
         "v_miniapp_title": "🛡️ Vectow — Open Mini App nya~",
-        "v_miniapp_body": "Open Vectow wight inside Tewegwam as a Mini App — no bwowser tabs, no passwowds, no wogin fowms!! (⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)\n\n• <b>Instant auto-wogin</b> via youw Tewegwam account ~nya\n• <b>End‑to‑end encwypted</b> session — youw data stays on youw device (￣ω￣)\n• <b>Fuww catawog</b>: seawch, wate moduwes, bwowse code, join discussions >w<\n• <b>Fastew</b> than bot commands — native WebApp wendewing UwU\n\nTap da button bewow to waunch!! owo",
+        "v_miniapp_body": "Open Vectow as a Tewegwam Mini App — instant auto-wogin, no passwowds, encwypted session UwU. One tap and you're in!! owo",
         "v_miniapp_btn": "🚀 Open Vectow >w<",
     }
 
@@ -2063,15 +2059,15 @@ Rate modules, browse source, join threads — all inside Telegram.",
         await send_feedback("ok" if res and res.get("ok") else "error")
 
     @loader.command(
-        en_doc="— open Vector Mini App info & deep link.",
-        ru_doc="— инфо и ссылка на Vector Mini App.",
-        ua_doc="— інфо та посилання на Vector Mini App.",
-        de_doc="— Vector Mini App Info & Deep-Link öffnen.",
-        jp_doc="— Vector Mini Appの情報とリンクを開く。",
-        neofit_doc="— $ vector_mini_app --info --deep-link",
-        tiktok_doc="— инфо про мини апп Vector, ссылка.",
-        leet_doc="— 0p3n V3c70r M1n1 4pp 1nf0 & d33p l1nk.",
-        uwu_doc="— open Vectow Mini App info & deep wink UwU",
+        en_doc="— open Vector as Telegram Mini App.",
+        ru_doc="— открыть Vector как Mini App в Telegram.",
+        ua_doc="— відкрити Vector як Mini App у Telegram.",
+        de_doc="— Vector als Telegram Mini App öffnen.",
+        jp_doc="— VectorをTelegram Mini Appとして開く。",
+        neofit_doc="— $ ./mini_app --launch",
+        tiktok_doc="— открыть Vector как мини апп в телеге.",
+        leet_doc="— 0p3n V3c70r 4s T3l3gr4m M1n1 4pp.",
+        uwu_doc="— open Vectow as Tewegwam Mini App nya~",
     )
     async def vecmecmd(self, msg: Message):
         await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_sending']}</b>")
