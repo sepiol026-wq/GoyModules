@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta developer: @GoyModules
 
-__version__ = (2, 4, 0)
+__version__ = (2, 4, 1)
 
 import asyncio
 import base64
@@ -152,6 +152,9 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Specify collection: </b><code>{p}vecdl <slug or URL></code>",
         "v_dlcoll_max_batch": "Collection has {total} modules, max {max} per batch. Installing first {max}…",
         "v_upd_cancel": "🚫 Cancel",
+        "v_miniapp_title": "🛡️ Vector — Mini App",
+        "v_miniapp_body": "Auto-login via Telegram. No passwords. All data encrypted. Faster & cleaner than bot commands. Rate modules, browse source code, join discussions — right inside Telegram.",
+        "v_miniapp_btn": "🚀 Open Vector",
     }
 
     strings_ru = {
@@ -253,6 +256,9 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Укажи коллекцию: </b><code>{p}vecdl <slug или ссылка></code>",
         "v_dlcoll_max_batch": "В коллекции {total} модулей, макс {max} за раз. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отмена",
+        "v_miniapp_title": "🛡️ Vector — Mini App",
+        "v_miniapp_body": "Автовход через Telegram. Без паролей. Все данные зашифрованы. Быстрее и чище чем бот-команды. Оценивай модули, смотри исходники, участвуй в обсуждениях — прямо в Telegram.",
+        "v_miniapp_btn": "🚀 Открыть Vector",
     }
 
     strings_jp = {
@@ -354,6 +360,9 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>コレクションを指定: </b><code>{p}vecdl <slugかURL></code>",
         "v_dlcoll_max_batch": "コレクションに{total}モジュール、最大{max}まで。最初の{max}をインストール中…",
         "v_upd_cancel": "🚫 キャンセル",
+        "v_miniapp_title": "🛡️ Vector — Mini App",
+        "v_miniapp_body": "Telegramで自動ログイン。パスワード不要。全データ暗号化。ボットコマンドより高速・快適。モジュールの評価、ソースコード閲覧、ディスカッション参加 — Telegramの中で完結。",
+        "v_miniapp_btn": "🚀 Vectorを開く",
     }
 
     strings_ua = {
@@ -455,6 +464,9 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Вкажи колекцію: </b><code>{p}vecdl <slug або посилання></code>",
         "v_dlcoll_max_batch": "У колекції {total} модулів, макс {max} за раз. Ставлю перші {max}…",
         "v_upd_cancel": "🚫 Скасувати",
+        "v_miniapp_title": "🛡️ Vector — Mini App",
+        "v_miniapp_body": "Автовхід через Telegram. Без паролів. Усі дані зашифровані. Швидше й чистіше ніж бот-команди. Оцінюй модулі, дивись сирці, долучайся до обговорень — прямо в Telegram.",
+        "v_miniapp_btn": "🚀 Відкрити Vector",
     }
 
     strings_de = {
@@ -556,6 +568,9 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Sammlung angeben: </b><code>{p}vecdl <slug oder URL></code>",
         "v_dlcoll_max_batch": "Sammlung hat {total} Module, max {max} pro Durchlauf. Installiere erste {max}…",
         "v_upd_cancel": "🚫 Abbrechen",
+        "v_miniapp_title": "🛡️ Vector — Mini App",
+        "v_miniapp_body": "Auto-Login via Telegram. Keine Passwörter. Alle Daten verschlüsselt. Schneller & sauberer als Bot-Befehle. Module bewerten, Quellcode durchsuchen, an Diskussionen teilnehmen — direkt in Telegram.",
+        "v_miniapp_btn": "🚀 Vector öffnen",
     }
 
     strings_neofit = {
@@ -657,6 +672,12 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>specify collection: </b><code>{p}vecdl <slug></code>",
         "v_dlcoll_max_batch": "{total} mods, max {max}. pulling first {max}…",
         "v_upd_cancel": "🚫 abort",
+        "v_miniapp_title": "🛡️ Vector — $MINI_APP_MODE",
+        "v_miniapp_body": "[AUTH] Auto-login via Telegram WebApp.
+[SEC] End-to-end encrypted session.
+[PERF] Sub-100ms rendering. No bot polling overhead.
+Rate modules, browse source, join threads — all inside Telegram.",
+        "v_miniapp_btn": "$ open_vector",
     }
 
     strings_tiktok = {
@@ -758,6 +779,9 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Скажи подборку: </b><code>{p}vecdl <slug или ссылка></code>",
         "v_dlcoll_max_batch": "Темок {total}, макс {max}. Ставлю первые {max}…",
         "v_upd_cancel": "🚫 Отбой",
+        "v_miniapp_title": "🛡️ Vector — имба тема",
+        "v_miniapp_body": "Автовход через ТГ, без паролей (ну тип шифрование и все дела). Быстрее чем команды бота, факт. Ставь лайки модулям, чекай код, пиши в треды — все в одном окне.",
+        "v_miniapp_btn": "🚀 Го в Vector",
     }
 
     strings_leet = {
@@ -859,6 +883,9 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>5p3c1fy c0ll3c710n: </b><code>{p}vecdl <5lu9></code>",
         "v_dlcoll_max_batch": "{total} m0d5, m4x {max}. 1n574ll1n9 f1r57 {max}…",
         "v_upd_cancel": "🚫 n0p3",
+        "v_miniapp_title": "🛡️ V3c70r — M1n1 4pp",
+        "v_miniapp_body": "4u70-l091n v14 T3l3gr4m. N0 p455w0rd5. 4ll d474 3ncryp73d. F4573r & cl34n3r 7h4n b07 c0mm4nd5. R473 m0dul35, br0w53 c0d3, j01n d15cu5510n5 — r19h7 1n51d3 T3l3gr4m.",
+        "v_miniapp_btn": "🚀 0p3n V3c70r",
     }
 
     strings_uwu = {
@@ -960,6 +987,9 @@ class Vector(loader.Module):
 "v_vecdl_usage": "<b>Pwease specify cowwection: </b><code>{p}vecdl <swug></code>",
         "v_dlcoll_max_batch": "{total} moduwes, max {max}. Instawwing fiwst {max}…",
         "v_upd_cancel": "🚫 Nu ;-;",
+        "v_miniapp_title": "🛡️ Vectow — Mini App ^_^",
+        "v_miniapp_body": "Auto-wogin via Tewegwam! No passwowds ~nya. Aww data encwypted (￣ω￣). Fastew & cweanew than bot commands UwU. Wate moduwes, bwowse souwce code, join discussions — aww inside Tewegwam!!",
+        "v_miniapp_btn": "🚀 Open Vectow >w<",
     }
 
     def _detect_lang_suffix(self) -> str:
@@ -2031,6 +2061,35 @@ class Vector(loader.Module):
             await send_feedback("banned", "User is banned", "permanent")
             return
         await send_feedback("ok" if res and res.get("ok") else "error")
+
+    @loader.command(
+        en_doc="— open Vector Mini App info & deep link.",
+        ru_doc="— инфо и ссылка на Vector Mini App.",
+        ua_doc="— інфо та посилання на Vector Mini App.",
+        de_doc="— Vector Mini App Info & Deep-Link öffnen.",
+        jp_doc="— Vector Mini Appの情報とリンクを開く。",
+        neofit_doc="— $ vector_mini_app --info --deep-link",
+        tiktok_doc="— инфо про мини апп Vector, ссылка.",
+        leet_doc="— 0p3n V3c70r M1n1 4pp 1nf0 & d33p l1nk.",
+        uwu_doc="— open Vectow Mini App info & deep wink UwU",
+    )
+    async def vecmecmd(self, msg: Message):
+        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_sending']}</b>")
+        bot_info = await self._net_req("GET", "/api/tg-bot")
+        bot_uname = (bot_info or {}).get("username", "").strip().lstrip("@")
+        if not bot_uname:
+            await utils.answer(msg, self.strings["v_err_api"])
+            return
+        text = f"{self.ICONS['shield']} <b>{self.strings['v_miniapp_title']}</b>\n\n{self.strings['v_miniapp_body']}"
+        link = f"https://t.me/{bot_uname}/vector"
+        await self.inline.form(
+            text, msg,
+            reply_markup=[[
+                {"text": self.strings["v_miniapp_btn"], "url": link},
+                {"text": self.strings["v_upd_cancel"], "action": "close"},
+            ]],
+            silent=True
+        )
 
     async def cb_dummy(self, cb: Any):
         log.debug("cb_dummy: no-op callback")
