@@ -1993,7 +1993,7 @@ class Vector(loader.Module):
             return
         if action not in {"install", "like", "dislike"}:
             return
-        if not re.fullmatch(r"[^\s:]+", module_name):
+        if not re.fullmatch(r"[^:]+", module_name):
             return
         if not ts_raw.isdigit():
             return
