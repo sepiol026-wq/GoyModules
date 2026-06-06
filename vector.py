@@ -1234,8 +1234,8 @@ class Vector(loader.Module):
             "likes": int(raw.get("likes") or 0),
             "dislikes": int(raw.get("dislikes") or 0),
             "banner": raw.get("banner"),
-            "source_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
-            "dl_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
+            "source_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source/raw",
+            "dl_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source/raw",
         }
 
     @staticmethod
@@ -1739,8 +1739,8 @@ class Vector(loader.Module):
 
         m_owner = "sepiol026-wq"
         m_name = "Vector"
-        dl_path = f"/modules/{m_owner}/{quote(m_name, safe='')}/source"
-        dl_url = f"{apirt}/modules/{m_owner}/{quote(m_name, safe='')}/source"
+        dl_path = f"/modules/{m_owner}/{quote(m_name, safe='')}/source/raw"
+        dl_url = f"{apirt}/api/modules/{m_owner}/{quote(m_name, safe='')}/source/raw"
         log.debug("vecupdate: dl_url=%s", dl_url)
 
         if force:
@@ -1914,7 +1914,7 @@ class Vector(loader.Module):
         ok = 0
         failed: List[str] = []
         for mod in modules:
-            dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{apirt}/modules/{quote(str(mod.get('source_owner', 'unknown')), safe='')}/{quote((mod.get('name') or ''), safe='')}/source"
+            dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{apirt}/api/modules/{quote(str(mod.get('source_owner', 'unknown')), safe='')}/{quote((mod.get('name') or ''), safe='')}/source/raw"
             m_name = mod.get("name", "?")
             res, errors = await self._safe_install(m_name, dl_url, notify=False)
             if res == 1:
@@ -2039,7 +2039,7 @@ class Vector(loader.Module):
 
         if action == "install":
             log.info("vector_install_payload_watcher: install action for %s/%s", owner, module_name)
-            dl_url = f"{apirt}/modules/{quote(owner, safe='')}/{quote(module_name, safe='')}/source"
+            dl_url = f"{apirt}/api/modules/{quote(owner, safe='')}/{quote(module_name, safe='')}/source/raw"
             res, _ = await self._safe_install(module_name, dl_url, notify=False)
             if res == -1:
                 log.error("vector_install_payload_watcher: install failed (no loader)")
@@ -2129,7 +2129,7 @@ class Vector(loader.Module):
     async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
         log.debug("cb_toggle: name=%s idx=%d exp=%s", m_name, i, exp)
         with suppress(Exception): await cb.answer()
-        item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
+        item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source/raw"}
         await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q, exp), item.get("banner"))
 
     async def cb_rate(self, cb: Any, m_owner: str, m_name: str, action: str, i: int, group: list, q: str):
@@ -2158,7 +2158,7 @@ class Vector(loader.Module):
                 group[i]["dislikes"] = new_dislikes
             item = group[i]
         else:
-            item = {"name": m_name, "likes": new_likes or 0, "dislikes": new_dislikes or 0, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
+            item = {"name": m_name, "likes": new_likes or 0, "dislikes": new_dislikes or 0, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source/raw"}
             
         await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q), item.get("banner"))
         s_val = res.get("rating", {}).get("state")
@@ -2172,7 +2172,7 @@ class Vector(loader.Module):
             with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
             return
 
-        dl_url = f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"
+        dl_url = f"{apirt}/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source/raw"
         log.debug("cb_install: dl_url=%s", dl_url)
         res, errors = await self._safe_install(m_name, dl_url)
         log.info("cb_install: result=%s errors=%d", res, len(errors) if errors else 0)
@@ -2199,7 +2199,7 @@ class Vector(loader.Module):
                 static = chk.get("details", {}).get("static", {})
                 if not (static.get("score", "?") == "?" and static.get("risk", "unknown") == "unknown"):
                     k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q, expanded)}])
-            k.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}])
+            k.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source/raw"}])
             k.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}])
             return k
 
@@ -2245,7 +2245,7 @@ class Vector(loader.Module):
             self.seccache[m_name] = res
             log.debug("cb_sec_run: cached result for %s", m_name)
         await self._safe_edit(cb, self._fmt_sec(m_name, res), [
-            [{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}],
+            [{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source/raw"}],
             [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}],
         ])
 
@@ -2319,7 +2319,7 @@ class Vector(loader.Module):
                 {"text": "▶️", "callback": self.cb_comments, "args": (m_owner, m_name, i, group, q, next_pg, expanded)},
             ])
 
-        kb.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}])
+        kb.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source/raw"}])
         kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded, pg)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
