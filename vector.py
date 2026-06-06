@@ -2030,6 +2030,13 @@ class Vector(loader.Module):
                     msg.chat_id,
                     f"#v_feedback:{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}:{feedback_signature}",
                 )
+            with suppress(Exception):
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as _s:
+                    await _s.post(
+                        f"{apirt}/api/tg-bot/install-feedback",
+                        json={"owner_module": owner_module, "status": status, "reason": safe_reason},
+                        headers={"content-type": "application/json", "x-bot-secret": auths},
+                    )
 
         token = await self._get_active_token()
         if not token:
