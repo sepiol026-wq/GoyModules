@@ -2102,7 +2102,7 @@ class Vector(loader.Module):
             log.debug("cb_sec_check: cache hit for %s", m_name)
             return await utils.answer(cb, f"{self.ICONS['safe']} <i>{self.strings['v_aud_mem']}</i>\n\n{self._fmt_sec(m_name, cached)}", reply_markup=_get_sec_kb(True, cached))
 
-        await utils.answer(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_req']}</b>", reply_markup=_get_sec_kb(True))
+        with suppress(Exception): await cb.answer()
         token = await self._get_active_token()
         if not token:
             with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
