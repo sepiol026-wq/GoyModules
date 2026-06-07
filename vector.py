@@ -29,7 +29,6 @@ import time
 import unicodedata
 from contextlib import suppress
 from typing import Any, Dict, List, Optional
-from herokutl.errors.rpcerrorlist import WebpageMediaEmptyError
 from urllib.parse import quote, urljoin
 
 import aiohttp
@@ -1527,139 +1526,6 @@ class Vector(loader.Module):
         return kbd
 
 
-    async def _safe_edit(self, target: Any, text: str, kbd: list, img: Optional[str] = None) -> None:
-        tname = type(target).__name__
-        log.debug("_safe_edit: kbd_rows=%d target=%s", len(kbd) if kbd else 0, tname)
-        fb = "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vec404.png"
-
-        try:
-            if "Message" in tname and hasattr(target, "unit_id"):
-                uid = target.unit_id
-                if hasattr(target, "_units") and uid in target._units:
-                    target._units[uid]["buttons"] = kbd
-                ekw = {}
-                if img and img.startswith("http"):
-                    ekw["photo"] = img
-                result = await target.edit(text, reply_markup=kbd, **ekw)
-                log.debug("_safe_edit: target.edit() returned %r", result)
-                if not result and ekw:
-                    log.info("_safe_edit: target.edit() failed with photo, retry without")
-                    result = await target.edit(text, reply_markup=kbd)
-                    log.debug("_safe_edit: target.edit() naked ret=%r", result)
-                if not result:
-                    log.debug("_safe_edit: target.edit() returned False (text_len=%d), trying direct bot edit", len(text))
-                    try:
-                        btns = self.inline.generate_markup(kbd)
-                        bot = getattr(self.inline, "_bot_client", None)
-                        imid = getattr(target, "inline_message_id", None)
-                        if bot and imid and btns:
-                            ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
-                            if img and img.startswith("http"):
-                                ekw2["file"] = img
-                            await bot.edit_message(imid, None, text, **ekw2)
-                        else:
-                            raise RuntimeError("no bot/imid/buttons")
-                    except WebpageMediaEmptyError:
-                        log.info("_safe_edit: bot edit WebpageMediaEmptyError, fallback banner")
-                        ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
-                        ekw2["file"] = fb
-                        try:
-                            await bot.edit_message(imid, None, text, **ekw2)
-                        except Exception:
-                            log.debug("_safe_edit: fallback banner also failed")
-                    except RuntimeError:
-                        log.info("_safe_edit: no bot/imid/buttons, fallback to utils.answer")
-                        unit = target._units.get(uid, {})
-                        chat = unit.get("chat")
-                        if chat:
-                            with suppress(Exception):
-                                await utils.answer(chat, text)
-                    except WebpageMediaEmptyError:
-                        log.info("_safe_edit: bot edit WebpageMediaEmptyError, fallback banner")
-                        ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
-                        ekw2["file"] = fb
-                        try:
-                            await bot.edit_message(imid, None, text, **ekw2)
-                        except Exception:
-                            log.debug("_safe_edit: fallback banner also failed")
-                    except Exception as e2:
-                        log.debug("_safe_edit: direct bot edit failed: %r", e2)
-                        with suppress(Exception):
-                            await target.delete()
-                        unit = target._units.get(uid, {})
-                        chat = unit.get("chat")
-                        if chat:
-                            kwargs = {"reply_markup": kbd}
-                            if img and img.startswith("http"):
-                                kwargs["photo"] = img
-                            try:
-                                await self.inline.form(text, message=chat, **kwargs)
-                            except WebpageMediaEmptyError:
-                                log.info("_safe_edit: inline.form WebpageMediaEmptyError, retry clean")
-                                kwargs.pop("photo", None)
-                                ct = re.sub(r'(?:https?://|www\.)\S+', '', text)
-                                ct = re.sub(r'<a\s[^>]*>[^<]*</a>', '', ct).strip()
-                                await self.inline.form(ct, message=chat, **kwargs)
-            elif hasattr(target, "edit"):
-                ekw = {}
-                if img and img.startswith("http"):
-                    ekw["photo"] = img
-                imid_val = getattr(target, "inline_message_id", None)
-                unit_data = target._units.get(getattr(target, "unit_id", ""), {}) if hasattr(target, "_units") else {}
-                log.debug("_safe_edit: InlineCall imid=%r unit_keys=%s", type(imid_val).__name__ if imid_val else None, list(unit_data.keys()))
-                result = await target.edit(text, reply_markup=kbd, **ekw)
-                log.debug("_safe_edit: InlineCall edit returned %r", result)
-                if not result:
-                    log.warning("_safe_edit: InlineCall edit failed, result=%r", result)
-                    try:
-                        btns = self.inline.generate_markup(kbd)
-                        bot = getattr(self.inline, "_bot_client", None)
-                        imid = imid_val
-                        if bot and imid and btns:
-                            ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
-                            if img and img.startswith("http"):
-                                ekw2["file"] = img
-                            await bot.edit_message(imid, None, text, **ekw2)
-                    except RuntimeError:
-                        log.info("_safe_edit: InlineCall no bot/imid/buttons, send via inline.bot")
-                        ibot = getattr(self.inline, "bot", None)
-                        if ibot and btns:
-                            cid = None
-                            if imid and hasattr(imid, "chat"):
-                                cid = getattr(imid.chat, "id", None) or getattr(imid.chat, "chat_id", None)
-                            if not cid and hasattr(target, "chat"):
-                                cid = getattr(target.chat, "id", None) or getattr(target.chat, "chat_id", None)
-                            if cid:
-                                try:
-                                    await ibot.send_message(cid, text, parse_mode="HTML", reply_markup=btns, link_preview=False)
-                                except Exception as e3:
-                                    log.warning("_safe_edit: InlineCall inline.bot send failed: %r", e3)
-                            else:
-                                log.warning("_safe_edit: InlineCall no cid from imid or target")
-                    except WebpageMediaEmptyError:
-                        log.info("_safe_edit: InlineCall bot edit WebpageMediaEmptyError, fallback banner")
-                        ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
-                        ekw2["file"] = fb
-                        try:
-                            await bot.edit_message(imid, None, text, **ekw2)
-                        except Exception:
-                            log.debug("_safe_edit: InlineCall fallback banner also failed")
-                    except Exception as e3:
-                        log.debug("_safe_edit: InlineCall bot fallback failed: %r", e3)
-            else:
-                await utils.answer(target, text, reply_markup=kbd)
-        except WebpageMediaEmptyError:
-            log.info("_safe_edit: top-level WebpageMediaEmptyError, fallback banner")
-            try:
-                await self._safe_edit(target, text, kbd, fb)
-            except Exception:
-                with suppress(Exception):
-                    await target.answer(self.strings["v_err_gui"], show_alert=True)
-        except Exception as e:
-            log.warning("_safe_edit: edit failed: %r", e)
-            with suppress(Exception):
-                await target.answer(self.strings["v_err_gui"], show_alert=True)
-
 
 
     @loader.command(
@@ -1695,7 +1561,7 @@ class Vector(loader.Module):
         token = await self._get_active_token()
         if not token:
             log.warning("vectorcmd: no token, aborting")
-            return await self._safe_edit(form, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", [[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+            return await utils.answer(form, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
 
         log.info("Vector search request q=%r token=%s", q, bool(token))
         lang_sfx = self._detect_lang_suffix()
@@ -1715,12 +1581,12 @@ class Vector(loader.Module):
         
         if not m_list:
             log.debug("vectorcmd: no results, showing 404")
-            return await self._safe_edit(form, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", [[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+            return await utils.answer(form, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
 
         item = m_list[0]
         kbd = self._build_kbd(item, 0, m_list, q)
         text = self._build_html(item, 1, len(m_list))
-        await self._safe_edit(form, text, kbd, item.get("banner"))
+        await utils.answer(form, text, reply_markup=kbd, photo=item.get("banner"))
 
     @loader.command(
         en_doc="[-f|--force] — update Vector module.",
@@ -1910,7 +1776,7 @@ class Vector(loader.Module):
         if total_orig > max_batch:
             modules = modules[:max_batch]
 
-        await self._safe_edit(cb, f"{self.ICONS['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.ICONS['search']} {self.strings['v_dlcoll_start']}", [[{"text": "…", "callback": self.cb_dummy}]])
+        await utils.answer(cb, f"{self.ICONS['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.ICONS['search']} {self.strings['v_dlcoll_start']}", reply_markup=[[{"text": "…", "callback": self.cb_dummy}]])
 
         ok = 0
         failed: List[str] = []
@@ -1946,7 +1812,7 @@ class Vector(loader.Module):
         if total_orig > max_batch:
             result += f"\n\n<i>{self.strings['v_dlcoll_max_batch'].format(total=total_orig, max=max_batch)}</i>"
 
-        await self._safe_edit(cb, result, [[{"text": "✖️", "action": "close"}]])
+        await utils.answer(cb, result, reply_markup=[[{"text": "✖️", "action": "close"}]])
 
     @loader.watcher()
     async def vector_install_payload_watcher(self, msg: Message):
@@ -2104,7 +1970,7 @@ class Vector(loader.Module):
         with suppress(Exception): await cb.answer()
         if 0 <= target_i < len(group):
             item = group[target_i]
-            await self._safe_edit(cb, self._build_html(item, target_i + 1, len(group)), self._build_kbd(item, target_i, group, q, expanded, comments_pg), item.get("banner"))
+            await utils.answer(cb, self._build_html(item, target_i + 1, len(group)), reply_markup=self._build_kbd(item, target_i, group, q, expanded, comments_pg), photo=item.get("banner"))
 
     async def cb_list(self, cb: Any, curr_i: int, group: list, q: str):
         log.debug("cb_list: curr_i=%d group_len=%d", curr_i, len(group) if group else 0)
@@ -2116,7 +1982,7 @@ class Vector(loader.Module):
         if len(group) > 8:
             kb.append([{"text": "▶️", "callback": self.cb_page, "args": (1, group, q, curr_i)}])
         kb.append([{"text": "✖️", "callback": self.cb_nav, "args": (curr_i, group, q)}])
-        await self._safe_edit(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", kb)
+        await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_page(self, cb: Any, pg: int, group: list, q: str, orig_i: int):
         log.debug("cb_page: pg=%d group_len=%d orig_i=%d", pg, len(group) if group else 0, orig_i)
@@ -2132,13 +1998,13 @@ class Vector(loader.Module):
         if end < len(group): nav_row.append({"text": "▶️", "callback": self.cb_page, "args": (pg + 1, group, q, orig_i)})
         if nav_row: kb.append(nav_row)
         kb.append([{"text": "✖️", "callback": self.cb_nav, "args": (orig_i, group, q)}])
-        await self._safe_edit(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", kb)
+        await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
         log.debug("cb_toggle: name=%s idx=%d exp=%s", m_name, i, exp)
         with suppress(Exception): await cb.answer()
         item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
-        await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q, exp), item.get("banner"))
+        await utils.answer(cb, self._build_html(item, i + 1, len(group or [item])), reply_markup=self._build_kbd(item, i, group, q, exp), photo=item.get("banner"))
 
     async def cb_rate(self, cb: Any, m_owner: str, m_name: str, action: str, i: int, group: list, q: str):
         log.info("cb_rate: name=%s action=%s", m_name, action)
@@ -2168,7 +2034,7 @@ class Vector(loader.Module):
         else:
             item = {"name": m_name, "likes": new_likes or 0, "dislikes": new_dislikes or 0, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
             
-        await self._safe_edit(cb, self._build_html(item, i + 1, len(group or [item])), self._build_kbd(item, i, group, q), item.get("banner"))
+        await utils.answer(cb, self._build_html(item, i + 1, len(group or [item])), reply_markup=self._build_kbd(item, i, group, q), photo=item.get("banner"))
         s_val = res.get("rating", {}).get("state")
         with suppress(Exception): await cb.answer(self.strings["v_fb_rm" if s_val == "removed" else "v_fb_add"], show_alert=True)
 
@@ -2194,7 +2060,7 @@ class Vector(loader.Module):
         if errors:
             item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": dl_url}
             err_text = self._fmt_install_errors(m_name, errors)
-            await self._safe_edit(cb, err_text, self._build_kbd(item, i, group, q), item.get("banner"))
+            await utils.answer(cb, err_text, reply_markup=self._build_kbd(item, i, group, q), photo=item.get("banner"))
         else:
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
 
@@ -2214,9 +2080,9 @@ class Vector(loader.Module):
         cached = self.seccache.get(m_name)
         if cached and cached.get("check"):
             log.debug("cb_sec_check: cache hit for %s", m_name)
-            return await self._safe_edit(cb, f"{self.ICONS['safe']} <i>{self.strings['v_aud_mem']}</i>\n\n{self._fmt_sec(m_name, cached)}", _get_sec_kb(True, cached))
+            return await utils.answer(cb, f"{self.ICONS['safe']} <i>{self.strings['v_aud_mem']}</i>\n\n{self._fmt_sec(m_name, cached)}", reply_markup=_get_sec_kb(True, cached))
 
-        await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_req']}</b>", _get_sec_kb(True))
+        await utils.answer(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_req']}</b>", reply_markup=_get_sec_kb(True))
         token = await self._get_active_token()
         if not token:
             with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
@@ -2225,16 +2091,16 @@ class Vector(loader.Module):
         
         if not res or self.httpc >= 400:
             log.warning("cb_sec_check: API error for %s, http=%s", m_name, self.httpc)
-            return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", _get_sec_kb(True))
+            return await utils.answer(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=_get_sec_kb(True))
 
         if res.get("check"):
             self.seccache[m_name] = res
             log.debug("cb_sec_check: cached result for %s", m_name)
-        await self._safe_edit(cb, self._fmt_sec(m_name, res), _get_sec_kb(bool(res.get("checked")), res))
+        await utils.answer(cb, self._fmt_sec(m_name, res), reply_markup=_get_sec_kb(bool(res.get("checked")), res))
 
     async def cb_sec_run(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, expanded: bool = False):
         log.info("cb_sec_run: name=%s", m_name)
-        await self._safe_edit(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
+        await utils.answer(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
         token = await self._get_active_token()
         if not token:
             with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
@@ -2243,16 +2109,16 @@ class Vector(loader.Module):
         
         if self.httpc == 429:
             log.warning("cb_sec_run: rate limited (429)")
-            return await self._safe_edit(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
+            return await utils.answer(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
         if not res or self.httpc >= 400:
             log.warning("cb_sec_run: API error, http=%s", self.httpc)
-            return await self._safe_edit(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", [[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
+            return await utils.answer(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
 
         log.info("cb_sec_run: scan complete for %s", m_name)
         if res.get("check"):
             self.seccache[m_name] = res
             log.debug("cb_sec_run: cached result for %s", m_name)
-        await self._safe_edit(cb, self._fmt_sec(m_name, res), [
+        await utils.answer(cb, self._fmt_sec(m_name, res), reply_markup=[
             [{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}],
             [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}],
         ])
@@ -2335,7 +2201,7 @@ class Vector(loader.Module):
         kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded, pg)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
-        await self._safe_edit(cb, self._fmt_comments(comments, m_name, pg), kb, item.get("banner"))
+        await utils.answer(cb, self._fmt_comments(comments, m_name, pg), reply_markup=kb, photo=item.get("banner"))
 
     async def cb_post_comment(self, cb: Any, text: str, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False):
         log.info("cb_post_comment: name=%s text_len=%d", m_name, len(text) if text else 0)
