@@ -1683,13 +1683,38 @@ class Vector(loader.Module):
             return
 
         log.debug("vecupdate: downloaded %d bytes", len(src_bytes))
+        remote_hash = hashlib.sha256(src_bytes).hexdigest()
 
-        remote_ver = self._parse_version_from_source(src_bytes)
-        local_ver = getattr(self.__class__, '__version__', (0,))
-        log.debug("vecupdate: remote_ver=%s local_ver=%s", remote_ver, local_ver)
+        import inspect, sys
+        local_hash = ""
 
-        if remote_ver and remote_ver == local_ver:
-            log.info("vecupdate: versions match, showing force-update prompt")
+        mod = sys.modules.get(self.__class__.__module__)
+        loader = getattr(mod, '__loader__', None)
+
+        if loader and hasattr(loader, 'get_source'):
+            try:
+                src = loader.get_source(self.__class__.__module__)
+                if src:
+                    local_hash = hashlib.sha256(src.encode("utf-8")).hexdigest()
+                    log.debug("vecupdate: got local via __loader__.get_source(), len=%d", len(src))
+            except Exception as e:
+                log.debug("vecupdate: __loader__.get_source() failed: %r", e)
+
+        if not local_hash and mod:
+            try:
+                src = inspect.getsource(mod)
+                local_hash = hashlib.sha256(src.encode("utf-8")).hexdigest()
+                log.debug("vecupdate: got local via inspect.getsource(module), len=%d", len(src))
+            except Exception:
+                pass
+
+        if local_hash:
+            log.debug("vecupdate: local_hash=%s remote_hash=%s", local_hash[:16], remote_hash[:16])
+        else:
+            log.warning("vecupdate: could not read local source, assuming hashes differ")
+
+        if remote_hash == local_hash:
+            log.info("vecupdate: hashes match, showing force-update prompt")
             await self.inline.form(
                 message=msg,
                 text=f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
@@ -1702,7 +1727,7 @@ class Vector(loader.Module):
             )
             return
 
-        log.info("vecupdate: versions differ or unknown, proceeding with install")
+        log.info("vecupdate: hashes differ, proceeding with install")
         await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
 
         log.info("vecupdate: calling _safe_install")
@@ -1716,17 +1741,6 @@ class Vector(loader.Module):
         else:
             log.warning("vecupdate: install failed, res=%s", res)
             await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
-
-    @staticmethod
-    def _parse_version_from_source(src_bytes: bytes):
-        import re
-        m = re.search(rb'__version__\s*=\s*\(([^)]+)\)', src_bytes)
-        if not m:
-            return None
-        try:
-            return tuple(int(x.strip()) for x in m.group(1).split(b','))
-        except (ValueError, TypeError):
-            return None
 
     async def _vecupdate_force(self, call: Any, dl_url: str):
         log.info("_vecupdate_force: force update triggered, url=%s", dl_url)
