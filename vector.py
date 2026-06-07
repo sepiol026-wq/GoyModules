@@ -1619,6 +1619,8 @@ class Vector(loader.Module):
                             if img and img.startswith("http"):
                                 ekw2["file"] = img
                             await bot.edit_message(imid, None, text, **ekw2)
+                        else:
+                            raise RuntimeError("no bot/imid/buttons")
                     except RuntimeError:
                         log.info("_safe_edit: InlineCall no bot/imid/buttons, send via inline.bot")
                         ibot = getattr(self.inline, "bot", None)
