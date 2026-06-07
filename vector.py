@@ -1145,6 +1145,8 @@ class Vector(loader.Module):
         self.httpc = 0
         self.bannote = ""
         self.btid = 0
+        self._list_pg = 0
+        self._expanded = False
 
     async def client_ready(self, client: "herokutl.TelegramClient", database: "loader.Database") -> None:
         self.client = client
@@ -1584,6 +1586,8 @@ class Vector(loader.Module):
             return await utils.answer(form, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
 
         item = m_list[0]
+        self._list_pg = 0
+        self._expanded = False
         kbd = self._build_kbd(item, 0, m_list, q)
         text = self._build_html(item, 1, len(m_list))
         await utils.answer(form, text, reply_markup=kbd, photo=item.get("banner"))
@@ -1965,7 +1969,10 @@ class Vector(loader.Module):
         log.debug("cb_dummy: no-op callback")
         with suppress(Exception): await cb.answer()
 
-    async def cb_nav(self, cb: Any, target_i: int, group: list, q: str, expanded: bool = False, comments_pg: int = 0):
+    async def cb_nav(self, cb: Any, target_i: int, group: list, q: str, expanded: Optional[bool] = None, comments_pg: int = 0):
+        if expanded is None:
+            expanded = getattr(self, '_expanded', False)
+        self._expanded = expanded
         log.debug("cb_nav: target_i=%d group_len=%d expanded=%s", target_i, len(group) if group else 0, expanded)
         with suppress(Exception): await cb.answer()
         if 0 <= target_i < len(group):
@@ -1976,7 +1983,7 @@ class Vector(loader.Module):
         log.debug("cb_list: curr_i=%d group_len=%d", curr_i, len(group) if group else 0)
         with suppress(Exception): await cb.answer()
         total_pages = max(1, (len(group) + 4) // 5)
-        pg = (curr_i // 5) % total_pages
+        pg = self._list_pg % total_pages
         start, end = pg * 5, min((pg + 1) * 5, len(group))
         kb = []
         for i in range(start, end):
@@ -1993,6 +2000,7 @@ class Vector(loader.Module):
         await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_page(self, cb: Any, pg: int, group: list, q: str, orig_i: int):
+        self._list_pg = pg
         log.debug("cb_page: pg=%d group_len=%d orig_i=%d", pg, len(group) if group else 0, orig_i)
         with suppress(Exception): await cb.answer()
         total_pages = max(1, (len(group) + 4) // 5)
@@ -2012,6 +2020,7 @@ class Vector(loader.Module):
         await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
+        self._expanded = exp
         log.debug("cb_toggle: name=%s idx=%d exp=%s", m_name, i, exp)
         with suppress(Exception): await cb.answer()
         item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
