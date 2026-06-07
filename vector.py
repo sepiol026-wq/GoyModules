@@ -2315,7 +2315,7 @@ class Vector(loader.Module):
         next_pg = (pg + 1) % total_pages if total_pages > 1 else 0
             
         kb = [[
-            {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q, pg)},
+            {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q, pg, expanded)},
         ], [
         ]]
 
@@ -2332,7 +2332,7 @@ class Vector(loader.Module):
         item = group[i] if group and 0 <= i < len(group) else {}
         await self._safe_edit(cb, self._fmt_comments(comments, m_name, pg), kb, item.get("banner"))
 
-    async def cb_post_comment(self, cb: Any, text: str, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0):
+    async def cb_post_comment(self, cb: Any, text: str, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False):
         log.info("cb_post_comment: name=%s text_len=%d", m_name, len(text) if text else 0)
         token = await self._get_active_token()
         if not token:
