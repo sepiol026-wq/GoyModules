@@ -2290,21 +2290,24 @@ class Vector(loader.Module):
             lines.append(f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=remaining, limit=qta.get('limit', '?'))}</i>")
         return "\n".join(lines)
 
-    async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False):
-        log.info("cb_comments: name=%s pg=%d", m_name, pg)
+    async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False, _comments: list = None):
+        log.info("cb_comments: name=%s pg=%d cached=%s", m_name, pg, bool(_comments))
         with suppress(Exception): await cb.answer()
-        token = await self._get_active_token()
-        if not token:
-            log.warning("cb_comments: no token")
-            with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
-            return
-        res = await self._net_req("GET", f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/comments", token=token)
-        
-        if not res or not isinstance(res, dict):
-            log.warning("cb_comments: bad response for %s", m_name)
-            with suppress(Exception): await cb.answer(self.strings["v_talk_err"], show_alert=True)
-            return
-        comments = res.get("comments", [])
+        if _comments is not None:
+            comments = _comments
+        else:
+            token = await self._get_active_token()
+            if not token:
+                log.warning("cb_comments: no token")
+                with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
+                return
+            res = await self._net_req("GET", f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/comments", token=token)
+            
+            if not res or not isinstance(res, dict):
+                log.warning("cb_comments: bad response for %s", m_name)
+                with suppress(Exception): await cb.answer(self.strings["v_talk_err"], show_alert=True)
+                return
+            comments = res.get("comments", [])
         log.debug("cb_comments: %d comments for %s", len(comments), m_name)
 
         roots = [c for c in comments if not c.get("parent_id")]
@@ -2362,7 +2365,8 @@ class Vector(loader.Module):
         
         await asyncio.sleep(1.5)
         
-        await self.cb_comments(cb, m_owner, m_name, i, group, q, pg, expanded)
+        cached = res.get("comments") if isinstance(res, dict) else None
+        await self.cb_comments(cb, m_owner, m_name, i, group, q, pg, expanded, _comments=cached)
 
     def _fmt_comments(self, comments: list, m_name: str, pg: int = 0, pp: int = 5) -> str:
         log.debug("_fmt_comments: name=%s count=%d pg=%d", m_name, len(comments) if comments else 0, pg)
