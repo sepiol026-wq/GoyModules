@@ -1337,6 +1337,8 @@ class Vector(loader.Module):
                         if new_jwt: break
                     except asyncio.TimeoutError:
                         with suppress(Exception): await out_msg.delete()
+                    else:
+                        with suppress(Exception): await resp.delete()
             except Exception as e:
                 log.warning("Token conversation attempt=%s failed: %r", attempt, e)
 
