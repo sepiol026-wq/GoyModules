@@ -1685,16 +1685,28 @@ class Vector(loader.Module):
         log.debug("vecupdate: downloaded %d bytes", len(src_bytes))
         remote_hash = hashlib.sha256(src_bytes).hexdigest()
 
+        import inspect, sys
         local_hash = ""
-        try:
-            import inspect
-            filepath = inspect.getfile(self.__class__)
-            with open(filepath, 'rb') as f:
-                local_bytes = f.read()
-            local_hash = hashlib.sha256(local_bytes).hexdigest()
-            log.debug("vecupdate: got local via file read, len=%d", len(local_bytes))
-        except Exception as e:
-            log.debug("vecupdate: could not read local file: %r", e)
+
+        mod = sys.modules.get(self.__class__.__module__)
+        loader = getattr(mod, '__loader__', None)
+
+        if loader and hasattr(loader, 'get_source'):
+            try:
+                src = loader.get_source(self.__class__.__module__)
+                if src:
+                    local_hash = hashlib.sha256(src.encode("utf-8")).hexdigest()
+                    log.debug("vecupdate: got local via __loader__.get_source(), len=%d", len(src))
+            except Exception as e:
+                log.debug("vecupdate: __loader__.get_source() failed: %r", e)
+
+        if not local_hash and mod:
+            try:
+                src = inspect.getsource(mod)
+                local_hash = hashlib.sha256(src.encode("utf-8")).hexdigest()
+                log.debug("vecupdate: got local via inspect.getsource(module), len=%d", len(src))
+            except Exception:
+                pass
 
         if local_hash:
             log.debug("vecupdate: local_hash=%s remote_hash=%s", local_hash[:16], remote_hash[:16])
