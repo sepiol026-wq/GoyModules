@@ -1142,6 +1142,7 @@ class Vector(loader.Module):
         )
         self.http: Optional[aiohttp.ClientSession] = None
         self.seccache: Dict[str, Dict[str, Any]] = {}
+        self._cmt_calls: Dict[str, Any] = {}
         self.httpc = 0
         self.bannote = ""
         self.btid = 0
@@ -2290,7 +2291,7 @@ class Vector(loader.Module):
             lines.append(f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=remaining, limit=qta.get('limit', '?'))}</i>")
         return "\n".join(lines)
 
-    async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False, _comments: list = None, _imid=None):
+    async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False, _comments: list = None):
         log.info("cb_comments: name=%s pg=%d cached=%s", m_name, pg, bool(_comments))
         with suppress(Exception): await cb.answer()
         if _comments is not None:
@@ -2308,6 +2309,7 @@ class Vector(loader.Module):
                 with suppress(Exception): await cb.answer(self.strings["v_talk_err"], show_alert=True)
                 return
             comments = res.get("comments", [])
+        self._cmt_calls[m_name] = cb
         log.debug("cb_comments: %d comments for %s", len(comments), m_name)
 
         roots = [c for c in comments if not c.get("parent_id")]
@@ -2317,9 +2319,8 @@ class Vector(loader.Module):
         prev_pg = (pg - 1) % total_pages if total_pages > 1 else 0
         next_pg = (pg + 1) % total_pages if total_pages > 1 else 0
             
-        imid = _imid or getattr(cb, "inline_message_id", None)
         kb = [[
-            {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q, pg, expanded, imid)},
+            {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q, pg, expanded)},
         ], [
         ]]
 
@@ -2334,20 +2335,9 @@ class Vector(loader.Module):
         kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded, pg)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
-        if _imid:
-            bot = getattr(self.inline, "_bot_client", None)
-            if bot:
-                btns = self.inline.generate_markup(kb)
-                ekw = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
-                banner = item.get("banner")
-                if banner and banner.startswith("http"):
-                    ekw["file"] = banner
-                with suppress(Exception):
-                    await bot.edit_message(_imid, None, self._fmt_comments(comments, m_name, pg), **ekw)
-        else:
-            await self._safe_edit(cb, self._fmt_comments(comments, m_name, pg), kb, item.get("banner"))
+        await self._safe_edit(cb, self._fmt_comments(comments, m_name, pg), kb, item.get("banner"))
 
-    async def cb_post_comment(self, cb: Any, text: str, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False, imid=None):
+    async def cb_post_comment(self, cb: Any, text: str, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False):
         log.info("cb_post_comment: name=%s text_len=%d", m_name, len(text) if text else 0)
         token = await self._get_active_token()
         if not token:
@@ -2378,7 +2368,8 @@ class Vector(loader.Module):
         await asyncio.sleep(1.5)
         
         cached = res.get("comments") if isinstance(res, dict) else None
-        await self.cb_comments(cb, m_owner, m_name, i, group, q, pg, expanded, _comments=cached, _imid=imid)
+        orig = self._cmt_calls.get(m_name, cb)
+        await self.cb_comments(orig, m_owner, m_name, i, group, q, pg, expanded, _comments=cached)
 
     def _fmt_comments(self, comments: list, m_name: str, pg: int = 0, pp: int = 5) -> str:
         log.debug("_fmt_comments: name=%s count=%d pg=%d", m_name, len(comments) if comments else 0, pg)
