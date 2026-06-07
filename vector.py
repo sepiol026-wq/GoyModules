@@ -1975,29 +1975,40 @@ class Vector(loader.Module):
     async def cb_list(self, cb: Any, curr_i: int, group: list, q: str):
         log.debug("cb_list: curr_i=%d group_len=%d", curr_i, len(group) if group else 0)
         with suppress(Exception): await cb.answer()
+        total_pages = max(1, (len(group) + 4) // 5)
+        pg = (curr_i // 5) % total_pages
+        start, end = pg * 5, min((pg + 1) * 5, len(group))
         kb = []
-        for i in range(0, min(8, len(group))):
+        for i in range(start, end):
             m = group[i]
             kb.append([{"text": f"{i + 1}. {m.get('name')} by {m.get('author')}", "callback": self.cb_nav, "args": (i, group, q)}])
-        if len(group) > 8:
-            kb.append([{"text": "▶️", "callback": self.cb_page, "args": (1, group, q, curr_i)}])
-        kb.append([{"text": "✖️", "callback": self.cb_nav, "args": (curr_i, group, q)}])
+        prev_pg = (pg - 1) % total_pages
+        next_pg = (pg + 1) % total_pages
+        kb.append([
+            {"text": "◀️", "callback": self.cb_page, "args": (prev_pg, group, q, curr_i)},
+            {"text": self.strings['v_page'].format(idx=pg + 1, total=total_pages), "callback": self.cb_dummy},
+            {"text": "▶️", "callback": self.cb_page, "args": (next_pg, group, q, curr_i)},
+        ])
+        kb.append([{"text": f"⬅️ {self.strings['v_btn_bck']}", "callback": self.cb_nav, "args": (curr_i, group, q)}])
         await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_page(self, cb: Any, pg: int, group: list, q: str, orig_i: int):
         log.debug("cb_page: pg=%d group_len=%d orig_i=%d", pg, len(group) if group else 0, orig_i)
         with suppress(Exception): await cb.answer()
+        total_pages = max(1, (len(group) + 4) // 5)
+        start, end = pg * 5, min((pg + 1) * 5, len(group))
         kb = []
-        start, end = pg * 8, min((pg + 1) * 8, len(group))
         for i in range(start, end):
             m = group[i]
             kb.append([{"text": f"{i + 1}. {m.get('name')} by {m.get('author')}", "callback": self.cb_nav, "args": (i, group, q)}])
-        
-        nav_row = []
-        if pg > 0: nav_row.append({"text": "◀️", "callback": self.cb_page, "args": (pg - 1, group, q, orig_i)})
-        if end < len(group): nav_row.append({"text": "▶️", "callback": self.cb_page, "args": (pg + 1, group, q, orig_i)})
-        if nav_row: kb.append(nav_row)
-        kb.append([{"text": "✖️", "callback": self.cb_nav, "args": (orig_i, group, q)}])
+        prev_pg = (pg - 1) % total_pages
+        next_pg = (pg + 1) % total_pages
+        kb.append([
+            {"text": "◀️", "callback": self.cb_page, "args": (prev_pg, group, q, orig_i)},
+            {"text": self.strings['v_page'].format(idx=pg + 1, total=total_pages), "callback": self.cb_dummy},
+            {"text": "▶️", "callback": self.cb_page, "args": (next_pg, group, q, orig_i)},
+        ])
+        kb.append([{"text": f"⬅️ {self.strings['v_btn_bck']}", "callback": self.cb_nav, "args": (orig_i, group, q)}])
         await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
