@@ -1152,7 +1152,7 @@ class Vector(loader.Module):
         self.client = client
         self.database = database
         self.http = aiohttp.ClientSession()
-        
+        asyncio.ensure_future(self._get_active_token())
         log.info("Vector Module Monolith Started")
 
     async def on_unload(self) -> None:
@@ -1527,8 +1527,30 @@ class Vector(loader.Module):
             
         return kbd
 
+    async def _run_search(self, q: str, lang_sfx: str = "") -> Any:
+        token = await self._get_active_token()
+        if not token:
+            log.warning("_run_search: no token")
+            return [], False
 
+        log.info("_run_search: q=%r token=%s", q, bool(token))
+        raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"]), "lang": lang_sfx})
 
+        if self.httpc == 401:
+            log.info("_run_search: got 401, forcing token refresh")
+            token = await self._get_active_token(force=True)
+            if not token:
+                return [], False
+            raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"]), "lang": lang_sfx})
+
+        m_list = []
+        if isinstance(raw_res, dict):
+            m_list = raw_res.get("results", [])
+        elif isinstance(raw_res, list):
+            m_list = raw_res
+        m_list = [self._normalize_module(x) for x in m_list if isinstance(x, dict)]
+        log.info("_run_search: %d results", len(m_list))
+        return m_list, True
 
     @loader.command(
         en_doc="<query> — search modules in Vector.",
@@ -1550,8 +1572,10 @@ class Vector(loader.Module):
         if len(q) > 120:
             return await utils.answer(msg, f"{self.ICONS['warn']} <b>{self.strings['v_err_len']}</b>")
 
-        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_sending']}</b>")
-        log.debug("vectorcmd: sending loading form")
+        lang_sfx = self._detect_lang_suffix()
+        search_task = asyncio.ensure_future(self._run_search(q, lang_sfx))
+        log.debug("vectorcmd: search launched, sending loading form")
+
         form = await self.inline.form(
             f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>",
             msg,
@@ -1559,27 +1583,13 @@ class Vector(loader.Module):
             photo="https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vsearch.png",
             silent=True
         )
+        log.debug("vectorcmd: loading form sent, awaiting search")
+
+        m_list, token_ok = await search_task
         
-        token = await self._get_active_token()
-        if not token:
-            log.warning("vectorcmd: no token, aborting")
+        if not token_ok:
+            log.warning("vectorcmd: no token after search")
             return await utils.answer(form, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
-
-        log.info("Vector search request q=%r token=%s", q, bool(token))
-        lang_sfx = self._detect_lang_suffix()
-        raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"]), "lang": lang_sfx})
-
-        if self.httpc == 401:
-            log.info("vectorcmd: got 401, forcing token refresh")
-            token = await self._get_active_token(force=True)
-            raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"]), "lang": lang_sfx})
-            
-        log.debug("vectorcmd: raw response type=%s", type(raw_res).__name__)
-        m_list = []
-        if isinstance(raw_res, dict): m_list = raw_res.get("results", [])
-        elif isinstance(raw_res, list): m_list = raw_res
-        m_list = [self._normalize_module(x) for x in m_list if isinstance(x, dict)]
-        log.info("vectorcmd: %d results after normalization", len(m_list))
         
         if not m_list:
             log.debug("vectorcmd: no results, showing 404")
