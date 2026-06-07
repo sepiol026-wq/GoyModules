@@ -1152,7 +1152,7 @@ class Vector(loader.Module):
         self.client = client
         self.database = database
         self.http = aiohttp.ClientSession()
-        asyncio.ensure_future(self._get_active_token())
+        asyncio.ensure_future(self._token_keeper())
         log.info("Vector Module Monolith Started")
 
     async def on_unload(self) -> None:
@@ -1527,6 +1527,12 @@ class Vector(loader.Module):
             
         return kbd
 
+    async def _token_keeper(self) -> None:
+        while True:
+            await asyncio.sleep(20 * 3600)
+            log.info("_token_keeper: refreshing token")
+            await self._get_active_token(force=True)
+
     async def _run_search(self, q: str, lang_sfx: str = "") -> Any:
         token = await self._get_active_token()
         if not token:
@@ -1552,6 +1558,22 @@ class Vector(loader.Module):
         log.info("_run_search: %d results", len(m_list))
         return m_list, True
 
+    async def _show_result_form(self, target: Any, m_list: list, q: str) -> None:
+        item = m_list[0]
+        self._list_pg = 0
+        self._expanded = False
+        kbd = self._build_kbd(item, 0, m_list, q)
+        text = self._build_html(item, 1, len(m_list))
+        await self.inline.form(text, target, reply_markup=kbd, photo=item.get("banner"), silent=True)
+
+    async def _show_search_fail(self, target: Any, m_list: list, token_ok: bool, q: str) -> None:
+        if not token_ok:
+            log.warning("vectorcmd: no token")
+            await utils.answer(target, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+        elif not m_list:
+            log.debug("vectorcmd: no results")
+            await utils.answer(target, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+
     @loader.command(
         en_doc="<query> — search modules in Vector.",
         ru_doc="<запрос> — поиск модулей в Vector.",
@@ -1574,8 +1596,18 @@ class Vector(loader.Module):
 
         lang_sfx = self._detect_lang_suffix()
         search_task = asyncio.ensure_future(self._run_search(q, lang_sfx))
-        log.debug("vectorcmd: search launched, sending loading form")
+        log.debug("vectorcmd: search launched, racing with form")
 
+        await asyncio.sleep(0.05)
+
+        if search_task.done():
+            log.info("vectorcmd: search beat form, sending result directly")
+            m_list, token_ok = search_task.result()
+            if not token_ok or not m_list:
+                return await self._show_search_fail(msg, m_list, token_ok, q)
+            return await self._show_result_form(msg, m_list, q)
+
+        log.debug("vectorcmd: form won race, sending loading")
         form = await self.inline.form(
             f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>",
             msg,
@@ -1586,14 +1618,8 @@ class Vector(loader.Module):
         log.debug("vectorcmd: loading form sent, awaiting search")
 
         m_list, token_ok = await search_task
-        
-        if not token_ok:
-            log.warning("vectorcmd: no token after search")
-            return await utils.answer(form, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
-        
-        if not m_list:
-            log.debug("vectorcmd: no results, showing 404")
-            return await utils.answer(form, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+        if not token_ok or not m_list:
+            return await self._show_search_fail(form, m_list, token_ok, q)
 
         item = m_list[0]
         self._list_pg = 0
