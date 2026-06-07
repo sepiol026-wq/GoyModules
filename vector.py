@@ -1613,7 +1613,7 @@ class Vector(loader.Module):
                     try:
                         btns = self.inline.generate_markup(kbd)
                         bot = getattr(self.inline, "_bot_client", None)
-                        imid = imid_val or unit_data.get("inline_message_id")
+                        imid = imid_val
                         if bot and imid and btns:
                             ekw2 = {"parse_mode": "HTML", "link_preview": False, "buttons": btns}
                             if img and img.startswith("http"):
