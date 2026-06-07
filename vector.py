@@ -1989,7 +1989,7 @@ class Vector(loader.Module):
             {"text": self.strings['v_page'].format(idx=pg + 1, total=total_pages), "callback": self.cb_dummy},
             {"text": "▶️", "callback": self.cb_page, "args": (next_pg, group, q, curr_i)},
         ])
-        kb.append([{"text": f"⬅️ {self.strings['v_btn_bck']}", "callback": self.cb_nav, "args": (curr_i, group, q)}])
+        kb.append([{"text": self.strings['v_btn_bck'], "callback": self.cb_nav, "args": (curr_i, group, q)}])
         await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_page(self, cb: Any, pg: int, group: list, q: str, orig_i: int):
@@ -2008,7 +2008,7 @@ class Vector(loader.Module):
             {"text": self.strings['v_page'].format(idx=pg + 1, total=total_pages), "callback": self.cb_dummy},
             {"text": "▶️", "callback": self.cb_page, "args": (next_pg, group, q, orig_i)},
         ])
-        kb.append([{"text": f"⬅️ {self.strings['v_btn_bck']}", "callback": self.cb_nav, "args": (orig_i, group, q)}])
+        kb.append([{"text": self.strings['v_btn_bck'], "callback": self.cb_nav, "args": (orig_i, group, q)}])
         await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
