@@ -1189,7 +1189,6 @@ class Vector(loader.Module):
     def _normalize_module(self, raw: dict) -> dict:
         log.debug("_normalize_module: name=%s version=%s", raw.get("name", "?"), raw.get("version", "?"))
         lang = self._detect_lang_suffix()
-        # Map lang to DB suffix (uk→ua, en→"")
         db_suffix = {"en": "", "ua": "_ua"}.get(lang, f"_{lang}")
         cmds = []
         for c in (raw.get("commands") or []):
@@ -1215,7 +1214,6 @@ class Vector(loader.Module):
         )
         name = str(raw.get("name") or raw.get("class_name") or "Unknown")
         
-        # Localized description: use locales.description<db_suffix> if available
         locales = raw.get("locales")
         desc = raw.get("description") or ""
         if isinstance(locales, dict):
@@ -1380,7 +1378,6 @@ class Vector(loader.Module):
 
     @staticmethod
     def _tag_safe_truncate(text: str, cap: int) -> str:
-        """Truncate text without breaking HTML tags."""
         if len(text) <= cap:
             return text
         plain = ""
