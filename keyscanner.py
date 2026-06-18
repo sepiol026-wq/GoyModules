@@ -17,7 +17,7 @@
 # meta developer: @GoyModules
 # requires: aiohttp aiohttp-socks
 
-__version__ = (2, 5, 8)
+__version__ = (2, 5, 9)
 import base64
 import binascii
 import re
@@ -1887,6 +1887,9 @@ class KeyScanner(loader.Module):
                         msg_content = message.get("content")
                         if isinstance(msg_content, str) and msg_content.strip():
                             texts.append(msg_content.strip())
+                        reasoning = message.get("reasoning_content") or choice.get("reasoning_content")
+                        if isinstance(reasoning, str) and reasoning.strip():
+                            texts.append(reasoning.strip())
                         elif isinstance(msg_content, list):
                             for part in msg_content:
                                 if not isinstance(part, dict):
@@ -1960,7 +1963,7 @@ class KeyScanner(loader.Module):
             clean = [m for m in clean if "rerank" not in m.lower()]
         return [m for m in dict.fromkeys(clean) if m]
 
-    async def _probe_openai_compatible_response(self, session, provider: str, key: str, base_url: str, models=None, headers=None, fallback_models=None):
+    async def _probe_openai_compatible_response(self, session, provider: str, key: str, base_url: str, models=None, headers=None, fallback_models=None, extra_body=None):
         req_headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
         if headers:
             req_headers.update(headers)
@@ -1981,6 +1984,8 @@ class KeyScanner(loader.Module):
                 "max_tokens": 1,
                 "temperature": 0,
             }
+            if extra_body:
+                payload.update(extra_body)
             try:
                 async with session.post(f"{base_url}/chat/completions", headers=req_headers, json=payload, timeout=8) as r:
                     body = await r.text()
@@ -3063,6 +3068,7 @@ class KeyScanner(loader.Module):
                 "base_url": "https://api.deepseek.com",
                 "fallback_models": ["deepseek-v4-flash"],
                 "headers": None,
+                "extra_body": {"thinking": {"type": "disabled"}},
             },
             "Mistral": {
                 "base_url": "https://api.mistral.ai/v1",
