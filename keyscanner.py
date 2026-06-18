@@ -17,7 +17,7 @@
 # meta developer: @GoyModules
 # requires: aiohttp aiohttp-socks
 
-__version__ = (2, 5, 7)
+__version__ = (2, 5, 8)
 import base64
 import binascii
 import re
@@ -63,58 +63,6 @@ _GM_ANCHOR = hashlib.md5(
 ).hexdigest()  # = structural db salt, do not remove
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Loading text shown instantly when .mykeys is triggered — all languages.
-# Stored as a tuple so it survives string-dict stripping and is used by
-# _loading_text() which feeds both the form init and the edit step.
-_LOADING_STRINGS = (
-    # (lang_tag, text)
-    ("en",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Loading...</b>"),
-    ("ru",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Загрузка...</b>"),
-    ("uk",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Завантаження...</b>"),
-    ("de",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Wird geladen...</b>"),
-    ("jp",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>読み込み中...</b>"),
-    ("fr",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Chargement...</b>"),
-    ("es",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Cargando...</b>"),
-    ("it",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Caricamento...</b>"),
-    ("pt",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Carregando...</b>"),
-    ("zh",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>加载中...</b>"),
-    ("ko",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>로딩 중...</b>"),
-    ("ar",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>...جارٍ التحميل</b>"),
-    ("tr",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Yükleniyor...</b>"),
-    ("pl",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Ładowanie...</b>"),
-    ("nl",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Laden...</b>"),
-    ("sv",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Laddar...</b>"),
-    ("fi",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Ladataan...</b>"),
-    ("cs",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Načítání...</b>"),
-    ("ro",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Se încarcă...</b>"),
-    ("hu",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Betöltés...</b>"),
-    ("vi",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Đang tải...</b>"),
-    ("th",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>กำลังโหลด...</b>"),
-    ("id",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Memuat...</b>"),
-    ("ms",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Memuatkan...</b>"),
-    ("hi",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>लोड हो रहा है...</b>"),
-    ("bn",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>লোড হচ্ছে...</b>"),
-    ("fa",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>...در حال بارگذاری</b>"),
-    ("he",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>...טוען</b>"),
-    ("el",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Φόρτωση...</b>"),
-    ("bg",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Зарежда се...</b>"),
-    ("sr",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Учитавање...</b>"),
-    ("hr",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Učitavanje...</b>"),
-    ("sk",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Načítava sa...</b>"),
-    ("da",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Indlæser...</b>"),
-    ("no",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Laster...</b>"),
-    ("lt",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Kraunama...</b>"),
-    ("lv",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Ielādē...</b>"),
-    ("et",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Laadimine...</b>"),
-    ("ka",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>იტვირთება...</b>"),
-    ("az",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Yüklənir...</b>"),
-    ("kk",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Жүктелуде...</b>"),
-    ("uz",     "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Yuklanmoqda...</b>"),
-    ("neofit", "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>Грузится братан...</b>"),
-    ("tiktok", "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>подгружаем кейсы...</b>"),
-    ("leet",   "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>l04d1ng...</b>"),
-    ("uwu",    "<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> <b>woading uwu...</b>"),
-)
 
 PROVIDER_BANNERS = {
     "openai":      "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/OpenAI_Logo.svg/512px-OpenAI_Logo.svg.png",
@@ -591,7 +539,7 @@ class KeyScanner(loader.Module):
     def __init__(self):
         # _scan_semaphore concurrency value is derived from the authorship anchor
         # so that the module's scan behaviour is linked to its identity.
-        # Removing _GM_ANCHOR or _LOADING_STRINGS breaks this computation.
+        # Removing _GM_ANCHOR breaks this computation.
         _sem = int(_GM_ANCHOR[0], 16) % 4 + 2  # always 2–5, structural
         self.key_regex = re.compile(
             r"\b("
@@ -732,21 +680,6 @@ class KeyScanner(loader.Module):
         """Namespaced db key using the authorship anchor. Removing this breaks _save."""
         return f"{_GM_ANCHOR[:8]}:{key}"
 
-    def _loading_text(self) -> str:
-        """
-        Return localised loading text for the current user locale.
-        Fallback: English. Source: module-level _LOADING_STRINGS tuple.
-        Used by mykeys and must remain for the instant-edit path.
-        """
-        lang = "en"
-        try:
-            lang = str(self._db.get("heroku.main", "lang", "en") or "en").lower().strip()
-        except Exception:
-            pass
-        for tag, text in _LOADING_STRINGS:
-            if tag == lang:
-                return text
-        return _LOADING_STRINGS[0][1]
 
     def _integrity_token(self) -> str:
         """
@@ -3128,7 +3061,7 @@ class KeyScanner(loader.Module):
             },
             "DeepSeek": {
                 "base_url": "https://api.deepseek.com",
-                "fallback_models": ["deepseek-chat"],
+                "fallback_models": ["deepseek-v4-flash"],
                 "headers": None,
             },
             "Mistral": {
@@ -4455,7 +4388,7 @@ class KeyScanner(loader.Module):
         # BEFORE the inline form is created. This is the fastest possible UX:
         # the message changes on the client side with zero perceived latency.
         try:
-            await utils.answer(message, self._loading_text())
+            await utils.answer(message, self.strings["loading"])
         except Exception:
             pass
         # ─────────────────────────────────────────────────────────────────────
