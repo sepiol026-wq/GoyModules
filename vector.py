@@ -34,6 +34,8 @@ from urllib.parse import quote, urljoin
 
 import aiohttp
 from herokutl.tl.functions.contacts import UnblockRequest
+from herokutl.tl.functions.account import UpdateNotifySettingsRequest, GetNotifySettingsRequest
+from herokutl.tl.types import InputNotifyPeer, InputPeerNotifySettings
 from herokutl.types import Message
 
 from .. import loader, utils
@@ -1874,101 +1876,123 @@ class Vector(loader.Module):
             return
         text = (getattr(msg, "raw_text", None) or "").strip()
         log.debug("vector_install_payload_watcher: text_len=%d starts_with_payload=%s", len(text), text.startswith("#v_payload:") if len(text) > 5 else False)
-        if text == lping:
-            log.debug("vector_install_payload_watcher: lang ping received")
-            with suppress(Exception):
-                await self._client.send_message(msg.chat_id, f"{lpong}{self._detect_lang_suffix()}")
-            with suppress(Exception):
-                await msg.delete()
-            return
-        if not text.startswith("#v_payload:"):
-            return
-
-        parts = text.split(":", 4)
-        if len(parts) != 5:
-            log.debug("vector_install_payload_watcher: invalid parts count=%d", len(parts))
-            return
-        _, owner_module, action, ts_raw, signature = parts
-        if "|" in owner_module:
-            owner, module_name = owner_module.split("|", 1)
-        else:
-            owner, module_name = "unknown", owner_module
-        log.info("vector_install_payload_watcher: owner=%s module=%s action=%s", owner, module_name, action)
-        if not owner_module or not action or not ts_raw or not signature:
-            return
-        if action not in {"install", "like", "dislike"}:
-            return
-        if not re.fullmatch(r"[^:]+", module_name):
-            return
-        if not ts_raw.isdigit():
-            return
-
-        ts = int(ts_raw)
-        now = int(time.time())
-        if abs(now - ts) > 60:
-            return
-
-        local_payload = f"{owner_module}:{action}:{ts}"
-        local_signature = hmac.new(
-            auths.encode("utf-8"),
-            local_payload.encode("utf-8"),
-            hashlib.sha256,
-        ).hexdigest()
-        if not hmac.compare_digest(local_signature, signature):
-            return
-
+        saved_notify = None
+        notify_peer = None
         with suppress(Exception):
-            await msg.delete()
+            peer = await self._client.get_input_entity(msg.chat_id)
+            notify_peer = InputNotifyPeer(peer=peer)
+            saved_notify = await self._client(GetNotifySettingsRequest(notify_peer))
+            await self._client(UpdateNotifySettingsRequest(
+                peer=notify_peer,
+                settings=InputPeerNotifySettings(mute_until=2**31 - 1)
+            ))
+        try:
+            if text == lping:
+                log.debug("vector_install_payload_watcher: lang ping received")
+                with suppress(Exception):
+                    await self._client.send_message(msg.chat_id, f"{lpong}{self._detect_lang_suffix()}")
+                with suppress(Exception):
+                    await msg.delete()
+                return
+            if not text.startswith("#v_payload:"):
+                return
 
-        async def send_feedback(status: str, reason: str = "", banned_until: str = "") -> None:
-            feedback_ts = int(time.time())
-            safe_reason = (reason or "").replace(":", " ").strip()
-            safe_until = (banned_until or "").replace(":", " ").strip()
-            feedback_payload = f"{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}"
-            feedback_signature = hmac.new(
+            parts = text.split(":", 4)
+            if len(parts) != 5:
+                log.debug("vector_install_payload_watcher: invalid parts count=%d", len(parts))
+                return
+            _, owner_module, action, ts_raw, signature = parts
+            if "|" in owner_module:
+                owner, module_name = owner_module.split("|", 1)
+            else:
+                owner, module_name = "unknown", owner_module
+            log.info("vector_install_payload_watcher: owner=%s module=%s action=%s", owner, module_name, action)
+            if not owner_module or not action or not ts_raw or not signature:
+                return
+            if action not in {"install", "like", "dislike"}:
+                return
+            if not re.fullmatch(r"[^:]+", module_name):
+                return
+            if not ts_raw.isdigit():
+                return
+
+            ts = int(ts_raw)
+            now = int(time.time())
+            if abs(now - ts) > 60:
+                return
+
+            local_payload = f"{owner_module}:{action}:{ts}"
+            local_signature = hmac.new(
                 auths.encode("utf-8"),
-                feedback_payload.encode("utf-8"),
+                local_payload.encode("utf-8"),
                 hashlib.sha256,
             ).hexdigest()
+            if not hmac.compare_digest(local_signature, signature):
+                return
+
             with suppress(Exception):
-                await self._client.send_message(
-                    msg.chat_id,
-                    f"#v_feedback:{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}:{feedback_signature}",
-                )
-            with suppress(Exception):
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as _s:
-                    await _s.post(
-                        f"{apirt}/api/tg-bot/install-feedback",
-                        json={"owner_module": owner_module, "status": status, "reason": safe_reason},
-                        headers={"content-type": "application/json", "x-bot-secret": auths},
+                await msg.delete()
+
+            async def send_feedback(status: str, reason: str = "", banned_until: str = "") -> None:
+                feedback_ts = int(time.time())
+                safe_reason = (reason or "").replace(":", " ").strip()
+                safe_until = (banned_until or "").replace(":", " ").strip()
+                feedback_payload = f"{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}"
+                feedback_signature = hmac.new(
+                    auths.encode("utf-8"),
+                    feedback_payload.encode("utf-8"),
+                    hashlib.sha256,
+                ).hexdigest()
+                with suppress(Exception):
+                    await self._client.send_message(
+                        msg.chat_id,
+                        f"#v_feedback:{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}:{feedback_signature}",
                     )
+                with suppress(Exception):
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as _s:
+                        await _s.post(
+                            f"{apirt}/api/tg-bot/install-feedback",
+                            json={"owner_module": owner_module, "status": status, "reason": safe_reason},
+                            headers={"content-type": "application/json", "x-bot-secret": auths},
+                        )
 
-        token = await self._get_active_token()
-        if not token:
-            reason = "User is banned" if not self.bannote else self.bannote
-            await send_feedback("banned", reason, "permanent")
-            return
+            token = await self._get_active_token()
+            if not token:
+                reason = "User is banned" if not self.bannote else self.bannote
+                await send_feedback("banned", reason, "permanent")
+                return
 
-        if action == "install":
-            log.info("vector_install_payload_watcher: install action for %s/%s", owner, module_name)
-            dl_url = f"{apirt}/modules/{quote(owner, safe='')}/{quote(module_name, safe='')}/source"
-            res, _ = await self._safe_install(module_name, dl_url, notify=False)
-            if res == -1:
-                log.error("vector_install_payload_watcher: install failed (no loader)")
-                await send_feedback("error")
-            else:
-                log.info("vector_install_payload_watcher: install result=%s", res)
-                await send_feedback("ok" if res == 1 else "error")
-            return
+            if action == "install":
+                log.info("vector_install_payload_watcher: install action for %s/%s", owner, module_name)
+                dl_url = f"{apirt}/modules/{quote(owner, safe='')}/{quote(module_name, safe='')}/source"
+                res, _ = await self._safe_install(module_name, dl_url, notify=False)
+                if res == -1:
+                    log.error("vector_install_payload_watcher: install failed (no loader)")
+                    await send_feedback("error")
+                else:
+                    log.info("vector_install_payload_watcher: install result=%s", res)
+                    await send_feedback("ok" if res == 1 else "error")
+                return
 
-        log.info("vector_install_payload_watcher: rate action %s for %s/%s", action, owner, module_name)
-        uid = self._parse_jwt(token).get("sub", "")
-        res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(owner, safe='')}/{quote(module_name, safe='')}/{action}", token=token)
-        if not res and self.httpc in {401, 403}:
-            log.warning("vector_install_payload_watcher: banned (401/403)")
-            await send_feedback("banned", "User is banned", "permanent")
-            return
-        await send_feedback("ok" if res and res.get("ok") else "error")
+            log.info("vector_install_payload_watcher: rate action %s for %s/%s", action, owner, module_name)
+            uid = self._parse_jwt(token).get("sub", "")
+            res = await self._net_req("POST", f"/api/rate/{quote(str(uid), safe='')}/{quote(owner, safe='')}/{quote(module_name, safe='')}/{action}", token=token)
+            if not res and self.httpc in {401, 403}:
+                log.warning("vector_install_payload_watcher: banned (401/403)")
+                await send_feedback("banned", "User is banned", "permanent")
+                return
+            await send_feedback("ok" if res and res.get("ok") else "error")
+        finally:
+            if saved_notify is not None and notify_peer is not None:
+                with suppress(Exception):
+                    await self._client(UpdateNotifySettingsRequest(
+                        peer=notify_peer,
+                        settings=InputPeerNotifySettings(
+                            mute_until=getattr(saved_notify, 'mute_until', 0),
+                            sound=getattr(saved_notify, 'sound', 'default'),
+                            show_previews=getattr(saved_notify, 'show_previews', False),
+                        )
+                    ))
 
     @loader.command(
         en_doc="— open Vector as Telegram Mini App.",
