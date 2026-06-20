@@ -1881,11 +1881,14 @@ class Vector(loader.Module):
         with suppress(Exception):
             peer = await self._client.get_input_entity(msg.chat_id)
             notify_peer = InputNotifyPeer(peer=peer)
-            saved_notify = await self._client(GetNotifySettingsRequest(notify_peer))
-            await self._client(UpdateNotifySettingsRequest(
-                peer=notify_peer,
-                settings=InputPeerNotifySettings(mute_until=2**31 - 1)
-            ))
+        if notify_peer is not None:
+            with suppress(Exception):
+                saved_notify = await self._client(GetNotifySettingsRequest(notify_peer))
+            with suppress(Exception):
+                await self._client(UpdateNotifySettingsRequest(
+                    peer=notify_peer,
+                    settings=InputPeerNotifySettings(mute_until=2**31 - 1)
+                ))
         try:
             if text == lping:
                 log.debug("vector_install_payload_watcher: lang ping received")
@@ -1983,14 +1986,12 @@ class Vector(loader.Module):
                 return
             await send_feedback("ok" if res and res.get("ok") else "error")
         finally:
-            if saved_notify is not None and notify_peer is not None:
+            if notify_peer is not None:
                 with suppress(Exception):
                     await self._client(UpdateNotifySettingsRequest(
                         peer=notify_peer,
                         settings=InputPeerNotifySettings(
-                            mute_until=getattr(saved_notify, 'mute_until', 0),
-                            sound=getattr(saved_notify, 'sound', 'default'),
-                            show_previews=getattr(saved_notify, 'show_previews', False),
+                            mute_until=getattr(saved_notify, 'mute_until', 0) if saved_notify is not None else 0,
                         )
                     ))
 
