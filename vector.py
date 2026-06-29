@@ -17,7 +17,7 @@
 # meta pic: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vecpic.png
 # meta developer: @GoyModules
 
-__version__ = (2, 4, 1)
+__version__ = (2, 4, 2)
 
 import asyncio
 import base64
