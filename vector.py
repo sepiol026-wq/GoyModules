@@ -84,6 +84,7 @@ class Vector(loader.Module):
         "v_dl_err": "Installation failed!",
         "v_lim_cfg": "Search output limits.",
         "v_max_batch_cfg": "Max modules per batch install.",
+        "v_auto_upd_cfg": "Notify me about module updates (hashing-based).",
         "v_btn_sec": "🛡 Security Scan",
         "v_aud_hdr": "Code Audit: {name}",
         "v_aud_req": "Connecting to Security API...",
@@ -189,6 +190,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Лимиты вывода поиска.",
         "v_btn_sec": "🛡 Проверка кода",
         "v_max_batch_cfg": "Макс модулей за одну установку.",
+        "v_auto_upd_cfg": "Уведомлять об обновлениях модулей (по хэшам).",
         "v_aud_hdr": "Аудит кода: {name}",
         "v_aud_req": "Соединение с Security API...",
         "v_aud_proc": "Анализ AST дерева...",
@@ -293,6 +295,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "検索出力制限。",
         "v_btn_sec": "🛡 セキュリティスキャン",
         "v_max_batch_cfg": "一括インストールの最大モジュール数。",
+        "v_auto_upd_cfg": "モジュールの更新をハッシュで通知。",
         "v_aud_hdr": "コード監査: {name}",
         "v_aud_req": "セキュリティAPIに接続中...",
         "v_aud_proc": "ASTツリーを処理中...",
@@ -397,6 +400,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Ліміти виводу пошуку.",
         "v_btn_sec": "🛡 Перевірка коду",
         "v_max_batch_cfg": "Макс модулів за одну установку.",
+        "v_auto_upd_cfg": "Повідомляти про оновлення модулів (за хешами).",
         "v_aud_hdr": "Аудит коду: {name}",
         "v_aud_req": "З'єднання з Security API...",
         "v_aud_proc": "Аналіз AST дерева...",
@@ -501,6 +505,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Suchausgabe-Limits.",
         "v_btn_sec": "🛡 Sicherheits-Scan",
         "v_max_batch_cfg": "Max Module pro Batch-Installation.",
+        "v_auto_upd_cfg": "Benachrichtige bei Modul-Updates (Hash-basiert).",
         "v_aud_hdr": "Code-Audit: {name}",
         "v_aud_req": "Verbindung zur Security-API...",
         "v_aud_proc": "Verarbeite AST-Baum...",
@@ -605,6 +610,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Search output limits.",
         "v_btn_sec": "🛡 Security scan",
         "v_max_batch_cfg": "max mods per batch install.",
+        "v_auto_upd_cfg": "hash-based mod update notifs on/off.",
         "v_aud_hdr": "Code audit: {name}",
         "v_aud_req": "Connecting to security API...",
         "v_aud_proc": "Parsing AST...",
@@ -708,6 +714,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Лимиты выдачи.",
         "v_btn_sec": "🛡 Чек кода",
         "v_max_batch_cfg": "Макс темок за раз.",
+        "v_auto_upd_cfg": "Слать уведомления при новых хэшах модулей.",
         "v_aud_hdr": "Прожарка: {name}",
         "v_aud_req": "Стучимся в API защиты...",
         "v_aud_proc": "Парсим AST...",
@@ -812,6 +819,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "534rch l1m175.",
         "v_btn_sec": "🛡 53cur17y 5c4n",
         "v_max_batch_cfg": "m4x m0d5 p3r b47ch.",
+        "v_auto_upd_cfg": "n071fy 0n m0d h45h ch4n635.",
         "v_aud_hdr": "C0d3 4ud17: {name}",
         "v_aud_req": "C0nn3c71ng 70 53cur17y 4P1...",
         "v_aud_proc": "Pr0c3551ng A57 7r33...",
@@ -916,6 +924,7 @@ class Vector(loader.Module):
         "v_lim_cfg": "Seawch wimits.",
         "v_btn_sec": "🛡 Secuwity Scan",
         "v_max_batch_cfg": "Max moduwes pew batch.",
+        "v_auto_upd_cfg": "Nya~tify when mod hashies change UwU!",
         "v_aud_hdr": "Code Audit: {name}",
         "v_aud_req": "Connecting to Secuwity API...",
         "v_aud_proc": "Pwocessing AST twee...",
@@ -1136,6 +1145,12 @@ class Vector(loader.Module):
                 validator=loader.validators.Integer(minimum=1, maximum=100)
             ),
             loader.ConfigValue(
+                "auto_update_notify",
+                True,
+                lambda: self.strings("v_auto_upd_cfg"),
+                validator=loader.validators.Boolean()
+            ),
+            loader.ConfigValue(
                 "VectorInstall",
                 True,
                 lambda: "Включает или выключает Vector Install",
@@ -1156,6 +1171,7 @@ class Vector(loader.Module):
         self.database = database
         self.http = aiohttp.ClientSession()
         asyncio.ensure_future(self._token_keeper())
+        asyncio.ensure_future(self._sync_modules_keeper())
         log.info("Vector Module Monolith Started")
 
     async def on_unload(self) -> None:
@@ -1758,6 +1774,50 @@ class Vector(loader.Module):
             log.warning("_vecupdate_force: force install failed, res=%s", res)
             await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
+    def _hash_module_source(self, mod_instance: Any) -> str | None:
+        try:
+            import inspect, sys
+            mod = sys.modules.get(mod_instance.__class__.__module__)
+            if not mod:
+                return None
+            src = inspect.getsource(mod)
+            return hashlib.sha256(src.encode("utf-8")).hexdigest()
+        except Exception:
+            return None
+
+    async def _sync_installed_modules(self) -> bool:
+        token = await self._get_active_token()
+        if not token:
+            return False
+        lang = self._detect_lang_suffix()
+        modules_data = []
+        for mod in list(self.allmodules.modules):
+            h = self._hash_module_source(mod)
+            if not h:
+                continue
+            modules_data.append({
+                "class_name": mod.__class__.__name__,
+                "contentHash": h,
+                "language": lang,
+            })
+        if not modules_data:
+            return False
+        res = await self._net_req("PUT", "/api/users/me/modules", token=token, json_data={"modules": modules_data})
+        return bool(res and res.get("ok"))
+
+    async def _sync_modules_keeper(self) -> None:
+        first_run = True
+        while True:
+            if not first_run:
+                await asyncio.sleep(86_400)
+            first_run = False
+            if not self.config.get("auto_update_notify", True):
+                continue
+            try:
+                await self._sync_installed_modules()
+            except Exception:
+                pass
+
     @loader.command(
         en_doc="<slug or URL> — download and install entire module collection from Vector.",
         ru_doc="<slug_или_ссылка> — скачать и установить всю коллекцию модулей из Vector.",
@@ -1912,7 +1972,7 @@ class Vector(loader.Module):
             log.info("vector_install_payload_watcher: owner=%s module=%s action=%s", owner, module_name, action)
             if not owner_module or not action or not ts_raw or not signature:
                 return
-            if action not in {"install", "like", "dislike"}:
+            if action not in {"install", "like", "dislike", "update"}:
                 return
             if not re.fullmatch(r"[^:]+", module_name):
                 return
@@ -1974,6 +2034,28 @@ class Vector(loader.Module):
                     await send_feedback("error")
                 else:
                     log.info("vector_install_payload_watcher: install result=%s", res)
+                    await send_feedback("ok" if res == 1 else "error")
+                return
+
+            if action == "update":
+                log.info("vector_install_payload_watcher: update action for module_id=%s", owner_module)
+                mod_info = await self._net_req("GET", f"/api/modules/by-id/{quote(owner_module, safe='')}", token=token)
+                if not mod_info or not mod_info.get("ok"):
+                    await send_feedback("error", "module not found")
+                    return
+                mod_data = mod_info.get("module", {})
+                mod_name = mod_data.get("name", "")
+                mod_owner = mod_data.get("source_owner", "")
+                if not mod_name:
+                    await send_feedback("error", "invalid module data")
+                    return
+                dl_url = f"{apirt}/modules/{quote(mod_owner, safe='')}/{quote(mod_name, safe='')}/source"
+                res, _ = await self._safe_install(mod_name, dl_url, notify=False)
+                if res == -1:
+                    log.error("vector_install_payload_watcher: update install failed (no loader)")
+                    await send_feedback("error")
+                else:
+                    log.info("vector_install_payload_watcher: update result=%s", res)
                     await send_feedback("ok" if res == 1 else "error")
                 return
 
