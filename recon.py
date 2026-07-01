@@ -16,6 +16,7 @@
 
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/recon.png
 # meta developer: @goymodules
+# meta tags: osint, recon, network, dns, scanner, infosec
 # requires: aiohttp beautifulsoup4
 __version__ = (1, 2, 1)
 
