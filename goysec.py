@@ -16,6 +16,7 @@
 
 # requires: requests aiohttp
 # meta developer: @goymodules
+# meta tags: security, scanner, module-analysis, preinstall-guard, antivirus, heroku
 # authors: @goymodules
 # Description: Module scanner + preinstall guard.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/goysec.png
