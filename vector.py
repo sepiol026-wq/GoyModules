@@ -16,6 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta pic: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vecpic.png
 # meta developer: @GoyModules
+# meta tags: catalog, module-search, discovery, reviews, heroku
 
 __version__ = (2, 4, 2)
 
