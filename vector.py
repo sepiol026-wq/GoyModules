@@ -64,6 +64,7 @@ class Vector(loader.Module):
         "v_dev_ofc": "official",
         "v_dev_unofc": "unofficial",
         "v_info": "Info:",
+        "v_tags": "Tags:",
         "v_cmds": "Usage:",
         "v_deps": "Dependencies:",
         "v_reqs": "Libs:",
@@ -1255,6 +1256,7 @@ class Vector(loader.Module):
             "dislikes": int(raw.get("dislikes") or 0),
             "banner": raw.get("banner"),
             "source_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
+            "tags": raw.get("tags") or [],
             "dl_url": raw.get("source_url") or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source",
         }
 
@@ -1457,6 +1459,23 @@ class Vector(loader.Module):
                 if desc_raw:
                     desc_block = f"{hdr}{desc_raw}{ftr}"
 
+        tags = m_data.get("tags", [])
+        tags_block = ""
+        if tags:
+            est = used + len(desc_block) + len(tags_block) + 30
+            if est < CAP:
+                hdr = f"\n\n🏷 <b>{self.strings.get("v_tags", "Tags")}</b>\n"
+                room = CAP - used - len(desc_block) - len(hdr) - 5
+                if room > 0:
+                    tl = []
+                    for t in tags:
+                        tt = utils.escape_html(str(t))
+                        if room - len(tt) - 3 < 0:
+                            break
+                        tl.append(f"<em>{tt}</em>")
+                        room -= len(tt) + 3
+                    if tl:
+                        tags_block = f"{hdr}{" · ".join(tl)}"
         cmds = m_data.get("commands", [])
         cmd_block = ""
         if cmds:
@@ -1491,7 +1510,7 @@ class Vector(loader.Module):
         if deps:
             hdr = f"\n\n{self.ICONS['dependency']} <b>{self.strings.get('v_deps', 'Dependencies')}</b>\n<blockquote expandable>"
             ftr = "</blockquote>"
-            room = CAP - used - len(desc_block) - len(cmd_block) - len(hdr) - len(ftr) - 3
+            room = CAP - used - len(desc_block) - len(tags_block) - len(cmd_block) - len(hdr) - len(ftr) - 3
             if room > 0:
                 dl = []
                 for d in deps:
@@ -1503,7 +1522,7 @@ class Vector(loader.Module):
                 if dl:
                     dep_block = f"{hdr}{', '.join(dl)}{ftr}"
 
-        return self._tag_safe_truncate(("\n".join(pfx) + desc_block + cmd_block + dep_block).rstrip(), CAP)
+        return self._tag_safe_truncate(("\n".join(pfx) + desc_block + tags_block + cmd_block + dep_block).rstrip(), CAP)
 
     def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False, comments_pg: int = 0) -> list:
         log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
