@@ -15,7 +15,7 @@
 # ====================================================================================================================
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/keyscanner.png
 # meta developer: @GoyModules
-# meta tags: security, api-keys, credentials, scanner, recon, heroku, безопасность, апи-ключи, учетные-данные, сканер, разведка, хероку
+# meta tags: key-scanner, leak-detection, credentials, security, heroku, поиск-ключей, обнаружение-утечек, безопасность, хероку
 # requires: aiohttp aiohttp-socks
 
 __version__ = (2, 5, 8)
