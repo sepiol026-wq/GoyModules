@@ -1408,6 +1408,19 @@ class Vector(loader.Module):
         return self.strings["v_ban_notice"].format(reason=reason, term=term)
 
     @staticmethod
+    def _plain_len(text: str) -> int:
+        n = 0
+        inside = False
+        for ch in text:
+            if ch == "<":
+                inside = True
+            elif ch == ">":
+                inside = False
+            elif not inside:
+                n += 1
+        return n
+
+    @staticmethod
     def _tag_safe_truncate(text: str, cap: int) -> str:
         if len(text) <= cap:
             return text
@@ -1501,45 +1514,48 @@ class Vector(loader.Module):
         tags_block = ""
         log.debug("_build_html: name=%s tags=%s", m_data.get("name", "?"), tags)
         if tags:
-            est = used + len(desc_block) + len(cmd_block) + 30
-            log.debug("_build_html tags: est=%d CAP=%d used=%d desc=%d cmd=%d", est, CAP, used, len(desc_block), len(cmd_block))
-            if est < CAP:
-                hdr = f"\n\n{self.ICONS['tag']} <b>{self.strings.get('v_tags', 'Tags')}</b>\n<blockquote expandable>"
-                ftr = "</blockquote>"
-                room = CAP - used - len(desc_block) - len(cmd_block) - len(hdr) - len(ftr) - 5
-                log.debug("_build_html tags: room=%d", room)
-                if room > 0:
-                    tl = []
-                    for t in tags:
-                        tt = utils.escape_html(str(t))
-                        if room - len(tt) - 3 < 0:
-                            break
-                        tl.append(f"<em>{tt}</em>")
-                        room -= len(tt) + 3
-                    if tl:
-                        tags_block = f"{hdr}{' · '.join(tl)}{ftr}"
-                        log.debug("_build_html tags: built %d tags", len(tl))
-                    else:
-                        log.debug("_build_html tags: tl empty, skipping")
+            pfx_plain = self._plain_len("\n".join(pfx))
+            desc_plain = self._plain_len(desc_block)
+            cmd_plain = self._plain_len(cmd_block)
+            cur_plain = pfx_plain + desc_plain + cmd_plain
+            hdr = f"\n\n{self.ICONS['tag']} <b>{self.strings.get('v_tags', 'Tags')}</b>\n<blockquote expandable>"
+            ftr = "</blockquote>"
+            hdr_plain = self._plain_len(hdr)
+            room = CAP - cur_plain - hdr_plain - self._plain_len(ftr)
+            log.debug("_build_html tags: cur_plain=%d room=%d", cur_plain, room)
+            if room > 0:
+                tl = []
+                for t in tags:
+                    tt = utils.escape_html(str(t))
+                    room_needed = self._plain_len(f"<em>{tt}</em>") + 3
+                    if room - room_needed < 0:
+                        break
+                    tl.append(f"<em>{tt}</em>")
+                    room -= room_needed
+                if tl:
+                    tags_block = f"{hdr}{' · '.join(tl)}{ftr}"
+                    log.debug("_build_html tags: built %d tags", len(tl))
+                else:
+                    log.debug("_build_html tags: tl empty, skipping")
             else:
                 log.debug("_build_html tags: room <= 0, skipping")
-        else:
-            log.debug("_build_html tags: est >= CAP, skipping")
 
         deps = m_data.get("dependencies", [])
         dep_block = ""
         if deps:
             hdr = f"\n\n{self.ICONS['dependency']} <b>{self.strings.get('v_deps', 'Dependencies')}</b>\n<blockquote expandable>"
             ftr = "</blockquote>"
-            room = CAP - used - len(desc_block) - len(tags_block) - len(cmd_block) - len(hdr) - len(ftr) - 3
+            tags_plain = self._plain_len(tags_block)
+            room = CAP - cur_plain - tags_plain - self._plain_len(hdr) - self._plain_len(ftr)
             if room > 0:
                 dl = []
                 for d in deps:
                     dt = utils.escape_html(str(d))
-                    if room - len(dt) - 3 < 0:
+                    room_needed = self._plain_len(f"<code>{dt}</code>") + 3
+                    if room - room_needed < 0:
                         break
                     dl.append(f"<code>{dt}</code>")
-                    room -= len(dt) + 3
+                    room -= room_needed
                 if dl:
                     dep_block = f"{hdr}{', '.join(dl)}{ftr}"
 
