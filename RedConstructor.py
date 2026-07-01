@@ -15,7 +15,7 @@
 # ====================================================================================================================
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/RedConstructor.png
 # meta developer: @GoyModules
-# meta tags: ide, module-builder, code-generation, development, heroku
+# meta tags: ide, module-builder, code-generation, development, heroku, иде, конструктор-модулей, генерация-кода, разработка, хероку
 # requires: aiohttp ast hashlin 
 
 __version__ = ("1", "0", "0")
