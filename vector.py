@@ -1470,7 +1470,7 @@ class Vector(loader.Module):
         tags = m_data.get("tags", [])
         tags_block = ""
         if tags:
-            est = used + len(desc_block) + len(tags_block) + 30
+            est = used + len(desc_block) + 30
             if est < CAP:
                 hdr = f"\n\n🏷 <b>{self.strings.get("v_tags", "Tags")}</b>\n"
                 room = CAP - used - len(desc_block) - len(hdr) - 5
@@ -1483,11 +1483,11 @@ class Vector(loader.Module):
                         tl.append(f"<em>{tt}</em>")
                         room -= len(tt) + 3
                     if tl:
-                        tags_block = f"{hdr}{" · ".join(tl)}"
+                        tags_block = f"{hdr}{' · '.join(tl)}"
         cmds = m_data.get("commands", [])
         cmd_block = ""
         if cmds:
-            est = used + len(desc_block) + 30
+            est = used + len(desc_block) + len(tags_block) + 30
             if est < CAP:
                 hdr = f"\n\n{self.ICONS['command']} <b>{self.strings['v_cmds']}</b>\n<blockquote expandable>"
                 ftr = "</blockquote>"
