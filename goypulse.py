@@ -16,6 +16,7 @@
 
 # requires: cryptography
 # meta developer: @goymodules
+# meta tags: ai, markov-chain, neural, auto-reply, nlp, chat
 # authors: @goymodules
 # Description: Нейро-автоответчик на цепях маркова с полезными функциями.
 # Этот модуль разработан исключительно для личного использования и автоматизации чатов.
