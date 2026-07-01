@@ -16,7 +16,7 @@
 
 # requires: telethon pytz markdown-it-py psutil
 # meta developer: @goymodules
-# meta tags: ai, qwen, cli, monitoring, patching, heroku
+# meta tags: ai, qwen, cli, monitoring, patching, heroku, ии, квен, кли, мониторинг, патчинг, хероку
 # authors: @goymodules
 # Description: Unified AI assistant module for Heroku.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/QwenCLI.png
