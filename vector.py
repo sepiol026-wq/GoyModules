@@ -1472,7 +1472,7 @@ class Vector(loader.Module):
         if tags:
             est = used + len(desc_block) + 30
             if est < CAP:
-                hdr = f"\n\n🏷 <b>{self.strings.get('v_tags', "Tags")}</b>\n"
+                hdr = f"\n\n🏷 <b>{self.strings.get('v_tags', 'Tags')}</b>\n"
                 room = CAP - used - len(desc_block) - len(hdr) - 5
                 if room > 0:
                     tl = []
