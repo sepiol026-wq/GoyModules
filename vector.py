@@ -1502,10 +1502,12 @@ class Vector(loader.Module):
         log.debug("_build_html: name=%s tags=%s", m_data.get("name", "?"), tags)
         if tags:
             est = used + len(desc_block) + len(cmd_block) + 30
+            log.debug("_build_html tags: est=%d CAP=%d used=%d desc=%d cmd=%d", est, CAP, used, len(desc_block), len(cmd_block))
             if est < CAP:
                 hdr = f"\n\n{self.ICONS['tag']} <b>{self.strings.get('v_tags', 'Tags')}</b>\n<blockquote expandable>"
                 ftr = "</blockquote>"
                 room = CAP - used - len(desc_block) - len(cmd_block) - len(hdr) - len(ftr) - 5
+                log.debug("_build_html tags: room=%d", room)
                 if room > 0:
                     tl = []
                     for t in tags:
@@ -1516,6 +1518,13 @@ class Vector(loader.Module):
                         room -= len(tt) + 3
                     if tl:
                         tags_block = f"{hdr}{' · '.join(tl)}{ftr}"
+                        log.debug("_build_html tags: built %d tags", len(tl))
+                    else:
+                        log.debug("_build_html tags: tl empty, skipping")
+            else:
+                log.debug("_build_html tags: room <= 0, skipping")
+        else:
+            log.debug("_build_html tags: est >= CAP, skipping")
 
         deps = m_data.get("dependencies", [])
         dep_block = ""
