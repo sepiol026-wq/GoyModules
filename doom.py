@@ -12,7 +12,7 @@
 
 # requires: herokutl
 # meta developer: @GoyModules
-# meta tags: game, doom, inline, entertainment, offline, игра, дум, инлайн, развлечение, офлайн
+# meta tags: game, doom, shooter, inline, entertainment, offline, игра, дум, шутер, инлайн, развлечение, офлайн
 # authors: @goymodules
 # Description: Inline DOOM mini-game module.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/doom.png
