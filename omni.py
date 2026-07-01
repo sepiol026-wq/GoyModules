@@ -16,7 +16,7 @@
 
 # requires: yt-dlp imageio-ffmpeg
 # meta developer: @goymodules
-# meta tags: media, downloader, scraper, video, audio, heroku
+# meta tags: media, downloader, scraper, video, audio, heroku, медиа, загрузчик, скрапер, видео, аудио, хероку
 # authors: @goymodules
 # Description: Universal media downloader — async chunked upload, instant.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/omniload.png
