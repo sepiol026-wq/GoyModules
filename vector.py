@@ -1499,6 +1499,7 @@ class Vector(loader.Module):
 
         tags = m_data.get("tags", [])
         tags_block = ""
+        log.debug("_build_html: name=%s tags=%s", m_data.get("name", "?"), tags)
         if tags:
             est = used + len(desc_block) + len(cmd_block) + 30
             if est < CAP:
