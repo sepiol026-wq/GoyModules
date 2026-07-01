@@ -16,6 +16,7 @@
 
 # requires: telethon pillow requests yt-dlp imageio-ffmpeg
 # meta developer: @goymodules
+# meta tags: music, youtube, downloader, audio, playlist
 # authors: @goymodules
 # Description: YouTube Music media module.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/ytmusic.png
