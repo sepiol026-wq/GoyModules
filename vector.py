@@ -1034,7 +1034,7 @@ class Vector(loader.Module):
         "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
         "reply": "↳",
         "broken": '<tg-emoji emoji-id="5877260593903177342">💥</tg-emoji>',
-        "tag": "🏷",
+        "tag": '<tg-emoji emoji-id="5985433648810171091">🏷</tg-emoji>',
     }
 
     _ierrs = [
