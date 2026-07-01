@@ -1510,14 +1510,15 @@ class Vector(loader.Module):
                             cl.append(f"... +{len(cmds) - len(cl)} more")
                         cmd_block = f"{hdr}{chr(10).join(cl)}{ftr}"
 
+        pfx_plain = self._plain_len("\n".join(pfx))
+        desc_plain = self._plain_len(desc_block)
+        cmd_plain = self._plain_len(cmd_block)
+        cur_plain = pfx_plain + desc_plain + cmd_plain
+
         tags = m_data.get("tags", [])
         tags_block = ""
         log.debug("_build_html: name=%s tags=%s", m_data.get("name", "?"), tags)
         if tags:
-            pfx_plain = self._plain_len("\n".join(pfx))
-            desc_plain = self._plain_len(desc_block)
-            cmd_plain = self._plain_len(cmd_block)
-            cur_plain = pfx_plain + desc_plain + cmd_plain
             hdr = f"\n\n{self.ICONS['tag']} <b>{self.strings.get('v_tags', 'Tags')}</b>\n<blockquote expandable>"
             ftr = "</blockquote>"
             hdr_plain = self._plain_len(hdr)
