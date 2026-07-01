@@ -16,7 +16,7 @@
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta pic: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vecpic.png
 # meta developer: @GoyModules
-# meta tags: search, catalog, discovery, reviews, ratings, comments, modules, api-client, i18n, bot-watcher, sqlite, heroku, поиск, каталог, открытия, отзывы, рейтинги, комментарии, модули, апи-клиент, интернационализация, бот-вотчер, скюлайт, хероку
+# meta tags: module-catalog, search, reviews, ratings, comments, heroku, каталог-модулей, поиск, отзывы, рейтинги, комментарии, хероку
 
 __version__ = (2, 4, 2)
 
