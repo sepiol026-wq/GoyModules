@@ -1034,6 +1034,7 @@ class Vector(loader.Module):
         "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
         "reply": "↳",
         "broken": '<tg-emoji emoji-id="5877260593903177342">💥</tg-emoji>',
+        "tag": "🏷",
     }
 
     _ierrs = [
@@ -1467,27 +1468,10 @@ class Vector(loader.Module):
                 if desc_raw:
                     desc_block = f"{hdr}{desc_raw}{ftr}"
 
-        tags = m_data.get("tags", [])
-        tags_block = ""
-        if tags:
-            est = used + len(desc_block) + 30
-            if est < CAP:
-                hdr = f"\n\n🏷 <b>{self.strings.get('v_tags', 'Tags')}</b>\n"
-                room = CAP - used - len(desc_block) - len(hdr) - 5
-                if room > 0:
-                    tl = []
-                    for t in tags:
-                        tt = utils.escape_html(str(t))
-                        if room - len(tt) - 3 < 0:
-                            break
-                        tl.append(f"<em>{tt}</em>")
-                        room -= len(tt) + 3
-                    if tl:
-                        tags_block = f"{hdr}{' · '.join(tl)}"
         cmds = m_data.get("commands", [])
         cmd_block = ""
         if cmds:
-            est = used + len(desc_block) + len(tags_block) + 30
+            est = used + len(desc_block) + 30
             if est < CAP:
                 hdr = f"\n\n{self.ICONS['command']} <b>{self.strings['v_cmds']}</b>\n<blockquote expandable>"
                 ftr = "</blockquote>"
@@ -1513,6 +1497,25 @@ class Vector(loader.Module):
                             cl.append(f"... +{len(cmds) - len(cl)} more")
                         cmd_block = f"{hdr}{chr(10).join(cl)}{ftr}"
 
+        tags = m_data.get("tags", [])
+        tags_block = ""
+        if tags:
+            est = used + len(desc_block) + len(cmd_block) + 30
+            if est < CAP:
+                hdr = f"\n\n{self.ICONS['tag']} <b>{self.strings.get('v_tags', 'Tags')}</b>\n<blockquote expandable>"
+                ftr = "</blockquote>"
+                room = CAP - used - len(desc_block) - len(cmd_block) - len(hdr) - len(ftr) - 5
+                if room > 0:
+                    tl = []
+                    for t in tags:
+                        tt = utils.escape_html(str(t))
+                        if room - len(tt) - 3 < 0:
+                            break
+                        tl.append(f"<em>{tt}</em>")
+                        room -= len(tt) + 3
+                    if tl:
+                        tags_block = f"{hdr}{' · '.join(tl)}{ftr}"
+
         deps = m_data.get("dependencies", [])
         dep_block = ""
         if deps:
@@ -1530,7 +1533,7 @@ class Vector(loader.Module):
                 if dl:
                     dep_block = f"{hdr}{', '.join(dl)}{ftr}"
 
-        return self._tag_safe_truncate(("\n".join(pfx) + desc_block + tags_block + cmd_block + dep_block).rstrip(), CAP)
+        return self._tag_safe_truncate(("\n".join(pfx) + desc_block + cmd_block + tags_block + dep_block).rstrip(), CAP)
 
     def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False, comments_pg: int = 0) -> list:
         log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
