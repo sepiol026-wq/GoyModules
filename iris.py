@@ -12,7 +12,7 @@
 
 # requires: html
 # meta developer: @GoyModules
-# meta tags: ai, iris, control, assistant, heroku, ии, ирис, управление, ассистент, хероку
+# meta tags: ai-control, assistant, system, heroku, управление-ии, ассистент, система, хероку
 # authors: @goymodules
 # Description: Iris control.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/iris.png
