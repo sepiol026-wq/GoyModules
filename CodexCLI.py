@@ -15,7 +15,7 @@
 #
 # requires: telethon pytz markdown-it-py psutil
 # meta developer: @justidev | fork of QwenCLI (@goymodules)
-# meta tags: ai, openai, codex, cli, devops, patching, heroku
+# meta tags: ai, openai, codex, cli, devops, patching, heroku, ии, опенаи, кодекс, кли, девопс, патчинг, хероку
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/CodexCLI.png
 # authors: @justidev
 # Description: Codex CLI module for Heroku.
