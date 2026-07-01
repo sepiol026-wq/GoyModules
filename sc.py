@@ -16,7 +16,7 @@
 
 # requires: telethon pillow yt-dlp imageio-ffmpeg curl_cffi
 # meta developer: @goymodules
-# meta tags: music, soundcloud, downloader, audio, playlist
+# meta tags: music, soundcloud, downloader, audio, playlist, музыка, саундклауд, загрузчик, аудио, плейлист
 # authors: @goymodules
 # Description: SoundCloud media module.
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/soundcloudmusic.png
