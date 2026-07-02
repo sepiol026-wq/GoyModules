@@ -1121,24 +1121,24 @@ class Vector(loader.Module):
             logging.getLogger(lg_name).addHandler(cap)
 
         classified = []
+        res = 0
         try:
             log.info("_safe_install: calling download_and_install for %s", m_name)
             res = await ldr.download_and_install(dl_url)
             log.info("_safe_install: download_and_install result=%s", res)
             if getattr(ldr, "fully_loaded", False):
                 ldr.update_modules_in_db()
-            return res, classified
         except Exception as e:
             log.warning("Install wrapper caught exception for %s: %r", m_name, e)
-            return 0, classified
         finally:
             for lg_name in ("heroku.modules.loader", "heroku", ""):
                 logging.getLogger(lg_name).removeHandler(cap)
             if cap.records:
-                classified = self._classify_install_errors(cap.records)
+                classified[:] = self._classify_install_errors(cap.records)
                 log.debug("_safe_install: %d install log records captured", len(cap.records))
                 if notify and classified:
                     log.info("Install errors for %s: %s", m_name, [e["type"] for e in classified])
+        return res, classified
 
     def __init__(self) -> None:
         log.debug("__init__: Vector module instance created")
