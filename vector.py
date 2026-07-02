@@ -1037,142 +1037,20 @@ class Vector(loader.Module):
         "tag": '<tg-emoji emoji-id="5985433648810171091">🏷</tg-emoji>',
     }
 
-    _ierrs = [
-        ("forbidden", re.compile(r"(?:uses forbidden method|failed(?: during ready)? security checks)")),
-        ("requirements", re.compile(r"Pip requirements install failed")),
-        ("requirements", re.compile(r"requirements.*failed to install", re.DOTALL)),
-        ("dependency", re.compile(r"(?:still )?requires?(?: missing)? dependency", re.DOTALL)),
-        ("dependency", re.compile(r"dependency installation failed")),
-        ("packages", re.compile(r"(?:System package|Can't install system|system packages|install_packages)")),
-        ("core_overwrite", re.compile(r"tried to overwrite core")),
-        ("ffmpeg", re.compile(r"requires ffmpeg")),
-        ("inline", re.compile(r"requires inline mode")),
-        ("heroku_min", re.compile(r"requires Heroku")),
-        ("not_found", re.compile(r"was not found in configured repos")),
-        ("download", re.compile(r"Failed to (?:install external|download) module")),
-        ("unknown", re.compile(r"(?:Module threw|Loading external module failed)")),
-    ]
-
-    class _ILog(logging.Handler):
-        def __init__(self):
-            super().__init__()
-            self.records: List[logging.LogRecord] = []
-
-        def emit(self, record: logging.LogRecord) -> None:
-            self.records.append(record)
-
-    def _classify_install_errors(self, records: List[logging.LogRecord]) -> List[Dict[str, str]]:
-        log.debug("_classify_install_errors: %d records", len(records))
-        errors = []
-        for rec in records:
-            if rec.levelno < logging.WARNING:
-                continue
-            msg = rec.getMessage()
-            for err_type, pattern in self._ierrs:
-                m = pattern.search(msg)
-                if m:
-                    if err_type == "core_overwrite":
-                        detail = f"{m.group(1)}.{m.group(2)}" if m.lastindex >= 2 else ""
-                    elif err_type == "heroku_min":
-                        detail = f"{m.group(1)} (current: {m.group(2)})" if m.lastindex >= 2 else ""
-                    elif m.lastindex:
-                        d = m.group(1).strip()
-                        detail = re.sub(r"[\[\]'\"]", "", d).strip() if d else ""
-                    else:
-                        detail = ""
-                    errors.append({"type": err_type, "detail": detail, "raw": msg})
-                    break
-            else:
-                if rec.levelno >= logging.ERROR:
-                    errors.append({"type": "unknown", "detail": msg[:200], "raw": msg})
-        return errors
-
-    def _fmt_install_errors(self, m_name: str, errors: List[Dict[str, str]]) -> str:
-        log.debug("_fmt_install_errors: module=%s errors=%d", m_name, len(errors))
-        if not errors:
-            return f"{self.ICONS['error']} <b>{self.strings['v_dl_err']}</b>"
-
-        lines = [f"{self.ICONS['broken']} <b>{self.strings['v_install_log_hdr'].format(name=m_name)}</b>"]
-        seen = set()
-        for err in errors:
-            key = err["type"]
-            if key in seen:
-                continue
-            seen.add(key)
-            detail = err["detail"]
-            str_key = f"v_install_fail_{key}"
-            fmt = self.strings.get(str_key)
-            if fmt:
-                try:
-                    if detail:
-                        lines.append(f"{self.ICONS['warn']} {fmt.format(detail=detail)}")
-                    else:
-                        clean = re.sub(r"<[^>]+>", "", fmt).rstrip(": ")
-                        lines.append(f"{self.ICONS['warn']} {clean}")
-                except (KeyError, ValueError):
-                    lines.append(f"{self.ICONS['warn']} {fmt}")
-            else:
-                lines.append(f"{self.ICONS['warn']} {detail or err['raw'][:200]}")
-
-        return "\n".join(lines)
-
-    def _fmt_install_alert(self, errors: List[Dict[str, str]]) -> str:
-        if not errors:
-            return self.strings["v_dl_err"]
-        seen = set()
-        lines = []
-        for err in errors:
-            key = err["type"]
-            if key in seen:
-                continue
-            seen.add(key)
-            detail = err["detail"]
-            str_key = f"v_install_fail_{key}"
-            fmt = self.strings.get(str_key)
-            if fmt:
-                clean = re.sub(r"<[^>]+>", "", fmt)
-                if detail:
-                    try:
-                        lines.append(clean.format(detail=detail))
-                    except (KeyError, ValueError):
-                        lines.append(clean)
-                else:
-                    lines.append(clean.rstrip(": "))
-            else:
-                lines.append(detail or err["raw"][:100])
-        return "\n".join(lines[:3])
-
-    async def _safe_install(self, m_name: str, dl_url: str, *, notify: bool = True) -> tuple:
-        log.debug("_safe_install: module=%s url=%s notify=%s", m_name, dl_url, notify)
+    async def _safe_install(self, m_name: str, dl_url: str) -> bool:
         ldr = self.lookup("Loader")
         if not ldr or not hasattr(ldr, "download_and_install"):
             log.error("_safe_install: no Loader or download_and_install missing")
-            return -1, []
+            return False
 
-        cap = self._ILog()
-        cap.setLevel(logging.WARNING)
-        for lg_name in ("heroku.modules.loader", "heroku", ""):
-            logging.getLogger(lg_name).addHandler(cap)
-
-        classified = []
-        res = 0
         try:
-            log.info("_safe_install: calling download_and_install for %s", m_name)
             res = await ldr.download_and_install(dl_url)
-            log.info("_safe_install: download_and_install result=%s", res)
             if getattr(ldr, "fully_loaded", False):
                 ldr.update_modules_in_db()
+            return res == 1
         except Exception as e:
             log.warning("Install wrapper caught exception for %s: %r", m_name, e)
-        finally:
-            for lg_name in ("heroku.modules.loader", "heroku", ""):
-                logging.getLogger(lg_name).removeHandler(cap)
-            if cap.records:
-                classified[:] = self._classify_install_errors(cap.records)
-                log.debug("_safe_install: %d install log records captured", len(cap.records))
-                if notify and classified:
-                    log.info("Install errors for %s: %s", m_name, [e["type"] for e in classified])
-        return res, classified
+            return False
 
     def __init__(self) -> None:
         log.debug("__init__: Vector module instance created")
@@ -1776,15 +1654,12 @@ class Vector(loader.Module):
         if force:
             log.info("vecupdate: force flag set, installing immediately")
             await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
-            res, _ = await self._safe_install(m_name, dl_url, notify=False)
-            if res == -1:
-                log.error("vecupdate: _safe_install returned -1 (no loader)")
-                return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
-            if res == 1:
+            ok = await self._safe_install(m_name, dl_url)
+            if ok:
                 log.info("vecupdate: force install successful")
                 await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
             else:
-                log.warning("vecupdate: force install failed, res=%s", res)
+                log.warning("vecupdate: force install failed")
                 await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
             return
 
@@ -1799,10 +1674,8 @@ class Vector(loader.Module):
         if not src_bytes:
             log.warning("vecupdate: download returned no bytes, installing anyway")
             await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
-            res, _ = await self._safe_install(m_name, dl_url, notify=False)
-            if res == -1:
-                return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
-            if res == 1:
+            ok = await self._safe_install(m_name, dl_url)
+            if ok:
                 await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
             else:
                 await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
@@ -1856,16 +1729,12 @@ class Vector(loader.Module):
         log.info("vecupdate: hashes differ, proceeding with install")
         await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
 
-        log.info("vecupdate: calling _safe_install")
-        res, _ = await self._safe_install(m_name, dl_url, notify=False)
-        if res == -1:
-            log.error("vecupdate: _safe_install returned -1 (no loader)")
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
-        if res == 1:
+        ok = await self._safe_install(m_name, dl_url)
+        if ok:
             log.info("vecupdate: install successful")
             await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
-            log.warning("vecupdate: install failed, res=%s", res)
+            log.warning("vecupdate: install failed")
             await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
     async def _vecupdate_force(self, call: Any, dl_url: str):
@@ -1873,12 +1742,12 @@ class Vector(loader.Module):
         with suppress(Exception):
             await call.answer()
         await call.edit(f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
-        res, _ = await self._safe_install("Vector", dl_url, notify=False)
-        if res == 1:
+        ok = await self._safe_install("Vector", dl_url)
+        if ok:
             log.info("_vecupdate_force: force install successful")
             await call.edit(f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
-            log.warning("_vecupdate_force: force install failed, res=%s", res)
+            log.warning("_vecupdate_force: force install failed")
             await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
     def _hash_module_source(self, mod_instance: Any) -> str | None:
@@ -1990,18 +1859,11 @@ class Vector(loader.Module):
         for mod in modules:
             dl_url = mod.get("source_download_url") or mod.get("source_raw_url") or f"{apirt}/modules/{quote(str(mod.get('source_owner', 'unknown')), safe='')}/{quote((mod.get('name') or ''), safe='')}/source"
             m_name = mod.get("name", "?")
-            res, errors = await self._safe_install(m_name, dl_url, notify=False)
-            if res == 1:
+            ok_flag = await self._safe_install(m_name, dl_url)
+            if ok_flag:
                 ok += 1
             else:
-                err_text = "unknown"
-                if errors:
-                    err_text = errors[0].get("type", "unknown")
-                elif res == -1:
-                    err_text = self.strings("v_install_fail_not_found")
-                else:
-                    err_text = self.strings("v_dl_err")
-                failed.append(self.strings('v_dlcoll_fail_item').format(name=utils.escape_html(m_name), reason=err_text))
+                failed.append(self.strings('v_dlcoll_fail_item').format(name=utils.escape_html(m_name), reason=self.strings("v_dl_err")))
             await asyncio.sleep(2)
 
         if ok == len(modules):
@@ -2135,13 +1997,9 @@ class Vector(loader.Module):
             if action == "install":
                 log.info("vector_install_payload_watcher: install action for %s/%s", owner, module_name)
                 dl_url = f"{apirt}/modules/{quote(owner, safe='')}/{quote(module_name, safe='')}/source"
-                res, _ = await self._safe_install(module_name, dl_url, notify=False)
-                if res == -1:
-                    log.error("vector_install_payload_watcher: install failed (no loader)")
-                    await send_feedback("error")
-                else:
-                    log.info("vector_install_payload_watcher: install result=%s", res)
-                    await send_feedback("ok" if res == 1 else "error")
+                ok = await self._safe_install(module_name, dl_url)
+                log.info("vector_install_payload_watcher: install result=%s", ok)
+                await send_feedback("ok" if ok else "error")
                 return
 
             if action == "update":
@@ -2157,13 +2015,9 @@ class Vector(loader.Module):
                     await send_feedback("error", "invalid module data")
                     return
                 dl_url = f"{apirt}/modules/{quote(mod_owner, safe='')}/{quote(mod_name, safe='')}/source"
-                res, _ = await self._safe_install(mod_name, dl_url, notify=False)
-                if res == -1:
-                    log.error("vector_install_payload_watcher: update install failed (no loader)")
-                    await send_feedback("error")
-                else:
-                    log.info("vector_install_payload_watcher: update result=%s", res)
-                    await send_feedback("ok" if res == 1 else "error")
+                ok = await self._safe_install(mod_name, dl_url)
+                log.info("vector_install_payload_watcher: update result=%s", ok)
+                await send_feedback("ok" if ok else "error")
                 return
 
             log.info("vector_install_payload_watcher: rate action %s for %s/%s", action, owner, module_name)
@@ -2315,20 +2169,9 @@ class Vector(loader.Module):
             return
 
         dl_url = f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"
-        log.debug("cb_install: dl_url=%s", dl_url)
-        res, errors = await self._safe_install(m_name, dl_url)
-        log.info("cb_install: result=%s errors=%d", res, len(errors) if errors else 0)
-        if res == -1:
-            with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
-            return
-        if res == 1:
-            with suppress(Exception): await cb.answer(self.strings["v_dl_ok"], show_alert=True)
-            return
-
-        if errors:
-            with suppress(Exception): await cb.answer(self._fmt_install_alert(errors)[:200], show_alert=True)
-        else:
-            with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
+        ok = await self._safe_install(m_name, dl_url)
+        key = "v_dl_ok" if ok else "v_dl_err"
+        with suppress(Exception): await cb.answer(self.strings[key], show_alert=True)
 
     async def cb_sec_check(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, expanded: bool = False):
         log.info("cb_sec_check: name=%s", m_name)
