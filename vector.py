@@ -1376,8 +1376,8 @@ class Vector(loader.Module):
             self.set("auth_token", new_jwt)
             self.bannote = ""
             log.info("_get_active_token: new token obtained")
-        elif bn:
-            self.bannote = bn
+        elif ban_notice:
+            self.bannote = ban_notice
             log.warning("_get_active_token: user banned")
         else:
             log.warning("_get_active_token: no token obtained")
