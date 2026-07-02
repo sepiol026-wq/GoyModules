@@ -1214,6 +1214,7 @@ class Vector(loader.Module):
                 return await r.json(content_type=None)
         except Exception as e:
             log.warning("HTTP request failed method=%s path=%s error=%r", method, path, e)
+            self.httpc = -1
             return None
 
     def _normalize_module(self, raw: dict) -> dict:
@@ -1607,7 +1608,7 @@ class Vector(loader.Module):
             log.info("_token_keeper: refreshing token")
             await self._get_active_token(force=True)
 
-    async def _run_search(self, q: str, lang_sfx: str = "") -> Any:
+    async def _run_search(self, q: str, lang_sfx: str = "", _retried: bool = False) -> Any:
         token = await self._get_active_token()
         if not token:
             log.warning("_run_search: no token")
@@ -1616,12 +1617,23 @@ class Vector(loader.Module):
         log.info("_run_search: q=%r token=%s", q, bool(token))
         raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"]), "lang": lang_sfx})
 
+        if raw_res is None and self.httpc != 401:
+            if not _retried:
+                log.warning("_run_search: first attempt failed (httpc=%s), retrying", self.httpc)
+                return await self._run_search(q, lang_sfx, _retried=True)
+            log.error("_run_search: retry also failed, httpc=%s", self.httpc)
+            return None, True
+
         if self.httpc == 401:
             log.info("_run_search: got 401, forcing token refresh")
             token = await self._get_active_token(force=True)
             if not token:
                 return [], False
             raw_res = await self._net_req("GET", "/api/search", token=token, params={"q": q, "limit": str(self.config["limit"]), "lang": lang_sfx})
+
+        if raw_res is None and self.httpc != 401:
+            log.error("_run_search: API error after token refresh, httpc=%s", self.httpc)
+            return None, True
 
         m_list = []
         if isinstance(raw_res, dict):
@@ -1644,6 +1656,9 @@ class Vector(loader.Module):
         if not token_ok:
             log.warning("vectorcmd: no token")
             await utils.answer(target, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+        elif m_list is None:
+            log.error("vectorcmd: API unreachable")
+            await utils.answer(target, f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
         elif not m_list:
             log.debug("vectorcmd: no results")
             await utils.answer(target, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
