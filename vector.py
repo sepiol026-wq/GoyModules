@@ -1116,6 +1116,32 @@ class Vector(loader.Module):
 
         return "\n".join(lines)
 
+    def _fmt_install_alert(self, errors: List[Dict[str, str]]) -> str:
+        if not errors:
+            return self.strings["v_dl_err"]
+        seen = set()
+        lines = []
+        for err in errors:
+            key = err["type"]
+            if key in seen:
+                continue
+            seen.add(key)
+            detail = err["detail"]
+            str_key = f"v_install_fail_{key}"
+            fmt = self.strings.get(str_key)
+            if fmt:
+                clean = re.sub(r"<[^>]+>", "", fmt)
+                if detail:
+                    try:
+                        lines.append(clean.format(detail=detail))
+                    except (KeyError, ValueError):
+                        lines.append(clean)
+                else:
+                    lines.append(clean.rstrip(": "))
+            else:
+                lines.append(detail or err["raw"][:100])
+        return "\n".join(lines[:3])
+
     async def _safe_install(self, m_name: str, dl_url: str, *, notify: bool = True) -> tuple:
         log.debug("_safe_install: module=%s url=%s notify=%s", m_name, dl_url, notify)
         ldr = self.lookup("Loader")
@@ -2300,8 +2326,7 @@ class Vector(loader.Module):
             return
 
         if errors:
-            err_text = self._fmt_install_errors(m_name, errors)
-            with suppress(Exception): await cb.answer(err_text[:200], show_alert=True)
+            with suppress(Exception): await cb.answer(self._fmt_install_alert(errors)[:200], show_alert=True)
         else:
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
 
