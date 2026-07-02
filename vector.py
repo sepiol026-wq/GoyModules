@@ -1039,9 +1039,11 @@ class Vector(loader.Module):
 
     _ierrs = [
         ("forbidden", re.compile(r"uses forbidden method:\s*(.+)")),
+        ("requirements", re.compile(r"Pip requirements install failed")),
         ("requirements", re.compile(r"requirements.*failed to install:\s*(.+)", re.DOTALL)),
-        ("dependency", re.compile(r"requires missing dependency\s+(.+)")),
-        ("packages", re.compile(r"system packages.*failed to install:\s*(.+)", re.DOTALL)),
+        ("dependency", re.compile(r"(?:still )?requires?(?: missing)? dependency\s+(.+)", re.DOTALL)),
+        ("dependency", re.compile(r"dependency installation failed:\s*(.+)")),
+        ("packages", re.compile(r"(?:System package|Can't install system|system packages)")),
         ("core_overwrite", re.compile(r"tried to overwrite core\s+(\S+)\s+(\S+)")),
         ("ffmpeg", re.compile(r"requires ffmpeg")),
         ("inline", re.compile(r"requires inline mode")),
