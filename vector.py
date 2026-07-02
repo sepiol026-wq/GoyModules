@@ -1038,18 +1038,19 @@ class Vector(loader.Module):
     }
 
     _ierrs = [
-        ("forbidden", re.compile(r"uses forbidden method:\s*(.+)")),
+        ("forbidden", re.compile(r"(?:uses forbidden method|failed(?: during ready)? security checks)")),
         ("requirements", re.compile(r"Pip requirements install failed")),
-        ("requirements", re.compile(r"requirements.*failed to install:\s*(.+)", re.DOTALL)),
-        ("dependency", re.compile(r"(?:still )?requires?(?: missing)? dependency\s+(.+)", re.DOTALL)),
-        ("dependency", re.compile(r"dependency installation failed:\s*(.+)")),
-        ("packages", re.compile(r"(?:System package|Can't install system|system packages)")),
-        ("core_overwrite", re.compile(r"tried to overwrite core\s+(\S+)\s+(\S+)")),
+        ("requirements", re.compile(r"requirements.*failed to install", re.DOTALL)),
+        ("dependency", re.compile(r"(?:still )?requires?(?: missing)? dependency", re.DOTALL)),
+        ("dependency", re.compile(r"dependency installation failed")),
+        ("packages", re.compile(r"(?:System package|Can't install system|system packages|install_packages)")),
+        ("core_overwrite", re.compile(r"tried to overwrite core")),
         ("ffmpeg", re.compile(r"requires ffmpeg")),
         ("inline", re.compile(r"requires inline mode")),
-        ("heroku_min", re.compile(r"requires Heroku\s+(\S+),\s*current version is\s+(\S+)")),
+        ("heroku_min", re.compile(r"requires Heroku")),
         ("not_found", re.compile(r"was not found in configured repos")),
-        ("download", re.compile(r"Failed to download module")),
+        ("download", re.compile(r"Failed to (?:install external|download) module")),
+        ("unknown", re.compile(r"(?:Module threw|Loading external module failed)")),
     ]
 
     class _ILog(logging.Handler):
@@ -1071,11 +1072,12 @@ class Vector(loader.Module):
                 m = pattern.search(msg)
                 if m:
                     if err_type == "core_overwrite":
-                        detail = f"{m.group(1)}.{m.group(2)}"
+                        detail = f"{m.group(1)}.{m.group(2)}" if m.lastindex >= 2 else ""
                     elif err_type == "heroku_min":
-                        detail = f"{m.group(1)} (current: {m.group(2)})"
+                        detail = f"{m.group(1)} (current: {m.group(2)})" if m.lastindex >= 2 else ""
                     elif m.lastindex:
-                        detail = m.group(1).strip()
+                        d = m.group(1).strip()
+                        detail = re.sub(r"[\[\]'\"]", "", d).strip() if d else ""
                     else:
                         detail = ""
                     errors.append({"type": err_type, "detail": detail, "raw": msg})
@@ -1102,7 +1104,11 @@ class Vector(loader.Module):
             fmt = self.strings.get(str_key)
             if fmt:
                 try:
-                    lines.append(f"{self.ICONS['warn']} {fmt.format(detail=detail)}")
+                    if detail:
+                        lines.append(f"{self.ICONS['warn']} {fmt.format(detail=detail)}")
+                    else:
+                        clean = re.sub(r"<[^>]+>", "", fmt).rstrip(": ")
+                        lines.append(f"{self.ICONS['warn']} {clean}")
                 except (KeyError, ValueError):
                     lines.append(f"{self.ICONS['warn']} {fmt}")
             else:
@@ -2294,9 +2300,8 @@ class Vector(loader.Module):
             return
 
         if errors:
-            item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": dl_url}
             err_text = self._fmt_install_errors(m_name, errors)
-            await utils.answer(cb, err_text, reply_markup=self._build_kbd(item, i, group, q), photo=item.get("banner"))
+            with suppress(Exception): await cb.answer(err_text[:200], show_alert=True)
         else:
             with suppress(Exception): await cb.answer(self.strings["v_dl_err"], show_alert=True)
 
