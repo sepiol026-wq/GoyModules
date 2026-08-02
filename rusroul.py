@@ -15,6 +15,7 @@
 # ====================================================================================================================
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/rusroul.png
 # meta developer: @GoyModules
+# meta tags: rusroul, рулетка, deleteacc, account-delete, удаление-аккаунта, русская-рулетка
 
 __version__ = (1, 0, 0)
 
