@@ -1017,7 +1017,7 @@ class Vector(loader.Module):
     }
 
     def _detect_lang_suffix(self) -> str:
-        return self.db.get("heroku.translations", "lang")
+        return self.db.get("heroku.translations", "lang") or "en"
 
 
     ICONS = {
