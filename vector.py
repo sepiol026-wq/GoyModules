@@ -2318,7 +2318,7 @@ class Vector(loader.Module):
         if res.get("check"):
             self.seccache[m_name] = res
             log.debug("cb_sec_check: cached result for %s", m_name)
-        await utils.answer(cb, self._fmt_sec(m_name, res), reply_markup=_get_sec_kb(bool(res.get("checked")), res))
+        await utils.answer(cb, self._fmt_sec(m_name, res), reply_markup=_get_sec_kb(bool(res.get("check")), res))
 
     async def cb_sec_run(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, expanded: bool = False):
         log.info("cb_sec_run: name=%s", m_name)
