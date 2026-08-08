@@ -18,7 +18,7 @@
 # meta developer: @GoyModules
 # meta tags: module-catalog, search, reviews, ratings, comments, heroku, каталог-модулей, поиск, отзывы, рейтинги, комментарии, хероку
 
-__version__ = (2, 4, 3)
+__version__ = (2, 4, 4)
 
 import asyncio
 import base64
@@ -30,6 +30,7 @@ import re
 import time
 import unicodedata
 from contextlib import suppress
+from email.utils import parsedate_to_datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote, urljoin
 
@@ -56,7 +57,6 @@ btrx = re.compile(r"(?:Срок|Term|期間|Dauer|73rm|Tewm):\s*(.+)", re.IGNORE
 class Vector(loader.Module):
 
     strings = {
-        "lang": "en",
         "name": "Vector",
         "_cls_doc": "Search modules for Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Author:",
@@ -163,7 +163,6 @@ class Vector(loader.Module):
     }
 
     strings_ru = {
-        "lang": "ru",
         "_cls_doc": "Поиск модулей для Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Автор:",
         "v_dev_str": "Разраб:",
@@ -269,7 +268,6 @@ class Vector(loader.Module):
     }
 
     strings_jp = {
-        "lang": "jp",
         "_cls_doc": "Heroku用モジュール検索。\nhttps://www.0xvector.lol",
         "v_dev_lbl": "作成者:",
         "v_dev_str": "開発:",
@@ -375,7 +373,6 @@ class Vector(loader.Module):
     }
 
     strings_ua = {
-        "lang": "ua",
         "_cls_doc": "Пошук модулів для Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Автор:",
         "v_dev_str": "Розроб:",
@@ -481,7 +478,6 @@ class Vector(loader.Module):
     }
 
     strings_de = {
-        "lang": "de",
         "_cls_doc": "Modulsuche für Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Autor:",
         "v_dev_str": "Entwickler:",
@@ -587,7 +583,6 @@ class Vector(loader.Module):
     }
 
     strings_neofit = {
-        "lang": "neofit",
         "_cls_doc": "Search modules for Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "by",
         "v_dev_str": "dev",
@@ -692,7 +687,6 @@ class Vector(loader.Module):
         "v_miniapp_btn": "🚀 Launch",
     }
     strings_tiktok = {
-        "lang": "tiktok",
         "_cls_doc": "Темка для поиска модулей для Heroku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Кодер:",
         "v_dev_str": "дев:",
@@ -798,7 +792,6 @@ class Vector(loader.Module):
     }
 
     strings_leet = {
-        "lang": "leet",
         "_cls_doc": "S34rch m0dul3s f0r H3r0ku.\nhttps://www.0xvector.lol",
         "v_dev_lbl": "4u7h0r:",
         "v_dev_str": "d3v:",
@@ -904,7 +897,6 @@ class Vector(loader.Module):
     }
 
     strings_uwu = {
-        "lang": "uwu",
         "_cls_doc": "Sweawch moduwes fow Hewoku >w<\nhttps://www.0xvector.lol",
         "v_dev_lbl": "Authow:",
         "v_dev_str": "dev:",
@@ -1010,31 +1002,27 @@ class Vector(loader.Module):
     }
 
     def _detect_lang_suffix(self) -> str:
-        variants = {"en", "ru", "jp", "ua", "de", "neofit", "tiktok", "leet", "uwu"}
-        lang = str(self.strings.get("lang", "en")).strip().lower()
-        result = lang if lang in variants else "en"
-        log.debug("_detect_lang_suffix: raw=%r -> %s", lang, result)
-        return result
+        return self.db.get("heroku.translations", "lang")
 
 
     ICONS = {
-        "search": '<tg-emoji emoji-id="5447459604524971717">🔎</tg-emoji>',
-        "error": '<tg-emoji emoji-id="5388785832956016892">❌</tg-emoji>',
-        "warn": '<tg-emoji emoji-id="5881702736843511327">⚠️</tg-emoji>',
-        "description": '<tg-emoji emoji-id="6008090211181923982">📝</tg-emoji>',
-        "command": '<tg-emoji emoji-id="5877260593903177342">⚙</tg-emoji>',
-        "dependency": '<tg-emoji emoji-id="5325732612084351248">📦</tg-emoji>',
-        "module": '<tg-emoji emoji-id="5924720918826848520">📦</tg-emoji>',
-        "modules_list": '<tg-emoji emoji-id="5883973610606956186">🗂</tg-emoji>',
-        "shield": '<tg-emoji emoji-id="5926783847453692661">🛡</tg-emoji>',
-        "safe": '<tg-emoji emoji-id="5776375003280838798">✅</tg-emoji>',
-        "stats": '<tg-emoji emoji-id="5877485980901971030">📊</tg-emoji>',
-        "quota": '<tg-emoji emoji-id="6311858554944888333">⌚️</tg-emoji>',
-        "verified": '<tg-emoji emoji-id="5958376256788502078">⭐️</tg-emoji>',
-        "comments": '<tg-emoji emoji-id="5886666250158870040">💬</tg-emoji>',
+        "search": '<emoji document_id="5447459604524971717">🔎</emoji>',
+        "error": '<emoji document_id="5388785832956016892">❌</emoji>',
+        "warn": '<emoji document_id="5881702736843511327">⚠️</emoji>',
+        "description": '<emoji document_id="6008090211181923982">📝</emoji>',
+        "command": '<emoji document_id="5877260593903177342">⚙</emoji>',
+        "dependency": '<emoji document_id="5325732612084351248">📦</emoji>',
+        "module": '<emoji document_id="5924720918826848520">📦</emoji>',
+        "modules_list": '<emoji document_id="5883973610606956186">🗂</emoji>',
+        "shield": '<emoji document_id="5926783847453692661">🛡</emoji>',
+        "safe": '<emoji document_id="5776375003280838798">✅</emoji>',
+        "stats": '<emoji document_id="5877485980901971030">📊</emoji>',
+        "quota": '<emoji document_id="6311858554944888333">⌚️</emoji>',
+        "verified": '<emoji document_id="5958376256788502078">⭐️</emoji>',
+        "comments": '<emoji document_id="5886666250158870040">💬</emoji>',
         "reply": "↳",
-        "broken": '<tg-emoji emoji-id="5877260593903177342">💥</tg-emoji>',
-        "tag": '<tg-emoji emoji-id="5985433648810171091">🏷</tg-emoji>',
+        "broken": '<emoji document_id="5877260593903177342">💥</emoji>',
+        "tag": '<emoji document_id="5985433648810171091">🏷</emoji>',
     }
 
     async def _safe_install(self, m_name: str, dl_url: str) -> bool:
@@ -1086,15 +1074,17 @@ class Vector(loader.Module):
         self.httpc = 0
         self.bannote = ""
         self.btid = 0
-        self._list_pg = 0
-        self._expanded = False
+        self._time_offset = 0.0
+        self._usr_state: Dict[int, dict] = {}
+
+    def _st(self, uid: int) -> dict:
+        return self._usr_state.setdefault(uid, {"pg": 0, "exp": False})
+
 
     async def client_ready(self, client: "herokutl.TelegramClient", database: "loader.Database") -> None:
         self.client = client
         self.database = database
         self.http = aiohttp.ClientSession()
-        asyncio.ensure_future(self._token_keeper())
-        asyncio.ensure_future(self._sync_modules_keeper())
         log.info("Vector Module Monolith Started")
 
     async def on_unload(self) -> None:
@@ -1115,19 +1105,35 @@ class Vector(loader.Module):
             headers["Authorization"] = f"Bearer {token}"
 
         self.httpc = 0
+        t0 = time.time()
         try:
             async with self.http.request(method, url, params=params, json=json_data, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as r:
+                t1 = time.time()
                 self.httpc = r.status
                 log.debug("HTTP %s %s -> %s", method, path, r.status)
+                self._sync_server_time(r.headers.get("Date"), t0, t1)
                 if r.status >= 300:
-                    return None
+                    return
                 if as_bytes:
                     return await r.read()
                 return await r.json(content_type=None)
         except Exception as e:
             log.warning("HTTP request failed method=%s path=%s error=%r", method, path, e)
             self.httpc = -1
-            return None
+            return
+
+    def _sync_server_time(self, date_header: Optional[str], t0: float, t1: float) -> None:
+        if not date_header:
+            return
+        with suppress(Exception):
+            srv_ts = parsedate_to_datetime(date_header).timestamp()
+            rtt_half = max(0.0, (t1 - t0) / 2)
+            self._time_offset = (srv_ts + rtt_half) - t1
+            log.debug("_sync_server_time: offset=%.3fs (rtt_half=%.3fs)", self._time_offset, rtt_half)
+
+    def _now(self) -> float:
+        return time.time() + self._time_offset
+
 
     def _normalize_module(self, raw: dict) -> dict:
         log.debug("_normalize_module: name=%s version=%s", raw.get("name", "?"), raw.get("version", "?"))
@@ -1234,7 +1240,7 @@ class Vector(loader.Module):
         cached = self.get("auth_token")
         if cached:
             payload = self._parse_jwt(cached)
-            if payload.get("exp", 0) - time.time() > 60:
+            if payload.get("exp", 0) - self._now() > 60:
                 log.debug("_get_active_token: cached token valid, exp=%s", payload.get("exp"))
                 return cached
             log.debug("_get_active_token: cached token expired or expiring")
@@ -1262,7 +1268,7 @@ class Vector(loader.Module):
         new_jwt = ""
         ban_notice = ""
         for attempt in range(2):
-            b_stamp = int(time.time() // 10) - attempt
+            b_stamp = int(self._now() // 10) - attempt
             cmd_hash = hashlib.sha256(f"vector-token-v2|{uid}|{b_stamp}|{auths}".encode()).hexdigest()[:32]
             cmd_str = f"/{cmd_hash}"
 
@@ -1483,7 +1489,7 @@ class Vector(loader.Module):
             [
                 {"text": self.strings["v_btn_copy"], "copy": search_phrase},
                 {"text": self.strings["v_btn_dl"], "callback": self.cb_install, "args": (m_owner, m_name, idx, group, search_phrase)},
-                {"text": self.strings["v_btn_code"], "url": item.get("source_url")},
+                {"text": self.strings["v_btn_code"], "url": item.get("source_url") or f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"},
             ],
             [
                 {"text": f"👍 {item.get('likes', 0)}", "callback": self.cb_rate, "args": (m_owner, m_name, "like", idx, group, search_phrase)},
@@ -1514,11 +1520,11 @@ class Vector(loader.Module):
             
         return kbd
 
+    @loader.loop(20 * 3600, autostart=True)
     async def _token_keeper(self) -> None:
-        while True:
-            await asyncio.sleep(20 * 3600)
-            log.info("_token_keeper: refreshing token")
-            await self._get_active_token(force=True)
+        log.info("_token_keeper: refreshing token")
+        await self._get_active_token(force=True)
+        
 
     async def _run_search(self, q: str, lang_sfx: str = "", _retried: bool = False) -> Any:
         token = await self._get_active_token()
@@ -1556,14 +1562,6 @@ class Vector(loader.Module):
         log.info("_run_search: %d results", len(m_list))
         return m_list, True
 
-    async def _show_result_form(self, target: Any, m_list: list, q: str) -> None:
-        item = m_list[0]
-        self._list_pg = 0
-        self._expanded = False
-        kbd = self._build_kbd(item, 0, m_list, q)
-        text = self._build_html(item, 1, len(m_list))
-        await self.inline.form(text, target, reply_markup=kbd, photo=item.get("banner"), silent=True)
-
     async def _show_search_fail(self, target: Any, m_list: list, token_ok: bool, q: str) -> None:
         if not token_ok:
             log.warning("vectorcmd: no token")
@@ -1591,24 +1589,12 @@ class Vector(loader.Module):
         log.info("vectorcmd: query=%r", q)
         if not q:
             log.debug("vectorcmd: empty query, aborting")
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}')}</code></b>")
+            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}</code>')}</b>")
         if len(q) > 120:
             return await utils.answer(msg, f"{self.ICONS['warn']} <b>{self.strings['v_err_len']}</b>")
 
         lang_sfx = self._detect_lang_suffix()
-        search_task = asyncio.ensure_future(self._run_search(q, lang_sfx))
-        log.debug("vectorcmd: search launched, racing with form")
 
-        await asyncio.sleep(0.05)
-
-        if search_task.done():
-            log.info("vectorcmd: search beat form, sending result directly")
-            m_list, token_ok = search_task.result()
-            if not token_ok or not m_list:
-                return await self._show_search_fail(msg, m_list, token_ok, q)
-            return await self._show_result_form(msg, m_list, q)
-
-        log.debug("vectorcmd: form won race, sending loading")
         form = await self.inline.form(
             f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>",
             msg,
@@ -1616,15 +1602,17 @@ class Vector(loader.Module):
             photo="https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vsearch.png",
             silent=True
         )
-        log.debug("vectorcmd: loading form sent, awaiting search")
+        log.debug("vectorcmd: loading form sent, searching")
 
-        m_list, token_ok = await search_task
+        m_list, token_ok = await self._run_search(q, lang_sfx)
         if not token_ok or not m_list:
             return await self._show_search_fail(form, m_list, token_ok, q)
 
         item = m_list[0]
-        self._list_pg = 0
-        self._expanded = False
+        uid = getattr(msg, "sender_id", None) or getattr(getattr(msg, "sender", None), "id", None) or 0
+        st = self._st(uid)
+        st["pg"] = 0
+        st["exp"] = False
         kbd = self._build_kbd(item, 0, m_list, q)
         text = self._build_html(item, 1, len(m_list))
         await utils.answer(form, text, reply_markup=kbd, photo=item.get("banner"))
@@ -1750,16 +1738,16 @@ class Vector(loader.Module):
             log.warning("_vecupdate_force: force install failed")
             await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
 
-    def _hash_module_source(self, mod_instance: Any) -> str | None:
+    def _hash_module_source(self, mod_instance: Any) -> Optional[str]:
         try:
             import inspect, sys
             mod = sys.modules.get(mod_instance.__class__.__module__)
             if not mod:
-                return None
+                return
             src = inspect.getsource(mod)
             return hashlib.sha256(src.encode("utf-8")).hexdigest()
         except Exception:
-            return None
+            return
 
     async def _sync_installed_modules(self) -> bool:
         token = await self._get_active_token()
@@ -1781,18 +1769,15 @@ class Vector(loader.Module):
         res = await self._net_req("PUT", "/api/users/me/modules", token=token, json_data={"modules": modules_data})
         return bool(res and res.get("ok"))
 
+    @loader.loop(86_400, autostart=True)
     async def _sync_modules_keeper(self) -> None:
-        first_run = True
-        while True:
-            if not first_run:
-                await asyncio.sleep(86_400)
-            first_run = False
-            if not self.config.get("auto_update_notify", True):
-                continue
-            try:
-                await self._sync_installed_modules()
-            except Exception:
-                pass
+        if not self.config.get("auto_update_notify", True):
+            return
+        try:
+            await self._sync_installed_modules()
+        except Exception:
+            pass
+
 
     @loader.command(
         en_doc="<slug or URL> — download and install entire module collection from Vector.",
@@ -1810,7 +1795,7 @@ class Vector(loader.Module):
         slug = raw_arg.split("/collections/")[-1].split("/")[0].split("?")[0] if "/collections/" in raw_arg else raw_arg
         log.info("vecdl: raw=%r slug=%r", raw_arg, slug)
         if not slug:
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>Specify collection: </b><code>{self.get_prefix()}vecdl {'<slug or URL>'}</code>")
+            return await utils.answer(msg, f"{self.ICONS['error']} {self.strings['v_vecdl_usage'].format(p=self.get_prefix())}")
 
         token = await self._get_active_token()
         if not token:
@@ -1863,7 +1848,7 @@ class Vector(loader.Module):
             if ok_flag:
                 ok += 1
             else:
-                failed.append(self.strings('v_dlcoll_fail_item').format(name=utils.escape_html(m_name), reason=self.strings("v_dl_err")))
+                failed.append(self.strings['v_dlcoll_fail_item'].format(name=utils.escape_html(m_name), reason=self.strings("v_dl_err")))
             await asyncio.sleep(2)
 
         if ok == len(modules):
@@ -1908,13 +1893,13 @@ class Vector(loader.Module):
         saved_notify = None
         notify_peer = None
         with suppress(Exception):
-            peer = await self._client.get_input_entity(msg.chat_id)
+            peer = await self.client.get_input_entity(msg.chat_id)
             notify_peer = InputNotifyPeer(peer=peer)
         if notify_peer is not None:
             with suppress(Exception):
-                saved_notify = await self._client(GetNotifySettingsRequest(notify_peer))
+                saved_notify = await self.client(GetNotifySettingsRequest(notify_peer))
             with suppress(Exception):
-                await self._client(UpdateNotifySettingsRequest(
+                await self.client(UpdateNotifySettingsRequest(
                     peer=notify_peer,
                     settings=InputPeerNotifySettings(mute_until=2**31 - 1)
                 ))
@@ -1922,7 +1907,7 @@ class Vector(loader.Module):
             if text == lping:
                 log.debug("vector_install_payload_watcher: lang ping received")
                 with suppress(Exception):
-                    await self._client.send_message(msg.chat_id, f"{lpong}{self._detect_lang_suffix()}")
+                    await self.client.send_message(msg.chat_id, f"{lpong}{self._detect_lang_suffix()}")
                 with suppress(Exception):
                     await msg.delete()
                 return
@@ -1949,7 +1934,7 @@ class Vector(loader.Module):
                 return
 
             ts = int(ts_raw)
-            now = int(time.time())
+            now = int(self._now())
             if abs(now - ts) > 60:
                 return
 
@@ -1966,7 +1951,7 @@ class Vector(loader.Module):
                 await msg.delete()
 
             async def send_feedback(status: str, reason: str = "", banned_until: str = "") -> None:
-                feedback_ts = int(time.time())
+                feedback_ts = int(self._now())
                 safe_reason = (reason or "").replace(":", " ").strip()
                 safe_until = (banned_until or "").replace(":", " ").strip()
                 feedback_payload = f"{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}"
@@ -1976,17 +1961,19 @@ class Vector(loader.Module):
                     hashlib.sha256,
                 ).hexdigest()
                 with suppress(Exception):
-                    await self._client.send_message(
+                    await self.client.send_message(
                         msg.chat_id,
                         f"#v_feedback:{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}:{feedback_signature}",
                     )
                 with suppress(Exception):
-                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as _s:
-                        await _s.post(
-                            f"{apirt}/api/tg-bot/install-feedback",
-                            json={"owner_module": owner_module, "status": status, "reason": safe_reason},
-                            headers={"content-type": "application/json", "x-bot-secret": auths},
-                        )
+                    if not self.http or self.http.closed:
+                        self.http = aiohttp.ClientSession()
+                    await self.http.post(
+                        f"{apirt}/api/tg-bot/install-feedback",
+                        json={"owner_module": owner_module, "status": status, "reason": safe_reason},
+                        headers={"content-type": "application/json", "x-bot-secret": auths},
+                        timeout=aiohttp.ClientTimeout(total=5),
+                    )
 
             token = await self._get_active_token()
             if not token:
@@ -2031,7 +2018,7 @@ class Vector(loader.Module):
         finally:
             if notify_peer is not None:
                 with suppress(Exception):
-                    await self._client(UpdateNotifySettingsRequest(
+                    await self.client(UpdateNotifySettingsRequest(
                         peer=notify_peer,
                         settings=InputPeerNotifySettings(
                             mute_until=getattr(saved_notify, 'mute_until', 0) if saved_notify is not None else 0,
@@ -2072,9 +2059,11 @@ class Vector(loader.Module):
         with suppress(Exception): await cb.answer()
 
     async def cb_nav(self, cb: Any, target_i: int, group: list, q: str, expanded: Optional[bool] = None, comments_pg: int = 0):
+        uid = getattr(cb, "from_user", None) and cb.from_user.id or 0
+        st = self._st(uid)
         if expanded is None:
-            expanded = getattr(self, '_expanded', False)
-        self._expanded = expanded
+            expanded = st["exp"]
+        st["exp"] = expanded
         log.debug("cb_nav: target_i=%d group_len=%d expanded=%s", target_i, len(group) if group else 0, expanded)
         with suppress(Exception): await cb.answer()
         if 0 <= target_i < len(group):
@@ -2084,8 +2073,10 @@ class Vector(loader.Module):
     async def cb_list(self, cb: Any, curr_i: int, group: list, q: str):
         log.debug("cb_list: curr_i=%d group_len=%d", curr_i, len(group) if group else 0)
         with suppress(Exception): await cb.answer()
+        uid = getattr(cb, "from_user", None) and cb.from_user.id or 0
+        st = self._st(uid)
         total_pages = max(1, (len(group) + 4) // 5)
-        pg = self._list_pg % total_pages
+        pg = st["pg"] % total_pages
         start, end = pg * 5, min((pg + 1) * 5, len(group))
         kb = []
         for i in range(start, end):
@@ -2102,7 +2093,9 @@ class Vector(loader.Module):
         await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_page(self, cb: Any, pg: int, group: list, q: str, orig_i: int):
-        self._list_pg = pg
+        uid = getattr(cb, "from_user", None) and cb.from_user.id or 0
+        st = self._st(uid)
+        st["pg"] = pg
         log.debug("cb_page: pg=%d group_len=%d orig_i=%d", pg, len(group) if group else 0, orig_i)
         with suppress(Exception): await cb.answer()
         total_pages = max(1, (len(group) + 4) // 5)
@@ -2122,7 +2115,9 @@ class Vector(loader.Module):
         await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
-        self._expanded = exp
+        uid = getattr(cb, "from_user", None) and cb.from_user.id or 0
+        st = self._st(uid)
+        st["exp"] = exp
         log.debug("cb_toggle: name=%s idx=%d exp=%s", m_name, i, exp)
         with suppress(Exception): await cb.answer()
         item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
@@ -2296,7 +2291,6 @@ class Vector(loader.Module):
             
         kb = [[
             {"text": self.strings["v_btn_wrt"], "input": self.strings["v_rep_ask"], "handler": self.cb_post_comment, "args": (m_owner, m_name, i, group, q, pg, expanded)},
-        ], [
         ]]
 
         if total_pages > 1:
@@ -2372,7 +2366,7 @@ class Vector(loader.Module):
             raw_uname = r.get("author_username")
             uname = (str(raw_uname).strip() if raw_uname else "").lstrip("@")
             meta = [f"@{utils.escape_html(uname)}"] if uname else []
-            ts = str(r.get("created_at", "")).replace("T", " ").replace("Z", "").strip()
+            ts = str(r.get("created_at") or "").replace("T", " ").replace("Z", "").strip()
             if ts: meta.append(utils.escape_html(ts[:16]))
             meta_str = f" <i>{' · '.join(meta)}</i>" if meta else ""
             edit_mark = " *" if r.get("can_edit") else ""
@@ -2385,7 +2379,7 @@ class Vector(loader.Module):
                 raw_s_uname = s.get("author_username")
                 s_uname = (str(raw_s_uname).strip() if raw_s_uname else "").lstrip("@")
                 s_meta = [f"@{utils.escape_html(s_uname)}"] if s_uname else []
-                s_ts = str(s.get("created_at", "")).replace("T", " ").replace("Z", "").strip()
+                s_ts = str(s.get("created_at") or "").replace("T", " ").replace("Z", "").strip()
                 if s_ts: s_meta.append(utils.escape_html(s_ts[:16]))
                 s_meta_str = f" <i>{' · '.join(s_meta)}</i>" if s_meta else ""
                 s_edit_mark = " *" if s.get("can_edit") else ""
