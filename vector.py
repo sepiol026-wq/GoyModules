@@ -2294,10 +2294,7 @@ class Vector(loader.Module):
         def _get_sec_kb(has_run: bool, payload: dict = None):
             k = []
             if not has_run:
-                chk = (payload or {}).get("check") or {}
-                static = chk.get("details", {}).get("static", {})
-                if not (static.get("score", "?") == "?" and static.get("risk", "unknown") == "unknown"):
-                    k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q, expanded)}])
+                k.append([{"text": self.strings["v_btn_aud_run"], "callback": self.cb_sec_run, "args": (m_owner, m_name, i, group, q, expanded)}])
             k.append([{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}])
             k.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}])
             return k
