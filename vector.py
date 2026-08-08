@@ -6,7 +6,7 @@
 #  ╚██████╔╝╚██████╔╝   ██║   ██║ ╚═╝ ██║╚██████╔╝██████╔╝╚██████╔╝███████╗███████╗███████║
 #   ╚═════╝  ╚═════╝    ╚═╝   ╚═╝     ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝
 #
-#   OFFICIAL USERNAMES: @goymodules | @samsepi0l_ovf
+#   OFFICIAL USERNAMES: @GoyMods | @samsepi0l_ovf
 #   MODULE: vector
 #
 #   THIS MODULE IS LICENSED UNDER GNU AGPLv3, PROTECTED AGAINST UNAUTHORIZED COPYING/RESALE,
@@ -15,7 +15,7 @@
 # ====================================================================================================================
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta pic: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vecpic.png
-# meta developer: @GoyModules
+# meta developer: @GoyMods
 # meta tags: module-catalog, search, reviews, ratings, comments, heroku, каталог-модулей, поиск, отзывы, рейтинги, комментарии, хероку
 
 __version__ = (2, 4, 4)
