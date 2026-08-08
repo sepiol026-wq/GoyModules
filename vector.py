@@ -27,6 +27,8 @@ import hmac
 import json
 import logging
 import re
+import socket
+import struct
 import time
 import unicodedata
 from contextlib import suppress
@@ -52,6 +54,14 @@ lping = "#v_lang_ping"
 lpong = "#v_lang:"
 brrx = re.compile(r"(?:Причина|Reason|理由|Grund|R3450n|Weason|Charge):\s*(.+)", re.IGNORECASE)
 btrx = re.compile(r"(?:Срок|Term|期間|Dauer|73rm|Tewm):\s*(.+)", re.IGNORECASE)
+
+# Real-world UTC time sources, independent of any single Vector-owned host.
+# The auth bot that validates the v2 hash runs on its own dedicated VPS with its
+# own system clock, so syncing against apirt alone isn't reliable - we need a
+# neutral, well-synced reference (NTP first, HTTPS Date header as fallback).
+_ntp_hosts = ("time.cloudflare.com", "time.google.com", "pool.ntp.org")
+_ntp_epoch_delta = 2208988800  # seconds between the NTP epoch (1900) and Unix epoch (1970)
+_http_time_hosts = ("https://www.cloudflare.com", "https://www.google.com")
 
 @loader.tds
 class Vector(loader.Module):
@@ -1075,6 +1085,8 @@ class Vector(loader.Module):
         self.bannote = ""
         self.btid = 0
         self._time_offset = 0.0
+        self._time_offset_ts = 0.0
+        self._time_sync_lock: Optional[asyncio.Lock] = None
         self._usr_state: Dict[int, dict] = {}
 
     def _st(self, uid: int) -> dict:
@@ -1105,13 +1117,10 @@ class Vector(loader.Module):
             headers["Authorization"] = f"Bearer {token}"
 
         self.httpc = 0
-        t0 = time.time()
         try:
             async with self.http.request(method, url, params=params, json=json_data, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as r:
-                t1 = time.time()
                 self.httpc = r.status
                 log.debug("HTTP %s %s -> %s", method, path, r.status)
-                self._sync_server_time(r.headers.get("Date"), t0, t1)
                 if r.status >= 300:
                     return
                 if as_bytes:
@@ -1122,14 +1131,71 @@ class Vector(loader.Module):
             self.httpc = -1
             return
 
-    def _sync_server_time(self, date_header: Optional[str], t0: float, t1: float) -> None:
-        if not date_header:
-            return
-        with suppress(Exception):
-            srv_ts = parsedate_to_datetime(date_header).timestamp()
+    @staticmethod
+    def _ntp_query(host: str, timeout: float = 1.5) -> Optional[float]:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.settimeout(timeout)
+                req = b"\x1b" + 47 * b"\0"
+                t0 = time.time()
+                s.sendto(req, (host, 123))
+                resp, _ = s.recvfrom(48)
+                t1 = time.time()
+            if len(resp) < 48:
+                return None
+            secs, frac = struct.unpack("!II", resp[40:48])
+            srv_ts = (secs - _ntp_epoch_delta) + frac / 2**32
             rtt_half = max(0.0, (t1 - t0) / 2)
-            self._time_offset = (srv_ts + rtt_half) - t1
-            log.debug("_sync_server_time: offset=%.3fs (rtt_half=%.3fs)", self._time_offset, rtt_half)
+            return (srv_ts + rtt_half) - t1
+        except Exception:
+            return None
+
+    async def _sync_via_ntp(self) -> Optional[float]:
+        loop = asyncio.get_event_loop()
+        for host in _ntp_hosts:
+            offset = await loop.run_in_executor(None, self._ntp_query, host)
+            if offset is not None:
+                log.debug("_sync_via_ntp: host=%s offset=%.3fs", host, offset)
+                return offset
+        return None
+
+    async def _sync_via_https(self) -> Optional[float]:
+        if not self.http or self.http.closed:
+            self.http = aiohttp.ClientSession()
+        for url in _http_time_hosts:
+            with suppress(Exception):
+                t0 = time.time()
+                async with self.http.head(url, timeout=aiohttp.ClientTimeout(total=3)) as r:
+                    t1 = time.time()
+                    date_header = r.headers.get("Date")
+                if date_header:
+                    srv_ts = parsedate_to_datetime(date_header).timestamp()
+                    rtt_half = max(0.0, (t1 - t0) / 2)
+                    offset = (srv_ts + rtt_half) - t1
+                    log.debug("_sync_via_https: url=%s offset=%.3fs", url, offset)
+                    return offset
+        return None
+
+    async def _ensure_time_synced(self, max_age: float = 300.0, force: bool = False) -> None:
+        if not force and self._time_offset_ts and (time.time() - self._time_offset_ts) < max_age:
+            return
+        if self._time_sync_lock is None:
+            self._time_sync_lock = asyncio.Lock()
+        async with self._time_sync_lock:
+            if not force and self._time_offset_ts and (time.time() - self._time_offset_ts) < max_age:
+                return
+            source = "ntp"
+            offset = await self._sync_via_ntp()
+            if offset is None:
+                source = "https"
+                offset = await self._sync_via_https()
+            if offset is None:
+                log.warning("_ensure_time_synced: all external sources failed, keeping previous offset=%.3fs", self._time_offset)
+                self._time_offset_ts = time.time()
+                return
+            self._time_offset = offset
+            self._time_offset_ts = time.time()
+            log.info("_ensure_time_synced: offset=%.3fs source=%s", self._time_offset, source)
 
     def _now(self) -> float:
         return time.time() + self._time_offset
@@ -1236,7 +1302,9 @@ class Vector(loader.Module):
         if force:
             self.set("auth_token", None)
             log.debug("_get_active_token: auth_token cleared (force)")
-            
+
+        await self._ensure_time_synced()
+
         cached = self.get("auth_token")
         if cached:
             payload = self._parse_jwt(cached)
@@ -1933,6 +2001,7 @@ class Vector(loader.Module):
             if not ts_raw.isdigit():
                 return
 
+            await self._ensure_time_synced()
             ts = int(ts_raw)
             now = int(self._now())
             if abs(now - ts) > 60:
