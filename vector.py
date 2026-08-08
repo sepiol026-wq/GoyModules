@@ -6,7 +6,7 @@
 #  ╚██████╔╝╚██████╔╝   ██║   ██║ ╚═╝ ██║╚██████╔╝██████╔╝╚██████╔╝███████╗███████╗███████║
 #   ╚═════╝  ╚═════╝    ╚═╝   ╚═╝     ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝
 #
-#   OFFICIAL USERNAMES: @GoyMods | @samsepi0l_ovf
+#   OFFICIAL USERNAMES: @goymodules | @samsepi0l_ovf
 #   MODULE: vector
 #
 #   THIS MODULE IS LICENSED UNDER GNU AGPLv3, PROTECTED AGAINST UNAUTHORIZED COPYING/RESALE,
@@ -15,10 +15,10 @@
 # ====================================================================================================================
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta pic: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vecpic.png
-# meta developer: @GoyMods
+# meta developer: @GoyModules
 # meta tags: module-catalog, search, reviews, ratings, comments, heroku, каталог-модулей, поиск, отзывы, рейтинги, комментарии, хероку
 
-__version__ = (2, 4, 4)
+__version__ = (2, 4, 5)
 
 import asyncio
 import base64
@@ -55,12 +55,8 @@ lpong = "#v_lang:"
 brrx = re.compile(r"(?:Причина|Reason|理由|Grund|R3450n|Weason|Charge):\s*(.+)", re.IGNORECASE)
 btrx = re.compile(r"(?:Срок|Term|期間|Dauer|73rm|Tewm):\s*(.+)", re.IGNORECASE)
 
-# Real-world UTC time sources, independent of any single Vector-owned host.
-# The auth bot that validates the v2 hash runs on its own dedicated VPS with its
-# own system clock, so syncing against apirt alone isn't reliable - we need a
-# neutral, well-synced reference (NTP first, HTTPS Date header as fallback).
 _ntp_hosts = ("time.cloudflare.com", "time.google.com", "pool.ntp.org")
-_ntp_epoch_delta = 2208988800  # seconds between the NTP epoch (1900) and Unix epoch (1970)
+_ntp_epoch_delta = 2208988800
 _http_time_hosts = ("https://www.cloudflare.com", "https://www.google.com")
 
 @loader.tds
@@ -85,6 +81,7 @@ class Vector(loader.Module):
         "v_err_404": "No records for: {q}",
         "v_err_len": "Query length is limited to 120 chars.",
         "v_err_api": "Access denied by Vector Server.",
+        "v_token_fail": "❌ Failed to obtain a Vector access token. Please try again later.",
         "v_ban_notice": "⛔ <b>Vector access blocked.</b>\n<b>Reason:</b> <code>{reason}</code>\n<b>Term:</b> <code>{term}</code>",
         "v_fb_add": "Rated successfully!",
         "v_fb_rm": "Rating cleared!",
@@ -190,6 +187,7 @@ class Vector(loader.Module):
         "v_err_404": "Нет записей по запросу: {q}",
         "v_err_len": "Длина запроса ограничена 120 символами.",
         "v_err_api": "Отказ в доступе от сервера Vector.",
+        "v_token_fail": "❌ Не удалось получить токен доступа Vector. Попробуйте позже.",
         "v_ban_notice": "⛔ <b>Доступ к Vector заблокирован.</b>\n<b>Причина:</b> <code>{reason}</code>\n<b>Срок:</b> <code>{term}</code>",
         "v_fb_add": "Оценка добавлена!",
         "v_fb_rm": "Оценка удалена!",
@@ -295,6 +293,7 @@ class Vector(loader.Module):
         "v_err_404": "次のクエリの記録はありません: {q}",
         "v_err_len": "クエリの長さは120文字に制限されています。",
         "v_err_api": "Vectorサーバーによりアクセスが拒否されました。",
+        "v_token_fail": "❌ Vectorのアクセストークンを取得できませんでした。後でもう一度お試しください。",
         "v_ban_notice": "⛔ <b>Vectorへのアクセスはブロックされています。</b>\n<b>理由:</b> <code>{reason}</code>\n<b>期間:</b> <code>{term}</code>",
         "v_fb_add": "評価が追加されました！",
         "v_fb_rm": "評価がクリアされました！",
@@ -400,6 +399,7 @@ class Vector(loader.Module):
         "v_err_404": "Немає записів за запитом: {q}",
         "v_err_len": "Довжина запиту обмежена 120 символами.",
         "v_err_api": "Відмова в доступі від сервера Vector.",
+        "v_token_fail": "❌ Не вдалося отримати токен доступу Vector. Спробуйте пізніше.",
         "v_ban_notice": "⛔ <b>Доступ до Vector заблоковано.</b>\n<b>Причина:</b> <code>{reason}</code>\n<b>Термін:</b> <code>{term}</code>",
         "v_fb_add": "Оцінка додана!",
         "v_fb_rm": "Оцінка видалена!",
@@ -505,6 +505,7 @@ class Vector(loader.Module):
         "v_err_404": "Keine Einträge für: {q}",
         "v_err_len": "Abfragelänge ist auf 120 Zeichen begrenzt.",
         "v_err_api": "Zugriff durch Vector-Server verweigert.",
+        "v_token_fail": "❌ Vector-Zugriffstoken konnte nicht abgerufen werden. Bitte später erneut versuchen.",
         "v_ban_notice": "⛔ <b>Zugriff auf Vector gesperrt.</b>\n<b>Grund:</b> <code>{reason}</code>\n<b>Dauer:</b> <code>{term}</code>",
         "v_fb_add": "Erfolgreich bewertet!",
         "v_fb_rm": "Bewertung gelöscht!",
@@ -610,6 +611,7 @@ class Vector(loader.Module):
         "v_err_404": "<b>grep:</b> <code>{q}</code> not found.",
         "v_err_len": "<b>Buffer overflow:</b> max 120 chars.",
         "v_err_api": "<b>403 Forbidden</b> by Vector API.",
+        "v_token_fail": "❌ <b>Token issuance failed.</b> Vector API did not return a valid token. Retry later.",
         "v_ban_notice": "⛔ <b>Vector blocked access.</b>\n<b>rule:</b> <code>{reason}</code>\n<b>TTL:</b> <code>{term}</code>",
         "v_fb_add": "Rated.",
         "v_fb_rm": "Rating cleared.",
@@ -714,6 +716,7 @@ class Vector(loader.Module):
         "v_err_404": "Пусто по запросу: {q}",
         "v_err_len": "Длинновато, до 120 симв.",
         "v_err_api": "Сервер Vector не пускает.",
+        "v_token_fail": "❌ Токен получить не вышло. Попробуй чуть позже.",
         "v_ban_notice": "⛔ <b>Вектор тебя забанил.</b>\n<b>Причина:</b> <code>{reason}</code>\n<b>Срок:</b> <code>{term}</code>",
         "v_fb_add": "Лайк влеплен!",
         "v_fb_rm": "Лайк снят!",
@@ -819,6 +822,7 @@ class Vector(loader.Module):
         "v_err_404": "N0 r3c0rd5 f0r: {q}",
         "v_err_len": "Qu3ry 700 l0ng (120 ch4r5 m4x).",
         "v_err_api": "4cc355 d3n13d by V3c70r 53rv3r.",
+        "v_token_fail": "❌ F41l3d 70 g37 V3c70r 70k3n. 7ry 4641n l473r.",
         "v_ban_notice": "⛔ <b>V3c70r 4cc355 bl0ck3d.</b>\n<b>R3450n:</b> <code>{reason}</code>\n<b>73rm:</b> <code>{term}</code>",
         "v_fb_add": "R473d!",
         "v_fb_rm": "R471ng cl34r3d!",
@@ -924,6 +928,7 @@ class Vector(loader.Module):
         "v_err_404": "N-No wecowds fow: {q} T_T",
         "v_err_len": "Quewy too wong (120 chaws) >_<",
         "v_err_api": "Access denied by Vectow Sewvew qwq.",
+        "v_token_fail": "❌ Couldn't get Vectow token >w<. Pwease twy again watew.",
         "v_ban_notice": "⛔ <b>Vectow bwocked access.</b>\n<b>Weason:</b> <code>{reason}</code>\n<b>Tewm:</b> <code>{term}</code>",
         "v_fb_add": "Wated! (≧◡≦)",
         "v_fb_rm": "Wating cweawed ;w;",
@@ -1087,6 +1092,8 @@ class Vector(loader.Module):
         self._time_offset = 0.0
         self._time_offset_ts = 0.0
         self._time_sync_lock: Optional[asyncio.Lock] = None
+        self._token_lock: Optional[asyncio.Lock] = None
+        self._token_validated = False
         self._usr_state: Dict[int, dict] = {}
 
     def _st(self, uid: int) -> dict:
@@ -1297,10 +1304,17 @@ class Vector(loader.Module):
         value = value.replace("​", "").replace("‌", "").replace("‍", "").replace("﻿", "")
         return " ".join(value.strip().split())
 
+    async def _validate_token(self, token: str) -> bool:
+        res = await self._net_req("GET", "/api/search", token=token, params={"q": "vector", "limit": "1"})
+        if self.httpc == 401:
+            return False
+        return True
+
     async def _get_active_token(self, force: bool = False) -> str:
         log.debug("_get_active_token: force=%s", force)
         if force:
             self.set("auth_token", None)
+            self._token_validated = False
             log.debug("_get_active_token: auth_token cleared (force)")
 
         await self._ensure_time_synced()
@@ -1309,65 +1323,88 @@ class Vector(loader.Module):
         if cached:
             payload = self._parse_jwt(cached)
             if payload.get("exp", 0) - self._now() > 60:
-                log.debug("_get_active_token: cached token valid, exp=%s", payload.get("exp"))
-                return cached
-            log.debug("_get_active_token: cached token expired or expiring")
+                if self._token_validated:
+                    log.debug("_get_active_token: cached token valid, exp=%s", payload.get("exp"))
+                    return cached
+                log.debug("_get_active_token: persisted token not yet validated this session, probing")
+                if await self._validate_token(cached):
+                    self._token_validated = True
+                    log.debug("_get_active_token: persisted token validated ok")
+                    return cached
+                log.warning("_get_active_token: persisted token rejected by server despite unexpired exp, refreshing")
+            else:
+                log.debug("_get_active_token: cached token expired or expiring")
 
-        log.info("_get_active_token: requesting fresh token")
-        bot_info = await self._net_req("GET", "/api/tg-bot")
-        bot_username = (bot_info or {}).get("username", "").strip().lstrip("@")
-        if not bot_username:
-            log.warning("No bot username returned from /api/tg-bot")
-            return ""
+        if self._token_lock is None:
+            self._token_lock = asyncio.Lock()
 
-        me = await self.client.get_me()
-        uid = str(getattr(me, "id", ""))
-        uname = getattr(me, "username", "") or ""
-        fname = getattr(me, "first_name", "") or ""
-        lname = getattr(me, "last_name", "") or ""
-        dname = " ".join(filter(None, [fname, lname])).strip() or uname or uid
+        async with self._token_lock:
+            if not force:
+                cached = self.get("auth_token")
+                if cached:
+                    payload = self._parse_jwt(cached)
+                    if payload.get("exp", 0) - self._now() > 60 and self._token_validated:
+                        log.debug("_get_active_token: token obtained by concurrent caller, exp=%s", payload.get("exp"))
+                        return cached
 
-        uname = self._norm_hash_name(uname).lower()
-        dname = self._norm_hash_name(dname)
+            log.info("_get_active_token: requesting fresh token")
+            bot_info = await self._net_req("GET", "/api/tg-bot")
+            bot_username = (bot_info or {}).get("username", "").strip().lstrip("@")
+            if not bot_username:
+                log.warning("No bot username returned from /api/tg-bot")
+                self.bannote = self._multilang_token_fail_notice()
+                return ""
 
-        with suppress(Exception):
-            await self.client(UnblockRequest(bot_username))
+            me = await self.client.get_me()
+            uid = str(getattr(me, "id", ""))
+            uname = getattr(me, "username", "") or ""
+            fname = getattr(me, "first_name", "") or ""
+            lname = getattr(me, "last_name", "") or ""
+            dname = " ".join(filter(None, [fname, lname])).strip() or uname or uid
 
-        new_jwt = ""
-        ban_notice = ""
-        for attempt in range(2):
-            b_stamp = int(self._now() // 10) - attempt
-            cmd_hash = hashlib.sha256(f"vector-token-v2|{uid}|{b_stamp}|{auths}".encode()).hexdigest()[:32]
-            cmd_str = f"/{cmd_hash}"
+            uname = self._norm_hash_name(uname).lower()
+            dname = self._norm_hash_name(dname)
 
-            try:
-                async with self.client.conversation(bot_username, timeout=12, exclusive=False) as conv:
-                    out_msg = await conv.send_message(cmd_str)
-                    try:
-                        resp = await asyncio.wait_for(conv.get_response(), timeout=10)
-                        txt = getattr(resp, "raw_text", getattr(resp, "text", ""))
-                        match = jwtrx.search(txt)
-                        if match:
-                            new_jwt = match.group(0)
-                        elif "заблок" in txt.lower() or "⛔" in txt:
-                            ban_notice = self._format_ban_notice(txt)
-                        with suppress(Exception): await out_msg.delete()
-                        if new_jwt: break
-                    except asyncio.TimeoutError:
-                        with suppress(Exception): await out_msg.delete()
-            except Exception as e:
-                log.warning("Token conversation attempt=%s failed: %r", attempt, e)
+            with suppress(Exception):
+                await self.client(UnblockRequest(bot_username))
 
-        if new_jwt:
-            self.set("auth_token", new_jwt)
-            self.bannote = ""
-            log.info("_get_active_token: new token obtained")
-        elif ban_notice:
-            self.bannote = ban_notice
-            log.warning("_get_active_token: user banned")
-        else:
-            log.warning("_get_active_token: no token obtained")
-        return new_jwt
+            new_jwt = ""
+            ban_notice = ""
+            for attempt in range(2):
+                b_stamp = int(self._now() // 10) - attempt
+                cmd_hash = hashlib.sha256(f"vector-token-v2|{uid}|{b_stamp}|{auths}".encode()).hexdigest()[:32]
+                cmd_str = f"/{cmd_hash}"
+
+                try:
+                    async with self.client.conversation(bot_username, timeout=12, exclusive=False) as conv:
+                        out_msg = await conv.send_message(cmd_str)
+                        try:
+                            resp = await asyncio.wait_for(conv.get_response(), timeout=10)
+                            txt = getattr(resp, "raw_text", getattr(resp, "text", ""))
+                            match = jwtrx.search(txt)
+                            if match:
+                                new_jwt = match.group(0)
+                            elif "заблок" in txt.lower() or "⛔" in txt:
+                                ban_notice = self._format_ban_notice(txt)
+                            with suppress(Exception): await out_msg.delete()
+                            if new_jwt or ban_notice: break
+                        except asyncio.TimeoutError:
+                            with suppress(Exception): await out_msg.delete()
+                except Exception as e:
+                    log.warning("Token conversation attempt=%s failed: %r", attempt, e)
+
+            if new_jwt:
+                self.set("auth_token", new_jwt)
+                self._token_validated = True
+                self.bannote = ""
+                log.info("_get_active_token: new token obtained")
+            elif ban_notice:
+                self.bannote = ban_notice
+                log.warning("_get_active_token: user banned")
+            else:
+                self.bannote = self._multilang_token_fail_notice()
+                log.warning("_get_active_token: no token obtained")
+            return new_jwt
 
     def _format_ban_notice(self, raw_text: str) -> str:
         log.debug("_format_ban_notice: raw_len=%d", len(raw_text) if raw_text else 0)
@@ -1393,6 +1430,21 @@ class Vector(loader.Module):
         reason = utils.escape_html(reason_raw or "-")
         term = utils.escape_html(term_raw or "permanent")
         return self.strings["v_ban_notice"].format(reason=reason, term=term)
+
+    def _multilang_token_fail_notice(self) -> str:
+        packs = (
+            self.strings, self.strings_ru, self.strings_jp, self.strings_ua, self.strings_de,
+            self.strings_neofit, self.strings_tiktok, self.strings_leet, self.strings_uwu,
+        )
+        lines: List[str] = []
+        seen = set()
+        for pack in packs:
+            with suppress(Exception):
+                text = pack.get("v_token_fail")
+                if text and text not in seen:
+                    seen.add(text)
+                    lines.append(text)
+        return "\n\n".join(lines) if lines else self.strings["v_token_fail"]
 
     @staticmethod
     def _plain_len(text: str) -> int:
@@ -1591,7 +1643,7 @@ class Vector(loader.Module):
     @loader.loop(20 * 3600, autostart=True)
     async def _token_keeper(self) -> None:
         log.info("_token_keeper: refreshing token")
-        await self._get_active_token(force=True)
+        await self._get_active_token()
         
 
     async def _run_search(self, q: str, lang_sfx: str = "", _retried: bool = False) -> Any:
