@@ -1352,7 +1352,7 @@ class Vector(loader.Module):
             bot_username = (bot_info or {}).get("username", "").strip().lstrip("@")
             if not bot_username:
                 log.warning("No bot username returned from /api/tg-bot")
-                self.bannote = self._multilang_token_fail_notice()
+                self.bannote = self.strings["v_token_fail"]
                 return ""
 
             me = await self.client.get_me()
@@ -1402,7 +1402,7 @@ class Vector(loader.Module):
                 self.bannote = ban_notice
                 log.warning("_get_active_token: user banned")
             else:
-                self.bannote = self._multilang_token_fail_notice()
+                self.bannote = self.strings["v_token_fail"]
                 log.warning("_get_active_token: no token obtained")
             return new_jwt
 
@@ -1430,21 +1430,6 @@ class Vector(loader.Module):
         reason = utils.escape_html(reason_raw or "-")
         term = utils.escape_html(term_raw or "permanent")
         return self.strings["v_ban_notice"].format(reason=reason, term=term)
-
-    def _multilang_token_fail_notice(self) -> str:
-        packs = (
-            self.strings, self.strings_ru, self.strings_jp, self.strings_ua, self.strings_de,
-            self.strings_neofit, self.strings_tiktok, self.strings_leet, self.strings_uwu,
-        )
-        lines: List[str] = []
-        seen = set()
-        for pack in packs:
-            with suppress(Exception):
-                text = pack.get("v_token_fail")
-                if text and text not in seen:
-                    seen.add(text)
-                    lines.append(text)
-        return "\n\n".join(lines) if lines else self.strings["v_token_fail"]
 
     @staticmethod
     def _plain_len(text: str) -> int:
