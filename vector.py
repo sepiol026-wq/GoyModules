@@ -6,16 +6,16 @@
 #  ╚██████╔╝╚██████╔╝   ██║   ██║ ╚═╝ ██║╚██████╔╝██████╔╝╚██████╔╝███████╗███████╗███████║
 #   ╚═════╝  ╚═════╝    ╚═╝   ╚═╝     ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝
 #
-#   OFFICIAL USERNAMES: @goymodules | @samsepi0l_ovf
+#   OFFICIAL USERNAMES: @GoyMods | @samsepi0l_ovf
 #   MODULE: vector
 #
 #   THIS MODULE IS LICENSED UNDER GNU AGPLv3, PROTECTED AGAINST UNAUTHORIZED COPYING/RESALE,
 #   AND ITS ORIGINAL AUTHORSHIP BELONGS TO @samsepi0l_ovf.
-#   ALL OFFICIAL UPDATES, RELEASE NOTES, AND PATCHES ARE PUBLISHED IN THE TELEGRAM CHANNEL @goymodules.
+#   ALL OFFICIAL UPDATES, RELEASE NOTES, AND PATCHES ARE PUBLISHED IN THE TELEGRAM CHANNEL @GoyMods.
 # ====================================================================================================================
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png
 # meta pic: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vecpic.png
-# meta developer: @GoyModules
+# meta developer: @GoyMods
 # meta tags: module-catalog, search, reviews, ratings, comments, heroku, каталог-модулей, поиск, отзывы, рейтинги, комментарии, хероку
 
 __version__ = (2, 4, 5)
@@ -99,7 +99,6 @@ class Vector(loader.Module):
         "v_aud_req": "Connecting to Security API...",
         "v_aud_proc": "Processing AST tree...",
         "v_btn_aud_run": "Start Scan",
-        "v_aud_mem": "Loaded from session cache.",
         "v_aud_lvl": "Threat Level",
         "v_aud_stat": "Scanner Data",
         "v_aud_out": "Summary",
@@ -205,7 +204,6 @@ class Vector(loader.Module):
         "v_aud_req": "Соединение с Security API...",
         "v_aud_proc": "Анализ AST дерева...",
         "v_btn_aud_run": "Запустить скан",
-        "v_aud_mem": "Загружено из кэша сессии.",
         "v_aud_lvl": "Уровень угрозы",
         "v_aud_stat": "Данные сканера",
         "v_aud_out": "Итог",
@@ -311,7 +309,6 @@ class Vector(loader.Module):
         "v_aud_req": "セキュリティAPIに接続中...",
         "v_aud_proc": "ASTツリーを処理中...",
         "v_btn_aud_run": "スキャン開始",
-        "v_aud_mem": "セッションキャッシュからロードされました。",
         "v_aud_lvl": "脅威レベル",
         "v_aud_stat": "スキャナデータ",
         "v_aud_out": "概要",
@@ -417,7 +414,6 @@ class Vector(loader.Module):
         "v_aud_req": "З'єднання з Security API...",
         "v_aud_proc": "Аналіз AST дерева...",
         "v_btn_aud_run": "Запустити скан",
-        "v_aud_mem": "Завантажено з кешу сесії.",
         "v_aud_lvl": "Рівень загрози",
         "v_aud_stat": "Дані сканера",
         "v_aud_out": "Підсумок",
@@ -523,7 +519,6 @@ class Vector(loader.Module):
         "v_aud_req": "Verbindung zur Security-API...",
         "v_aud_proc": "Verarbeite AST-Baum...",
         "v_btn_aud_run": "Scan starten",
-        "v_aud_mem": "Aus dem Session-Cache geladen.",
         "v_aud_lvl": "Bedrohungsstufe",
         "v_aud_stat": "Scanner-Daten",
         "v_aud_out": "Zusammenfassung",
@@ -1020,24 +1015,24 @@ class Vector(loader.Module):
         return self.db.get("heroku.translations", "lang") or "en"
 
 
-    ICONS = {
-        "search": '<emoji document_id="5447459604524971717">🔎</emoji>',
-        "error": '<emoji document_id="5388785832956016892">❌</emoji>',
-        "warn": '<emoji document_id="5881702736843511327">⚠️</emoji>',
-        "description": '<emoji document_id="6008090211181923982">📝</emoji>',
-        "command": '<emoji document_id="5877260593903177342">⚙</emoji>',
-        "dependency": '<emoji document_id="5325732612084351248">📦</emoji>',
-        "module": '<emoji document_id="5924720918826848520">📦</emoji>',
-        "modules_list": '<emoji document_id="5883973610606956186">🗂</emoji>',
-        "shield": '<emoji document_id="5926783847453692661">🛡</emoji>',
-        "safe": '<emoji document_id="5776375003280838798">✅</emoji>',
-        "stats": '<emoji document_id="5877485980901971030">📊</emoji>',
-        "quota": '<emoji document_id="6311858554944888333">⌚️</emoji>',
-        "verified": '<emoji document_id="5958376256788502078">⭐️</emoji>',
-        "comments": '<emoji document_id="5886666250158870040">💬</emoji>',
+    emj = {
+        "search": '<tg-emoji emoji-id=5447459604524971717>🔎</tg-emoji>',
+        "error": '<tg-emoji emoji-id=5388785832956016892>❌</tg-emoji>',
+        "warn": '<tg-emoji emoji-id=5881702736843511327>⚠️</tg-emoji>',
+        "description": '<tg-emoji emoji-id=6008090211181923982>📝</tg-emoji>',
+        "command": '<tg-emoji emoji-id=5877260593903177342>⚙</tg-emoji>',
+        "dependency": '<tg-emoji emoji-id=5325732612084351248>📦</tg-emoji>',
+        "module": '<tg-emoji emoji-id=5924720918826848520>📦</tg-emoji>',
+        "modules_list": '<tg-emoji emoji-id=5883973610606956186>🗂</tg-emoji>',
+        "shield": '<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>',
+        "safe": '<tg-emoji emoji-id=5776375003280838798>✅</tg-emoji>',
+        "stats": '<tg-emoji emoji-id=5877485980901971030>📊</tg-emoji>',
+        "quota": '<tg-emoji emoji-id=6311858554944888333>⌚️</tg-emoji>',
+        "verified": '<tg-emoji emoji-id=5958376256788502078>⭐️</tg-emoji>',
+        "comments": '<tg-emoji emoji-id=5886666250158870040>💬</tg-emoji>',
         "reply": "↳",
-        "broken": '<emoji document_id="5877260593903177342">💥</emoji>',
-        "tag": '<emoji document_id="5985433648810171091">🏷</emoji>',
+        "broken": '<tg-emoji emoji-id=5877260593903177342>💥</tg-emoji>',
+        "tag": '<tg-emoji emoji-id=5985433648810171091>🏷</tg-emoji>',
     }
 
     async def _safe_install(self, m_name: str, dl_url: str) -> bool:
@@ -1480,12 +1475,12 @@ class Vector(loader.Module):
         author = utils.escape_html(str(m_data.get("author", "@Unknown")))
         ver = str(m_data.get("version", "?.?.?"))
 
-        header = f"{self.ICONS['module']} <code>{name}</code> <b>{self.strings['v_dev_lbl']}</b> <code>{author}</code>"
+        header = f"{self.emj['module']} <code>{name}</code> <b>{self.strings['v_dev_lbl']}</b> <code>{author}</code>"
         if ver != "?.?.?":
             header += f" (<code>v{utils.escape_html(ver)}</code>)"
         status_text = self.strings["v_dev_ofc"] if m_data.get("official") else self.strings["v_dev_unofc"]
-        status = f"{self.ICONS['verified']} <b>{self.strings['v_dev_str']}</b> <code>{status_text}</code>"
-        page = f"{self.ICONS['modules_list']} <i>{self.strings['v_page'].format(idx=current_idx, total=total_cnt)}</i>" if total_cnt > 1 else ""
+        status = f"{self.emj['verified']} <b>{self.strings['v_dev_str']}</b> <code>{status_text}</code>"
+        page = f"{self.emj['modules_list']} <i>{self.strings['v_page'].format(idx=current_idx, total=total_cnt)}</i>" if total_cnt > 1 else ""
 
         pfx = [header, status]
         if page:
@@ -1496,7 +1491,7 @@ class Vector(loader.Module):
         desc_block = ""
         if desc and used < CAP - 20:
             desc_raw = re.sub(r'(https?://\S+|www\.\S+)', r'<code>\1</code>', utils.escape_html(str(desc)))
-            hdr = f"\n{self.ICONS['description']} <b>{self.strings['v_info']}</b>\n<blockquote expandable>"
+            hdr = f"\n{self.emj['description']} <b>{self.strings['v_info']}</b>\n<blockquote expandable>"
             ftr = "</blockquote>"
             room = CAP - used - len(hdr) - len(ftr) - 8
             if room > 0:
@@ -1510,7 +1505,7 @@ class Vector(loader.Module):
         if cmds:
             est = used + len(desc_block) + 30
             if est < CAP:
-                hdr = f"\n\n{self.ICONS['command']} <b>{self.strings['v_cmds']}</b>\n<blockquote expandable>"
+                hdr = f"\n\n{self.emj['command']} <b>{self.strings['v_cmds']}</b>\n<blockquote expandable>"
                 ftr = "</blockquote>"
                 room = CAP - used - len(desc_block) - len(hdr) - len(ftr) - 5
                 if room > 0:
@@ -1543,7 +1538,7 @@ class Vector(loader.Module):
         tags_block = ""
         log.debug("_build_html: name=%s tags=%s", m_data.get("name", "?"), tags)
         if tags:
-            hdr = f"\n\n{self.ICONS['tag']} <b>{self.strings.get('v_tags', 'Tags')}</b>\n<blockquote expandable>"
+            hdr = f"\n\n{self.emj['tag']} <b>{self.strings.get('v_tags', 'Tags')}</b>\n<blockquote expandable>"
             ftr = "</blockquote>"
             hdr_plain = self._plain_len(hdr)
             room = CAP - cur_plain - hdr_plain - self._plain_len(ftr)
@@ -1568,7 +1563,7 @@ class Vector(loader.Module):
         deps = m_data.get("dependencies", [])
         dep_block = ""
         if deps:
-            hdr = f"\n\n{self.ICONS['dependency']} <b>{self.strings.get('v_deps', 'Dependencies')}</b>\n<blockquote expandable>"
+            hdr = f"\n\n{self.emj['dependency']} <b>{self.strings.get('v_deps', 'Dependencies')}</b>\n<blockquote expandable>"
             ftr = "</blockquote>"
             tags_plain = self._plain_len(tags_block)
             room = CAP - cur_plain - tags_plain - self._plain_len(hdr) - self._plain_len(ftr)
@@ -1670,13 +1665,13 @@ class Vector(loader.Module):
     async def _show_search_fail(self, target: Any, m_list: list, token_ok: bool, q: str) -> None:
         if not token_ok:
             log.warning("vectorcmd: no token")
-            await utils.answer(target, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+            await utils.answer(target, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
         elif m_list is None:
             log.error("vectorcmd: API unreachable")
-            await utils.answer(target, f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+            await utils.answer(target, f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
         elif not m_list:
             log.debug("vectorcmd: no results")
-            await utils.answer(target, f"{self.ICONS['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+            await utils.answer(target, f"{self.emj['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
 
     @loader.command(
         en_doc="<query> — search modules in Vector.",
@@ -1694,14 +1689,14 @@ class Vector(loader.Module):
         log.info("vectorcmd: query=%r", q)
         if not q:
             log.debug("vectorcmd: empty query, aborting")
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}</code>')}</b>")
+            return await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}</code>')}</b>")
         if len(q) > 120:
-            return await utils.answer(msg, f"{self.ICONS['warn']} <b>{self.strings['v_err_len']}</b>")
+            return await utils.answer(msg, f"{self.emj['warn']} <b>{self.strings['v_err_len']}</b>")
 
         lang_sfx = self._detect_lang_suffix()
 
         form = await self.inline.form(
-            f"{self.ICONS['search']} <b>{self.strings['v_loading_ui']}</b>",
+            f"{self.emj['search']} <b>{self.strings['v_loading_ui']}</b>",
             msg,
             reply_markup=[[{"text": "ㅤ", "callback": self.cb_dummy}]],
             photo="https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vsearch.png",
@@ -1746,32 +1741,32 @@ class Vector(loader.Module):
 
         if force:
             log.info("vecupdate: force flag set, installing immediately")
-            await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
+            await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
             ok = await self._safe_install(m_name, dl_url)
             if ok:
                 log.info("vecupdate: force install successful")
-                await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
+                await utils.answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
             else:
                 log.warning("vecupdate: force install failed")
-                await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+                await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
             return
 
-        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_check']}</b>")
+        await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_check']}</b>")
 
         token = await self._get_active_token()
         if not token:
             log.warning("vecupdate: no token, aborting")
-            return await utils.answer(msg, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+            return await utils.answer(msg, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>")
 
         src_bytes = await self._net_req("GET", dl_path, token=token, as_bytes=True)
         if not src_bytes:
             log.warning("vecupdate: download returned no bytes, installing anyway")
-            await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
+            await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
             ok = await self._safe_install(m_name, dl_url)
             if ok:
-                await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
+                await utils.answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
             else:
-                await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+                await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
             return
 
         log.debug("vecupdate: downloaded %d bytes", len(src_bytes))
@@ -1809,7 +1804,7 @@ class Vector(loader.Module):
             log.info("vecupdate: hashes match, showing force-update prompt")
             await self.inline.form(
                 message=msg,
-                text=f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
+                text=f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
                 reply_markup=[
                     [
                         {"text": self.strings["v_upd_force_btn"], "callback": self._vecupdate_force, "args": (dl_url,), "style": "primary"},
@@ -1820,28 +1815,28 @@ class Vector(loader.Module):
             return
 
         log.info("vecupdate: hashes differ, proceeding with install")
-        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
+        await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
 
         ok = await self._safe_install(m_name, dl_url)
         if ok:
             log.info("vecupdate: install successful")
-            await utils.answer(msg, f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
+            await utils.answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
             log.warning("vecupdate: install failed")
-            await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+            await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
 
     async def _vecupdate_force(self, call: Any, dl_url: str):
         log.info("_vecupdate_force: force update triggered, url=%s", dl_url)
         with suppress(Exception):
             await call.answer()
-        await call.edit(f"{self.ICONS['search']} <b>{self.strings['v_upd_req']}</b>")
+        await call.edit(f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
         ok = await self._safe_install("Vector", dl_url)
         if ok:
             log.info("_vecupdate_force: force install successful")
-            await call.edit(f"{self.ICONS['safe']} <b>{self.strings['v_upd_ok']}</b>")
+            await call.edit(f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
             log.warning("_vecupdate_force: force install failed")
-            await call.edit(f"{self.ICONS['error']} <b>{self.strings['v_upd_err']}</b>")
+            await call.edit(f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
 
     def _hash_module_source(self, mod_instance: Any) -> Optional[str]:
         try:
@@ -1900,22 +1895,22 @@ class Vector(loader.Module):
         slug = raw_arg.split("/collections/")[-1].split("/")[0].split("?")[0] if "/collections/" in raw_arg else raw_arg
         log.info("vecdl: raw=%r slug=%r", raw_arg, slug)
         if not slug:
-            return await utils.answer(msg, f"{self.ICONS['error']} {self.strings['v_vecdl_usage'].format(p=self.get_prefix())}")
+            return await utils.answer(msg, f"{self.emj['error']} {self.strings['v_vecdl_usage'].format(p=self.get_prefix())}")
 
         token = await self._get_active_token()
         if not token:
-            return await utils.answer(msg, self.bannote or f"{self.ICONS['error']} <b>{self.strings['v_err_api']}</b>")
+            return await utils.answer(msg, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>")
 
         raw = await self._net_req("GET", f"/api/collections/{quote(slug, safe='')}", token=token)
         if not raw or not raw.get("ok"):
-            return await utils.answer(msg, f"{self.ICONS['error']} <b>{self.strings['v_dlcoll_not_found']}</b>")
+            return await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_dlcoll_not_found']}</b>")
 
         col = raw["collection"]
         modules = [entry["module"] for entry in (col.get("modules") or []) if entry.get("module")]
         if not modules:
-            return await utils.answer(msg, f"{self.ICONS['warn']} <b>{self.strings['v_dlcoll_empty']}</b>")
+            return await utils.answer(msg, f"{self.emj['warn']} <b>{self.strings['v_dlcoll_empty']}</b>")
 
-        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_sending']}</b>")
+        await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_sending']}</b>")
 
         max_batch = int(self.config.get("max_batch", 50))
         total_orig = len(modules)
@@ -1924,7 +1919,7 @@ class Vector(loader.Module):
 
         col_name = col.get("name", slug)
         await self.inline.form(
-            f"{self.ICONS['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}",
+            f"{self.emj['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}",
             msg,
             reply_markup=[[
                 {"text": self.strings["v_btn_dl"], "callback": self._vecdl_install, "args": (modules, col_name)},
@@ -1942,7 +1937,7 @@ class Vector(loader.Module):
         if total_orig > max_batch:
             modules = modules[:max_batch]
 
-        await utils.answer(cb, f"{self.ICONS['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.ICONS['search']} {self.strings['v_dlcoll_start']}", reply_markup=[[{"text": "…", "callback": self.cb_dummy}]])
+        await utils.answer(cb, f"{self.emj['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.emj['search']} {self.strings['v_dlcoll_start']}", reply_markup=[[{"text": "…", "callback": self.cb_dummy}]])
 
         ok = 0
         failed: List[str] = []
@@ -1957,11 +1952,11 @@ class Vector(loader.Module):
             await asyncio.sleep(2)
 
         if ok == len(modules):
-            result = f"{self.ICONS['safe']} {self.strings['v_dlcoll_done']}"
+            result = f"{self.emj['safe']} {self.strings['v_dlcoll_done']}"
         elif ok > 0:
-            result = f"{self.ICONS['warn']} {self.strings['v_dlcoll_done_partial']}"
+            result = f"{self.emj['warn']} {self.strings['v_dlcoll_done_partial']}"
         else:
-            result = f"{self.ICONS['error']} {self.strings['v_dlcoll_done_none']}"
+            result = f"{self.emj['error']} {self.strings['v_dlcoll_done_none']}"
 
         result += f"\n<b>{ok}/{len(modules)}</b>"
         if failed:
@@ -2143,13 +2138,13 @@ class Vector(loader.Module):
         uwu_doc="— open Vectow as Tewegwam Mini App nya~",
     )
     async def vecmecmd(self, msg: Message):
-        await utils.answer(msg, f"{self.ICONS['search']} <b>{self.strings['v_sending']}</b>")
+        await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_sending']}</b>")
         bot_info = await self._net_req("GET", "/api/tg-bot")
         bot_uname = (bot_info or {}).get("username", "").strip().lstrip("@")
         if not bot_uname:
             await utils.answer(msg, self.strings["v_err_api"])
             return
-        text = f"{self.ICONS['shield']} <b>{self.strings['v_miniapp_title']}</b>\n\n{self.strings['v_miniapp_body']}"
+        text = f"{self.emj['shield']} <b>{self.strings['v_miniapp_title']}</b>\n\n{self.strings['v_miniapp_body']}"
         link = f"https://t.me/{bot_uname}/vector"
         await self.inline.form(
             text, msg,
@@ -2196,7 +2191,7 @@ class Vector(loader.Module):
             {"text": "▶️", "callback": self.cb_page, "args": (next_pg, group, q, curr_i)},
         ])
         kb.append([{"text": self.strings['v_btn_bck'], "callback": self.cb_nav, "args": (curr_i, group, q)}])
-        await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
+        await utils.answer(cb, f"{self.emj['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_page(self, cb: Any, pg: int, group: list, q: str, orig_i: int):
         uid = getattr(cb, "from_user", None) and cb.from_user.id or 0
@@ -2218,7 +2213,7 @@ class Vector(loader.Module):
             {"text": "▶️", "callback": self.cb_page, "args": (next_pg, group, q, orig_i)},
         ])
         kb.append([{"text": self.strings['v_btn_bck'], "callback": self.cb_nav, "args": (orig_i, group, q)}])
-        await utils.answer(cb, f"{self.ICONS['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
+        await utils.answer(cb, f"{self.emj['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
         uid = getattr(cb, "from_user", None) and cb.from_user.id or 0
@@ -2287,7 +2282,7 @@ class Vector(loader.Module):
         cached = self.seccache.get(m_name)
         if cached and cached.get("check"):
             log.debug("cb_sec_check: cache hit for %s", m_name)
-            return await utils.answer(cb, f"{self.ICONS['safe']} <i>{self.strings['v_aud_mem']}</i>\n\n{self._fmt_sec(m_name, cached)}", reply_markup=_get_sec_kb(True, cached))
+            return await utils.answer(cb, f"{self._fmt_sec(m_name, cached)}", reply_markup=_get_sec_kb(True, cached))
 
         with suppress(Exception): await cb.answer()
         token = await self._get_active_token()
@@ -2298,7 +2293,7 @@ class Vector(loader.Module):
         
         if not res or self.httpc >= 400:
             log.warning("cb_sec_check: API error for %s, http=%s", m_name, self.httpc)
-            return await utils.answer(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=_get_sec_kb(True))
+            return await utils.answer(cb, f"{self.emj['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=_get_sec_kb(True))
 
         if res.get("check"):
             self.seccache[m_name] = res
@@ -2307,7 +2302,7 @@ class Vector(loader.Module):
 
     async def cb_sec_run(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, expanded: bool = False):
         log.info("cb_sec_run: name=%s", m_name)
-        await utils.answer(cb, f"{self.ICONS['search']} <b>{self.strings['v_aud_proc']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
+        await utils.answer(cb, f"{self.emj['search']} <b>{self.strings['v_aud_proc']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
         token = await self._get_active_token()
         if not token:
             with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
@@ -2316,10 +2311,10 @@ class Vector(loader.Module):
         
         if self.httpc == 429:
             log.warning("cb_sec_run: rate limited (429)")
-            return await utils.answer(cb, f"{self.ICONS['warn']} <b>{self.strings['v_aud_zero']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
+            return await utils.answer(cb, f"{self.emj['warn']} <b>{self.strings['v_aud_zero']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
         if not res or self.httpc >= 400:
             log.warning("cb_sec_run: API error, http=%s", self.httpc)
-            return await utils.answer(cb, f"{self.ICONS['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
+            return await utils.answer(cb, f"{self.emj['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
 
         log.info("cb_sec_run: scan complete for %s", m_name)
         if res.get("check"):
@@ -2335,33 +2330,33 @@ class Vector(loader.Module):
         chk = payload.get("check")
         qta = payload.get("quota") or (chk.get("quota") if chk else None) or {}
         if not chk:
-            return (f"{self.ICONS['shield']} <b>{self.strings['v_aud_hdr'].format(name=m_name)}</b>\n\n"
-                    f"{self.ICONS['warn']} {self.strings['v_aud_none']}\n"
-                    f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=qta.get('remaining', '?'), limit=qta.get('limit', '?'))}</i>")
+            return (f"{self.emj['shield']} <b>{self.strings['v_aud_hdr'].format(name=m_name)}</b>\n\n"
+                    f"{self.emj['warn']} {self.strings['v_aud_none']}\n"
+                    f"{self.emj['quota']} <i>{self.strings['v_aud_left'].format(remaining=qta.get('remaining', '?'), limit=qta.get('limit', '?'))}</i>")
 
         v = str(chk.get("verdict", "unknown"))
-        v_icon = self.ICONS.get(v, self.ICONS['shield'])
+        v_icon = self.emj.get(v, self.emj['shield'])
         static = chk.get("details", {}).get("static", {})
         fnds = static.get("findings", {})
         
         lines = [
             f"{v_icon} <b>{self.strings['v_aud_hdr'].format(name=m_name)}</b>\n",
-            f"{self.ICONS['shield']} <b>{self.strings['v_aud_lvl']}:</b> <code>{chk.get('label', v)}</code> (<code>{chk.get('confidence', 0)}%</code>)",
+            f"{self.emj['shield']} <b>{self.strings['v_aud_lvl']}:</b> <code>{chk.get('label', v)}</code> (<code>{chk.get('confidence', 0)}%</code>)",
         ]
         if static.get("score", "?") != "?" or static.get("risk", "unknown") != "unknown":
-            lines.append(f"{self.ICONS['stats']} <b>{self.strings['v_aud_stat']}:</b> risk <code>{static.get('risk', 'unknown')}</code>, score <code>{static.get('score', '?')}</code>")
-        lines.append(f"{self.ICONS['description']} <b>{self.strings['v_aud_out']}:</b>\n<blockquote expandable>{chk.get('summary', self.strings['v_aud_no_txt'])}</blockquote>")
+            lines.append(f"{self.emj['stats']} <b>{self.strings['v_aud_stat']}:</b> risk <code>{static.get('risk', 'unknown')}</code>, score <code>{static.get('score', '?')}</code>")
+        lines.append(f"{self.emj['description']} <b>{self.strings['v_aud_out']}:</b>\n<blockquote expandable>{chk.get('summary', self.strings['v_aud_no_txt'])}</blockquote>")
         
         f_blocks = []
         for hdr, key in [(self.strings["v_sig_crit"], "critical"), (self.strings["v_sig_warn"], "warning"), (self.strings["v_sig_info"], "info")]:
             arr = fnds.get(key, [])
             if arr: f_blocks.append(f"<b>{hdr}</b>: " + ", ".join(x.get("title", "?") for x in arr[:3]))
         if f_blocks:
-            lines.append(f"{self.ICONS['search']} <b>{self.strings['v_aud_sigs']}:</b>\n<blockquote expandable>{chr(10).join(f_blocks)}</blockquote>")
+            lines.append(f"{self.emj['search']} <b>{self.strings['v_aud_sigs']}:</b>\n<blockquote expandable>{chr(10).join(f_blocks)}</blockquote>")
             
         remaining = qta.get("remaining", "?")
         if remaining != "?":
-            lines.append(f"{self.ICONS['quota']} <i>{self.strings['v_aud_left'].format(remaining=remaining, limit=qta.get('limit', '?'))}</i>")
+            lines.append(f"{self.emj['quota']} <i>{self.strings['v_aud_left'].format(remaining=remaining, limit=qta.get('limit', '?'))}</i>")
         return "\n".join(lines)
 
     async def cb_comments(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False, _comments: list = None):
@@ -2445,7 +2440,7 @@ class Vector(loader.Module):
 
     def _fmt_comments(self, comments: list, m_name: str, pg: int = 0, pp: int = 5) -> str:
         log.debug("_fmt_comments: name=%s count=%d pg=%d", m_name, len(comments) if comments else 0, pg)
-        h = f"{self.strings['v_talk_hdr'].format(emoji=self.ICONS['comments'], name=m_name)}\n<b>{self.strings['v_talk_desc']}</b>\n<i>{self.strings['v_talk_num'].format(count=len(comments))}</i>"
+        h = f"{self.strings['v_talk_hdr'].format(emoji=self.emj['comments'], name=m_name)}\n<b>{self.strings['v_talk_desc']}</b>\n<i>{self.strings['v_talk_num'].format(count=len(comments))}</i>"
         if not comments: return f"{h}\n\n{self.strings['v_talk_0']}"
         
         roots, chmap = [], {}
@@ -2488,7 +2483,7 @@ class Vector(loader.Module):
                 s_edit_mark = " *" if s.get("can_edit") else ""
                 
                 s_auth = f"<b>{utils.escape_html(s.get('author_name') or s.get('author_username') or 'Unknown')}</b>{s_edit_mark}{s_meta_str}"
-                blks.append(f"  {self.ICONS['reply']} {s_auth}\n<blockquote>{utils.escape_html(str(s.get('body', '')))}</blockquote>")
+                blks.append(f"  {self.emj['reply']} {s_auth}\n<blockquote>{utils.escape_html(str(s.get('body', '')))}</blockquote>")
                 
             if len(subs) > 4: blks.append(f"  <i>{self.strings['v_more_replies'].format(count=len(subs)-4)}</i>")
             
