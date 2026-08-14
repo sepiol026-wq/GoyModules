@@ -2092,7 +2092,7 @@ class Vector(loader.Module):
 
             if action == "update":
                 log.info("vector_install_payload_watcher: update action for module_id=%s", owner_module)
-                mod_info = await self._net_req("GET", f"/api/modules/by-id/{quote(owner_module, safe='')}", token=token)
+                mod_info = await self._net_req("GET", f"/api/modules/by-id?id={quote(owner_module, safe='')}", token=token)
                 if not mod_info or not mod_info.get("ok"):
                     await send_feedback("error", "module not found")
                     return
