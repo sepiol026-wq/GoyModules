@@ -1065,25 +1065,25 @@ class Vector(loader.Module):
             loader.ConfigValue(
                 "limit", 
                 30, 
-                lambda: self.strings("v_lim_cfg"), 
+                lambda: self.strings["v_lim_cfg"], 
                 validator=loader.validators.Integer(minimum=1, maximum=100)
             ),
             loader.ConfigValue(
                 "max_batch",
                 50,
-                lambda: self.strings("v_max_batch_cfg"),
+                lambda: self.strings["v_max_batch_cfg"],
                 validator=loader.validators.Integer(minimum=1, maximum=100)
             ),
             loader.ConfigValue(
                 "auto_update_notify",
                 True,
-                lambda: self.strings("v_auto_upd_cfg"),
+                lambda: self.strings["v_auto_upd_cfg"],
                 validator=loader.validators.Boolean()
             ),
             loader.ConfigValue(
                 "VectorInstall",
                 True,
-                lambda: self.strings("v_install_cfg"),
+                lambda: self.strings["v_install_cfg"],
                 validator=loader.validators.Boolean()
             ),
         )
@@ -1962,7 +1962,7 @@ class Vector(loader.Module):
             if ok_flag:
                 ok += 1
             else:
-                failed.append(self.strings['v_dlcoll_fail_item'].format(name=utils.escape_html(m_name), reason=self.strings("v_dl_err")))
+                failed.append(self.strings['v_dlcoll_fail_item'].format(name=utils.escape_html(m_name), reason=self.strings["v_dl_err"]))
             await asyncio.sleep(2)
 
         if ok == len(modules):
