@@ -19,6 +19,7 @@
 # requires: aiohttp aiohttp-socks
 
 __version__ = (2, 5, 8)
+
 import base64
 import binascii
 import re
