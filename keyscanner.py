@@ -52,6 +52,7 @@ try:
 except ImportError:
     ProxyConnector = None
 
+
 BANNER_URL = "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/keyscanner.png"
 KEY_TOPIC_EMOJI_ID = 6005570495603282482
 KEYSCANNER_HEROKU_TOPIC_TITLE = "KeyScanner Logs"
