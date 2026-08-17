@@ -50,8 +50,6 @@ log.setLevel(logging.DEBUG)
 apirt = "https://www.0xvector.lol"
 jwtrx = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 auths = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
-lping = "#v_lang_ping"
-lpong = "#v_lang:"
 brrx = re.compile(r"(?:Причина|Reason|理由|Grund|R3450n|Weason|Charge):\s*(.+)", re.IGNORECASE)
 btrx = re.compile(r"(?:Срок|Term|期間|Dauer|73rm|Tewm):\s*(.+)", re.IGNORECASE)
 
@@ -2004,13 +2002,6 @@ class Vector(loader.Module):
                     settings=InputPeerNotifySettings(mute_until=2**31 - 1)
                 ))
         try:
-            if text == lping:
-                log.debug("vector_install_payload_watcher: lang ping received")
-                with suppress(Exception):
-                    await self.client.send_message(msg.chat_id, f"{lpong}{self._detect_lang_suffix()}")
-                with suppress(Exception):
-                    await msg.delete()
-                return
             if not text.startswith("#v_payload:"):
                 return
 
