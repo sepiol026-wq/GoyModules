@@ -19,6 +19,7 @@
 
 """Inline DOOM with waves, boss, shop, profile and daily run."""
 
+
 __version__ = (1, 4, 0)
 
 import asyncio
