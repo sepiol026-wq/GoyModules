@@ -18,7 +18,7 @@
 # meta developer: @GoyMods
 # meta tags: module-catalog, search, reviews, ratings, comments, heroku, каталог-модулей, поиск, отзывы, рейтинги, комментарии, хероку
 
-__version__ = (2, 4, 5)
+__version__ = (2, 4, 6)
 
 import asyncio
 import base64
