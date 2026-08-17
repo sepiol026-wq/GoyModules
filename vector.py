@@ -48,6 +48,7 @@ log = logging.getLogger("VectorMonolith")
 log.setLevel(logging.DEBUG)
 
 
+
 apirt = "https://www.0xvector.lol"
 jwtrx = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+")
 auths = "vektor_heroku_searchmodulesModbySepiol026-wqGithub"
