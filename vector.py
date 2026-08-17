@@ -1837,15 +1837,15 @@ class Vector(loader.Module):
             await call.edit(f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
 
     def _hash_module_source(self, mod_instance: Any) -> Optional[str]:
+        """Hash Heroku's loader-retained source, including dynamic ext modules."""
         try:
-            import inspect, sys
-            mod = sys.modules.get(mod_instance.__class__.__module__)
-            if not mod:
-                return
-            src = inspect.getsource(mod)
-            return hashlib.sha256(src.encode("utf-8")).hexdigest()
+            source = getattr(mod_instance, "__source__", None)
+            if not isinstance(source, str) or not source:
+                import inspect
+                source = inspect.getsource(mod_instance.__class__)
+            return hashlib.sha256(source.encode("utf-8")).hexdigest()
         except Exception:
-            return
+            return None
 
     async def _sync_installed_modules(self) -> bool:
         token = await self._get_active_token()
