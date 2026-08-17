@@ -34,7 +34,7 @@ import unicodedata
 from contextlib import suppress
 from email.utils import parsedate_to_datetime
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlparse
 
 import aiohttp
 from herokutl.tl.functions.contacts import UnblockRequest
@@ -1856,6 +1856,9 @@ class Vector(loader.Module):
         lang = self._detect_lang_suffix()
         modules_data = []
         for mod in list(self.allmodules.modules):
+            origin = urlparse(str(getattr(mod, "__origin__", "")))
+            if origin.scheme != "https" or origin.netloc != "www.0xvector.lol" or not origin.path.startswith(("/modules/", "/api/modules/")):
+                continue
             h = self._hash_module_source(mod)
             if not h:
                 continue
@@ -1866,7 +1869,7 @@ class Vector(loader.Module):
             })
         if not modules_data:
             return False
-        res = await self._net_req("PUT", "/api/users/me/modules", token=token, json_data={"modules": modules_data})
+        res = await self._net_req("PUT", "/api/users/me/modules", token=token, json_data={"modules": modules_data, "replace_inventory": True})
         return bool(res and res.get("ok"))
 
     @loader.loop(86_400, autostart=True)
