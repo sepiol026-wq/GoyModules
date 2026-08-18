@@ -1881,8 +1881,6 @@ class Vector(loader.Module):
         res = await self._net_req("PUT", "/api/users/me/modules", token=token, json_data={"modules": modules_data, "replace_inventory": True})
         return bool(res and res.get("ok"))
 
-    # Backend enforces the authoritative DB rate limit; this interval keeps the
-    # local inventory fresh without relying on a once-per-day client heartbeat.
     @loader.loop(30 * 60, autostart=True)
     async def _sync_modules_keeper(self) -> None:
         if not self.config.get("auto_update_notify", True):
