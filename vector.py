@@ -18,7 +18,7 @@
 # meta developer: @GoyMods
 # meta tags: module-catalog, search, reviews, ratings, comments, heroku, каталог-модулей, поиск, отзывы, рейтинги, комментарии, хероку
 
-__version__ = (2, 4, 6)
+__version__ = (2, 4, 7)
 
 import asyncio
 import base64
@@ -1876,8 +1876,6 @@ class Vector(loader.Module):
                 "contentHash": h,
                 "language": lang,
             })
-        if not modules_data:
-            return False
         res = await self._net_req("PUT", "/api/users/me/modules", token=token, json_data={"modules": modules_data, "replace_inventory": True})
         return bool(res and res.get("ok"))
 
