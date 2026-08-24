@@ -15,6 +15,7 @@
   <img src="./banner.png" alt="GoyModules Banner">
 
 Goyifier polling test 1
+Goyifier polling test 2
 </p>
 
 
