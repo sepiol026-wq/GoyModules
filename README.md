@@ -1,4 +1,4 @@
-# GoyModules 
+# GoyModules  
      
 [![DOCS RU](https://img.shields.io/badge/DOCS-RU-2CA5E0?style=for-the-badge&logo=readthedocs&logoColor=white)](./readme/readme_ru.md)
 [![DOCS EN](https://img.shields.io/badge/DOCS-EN-6f42c1?style=for-the-badge&logo=readthedocs&logoColor=white)](./readme/readme_en.md)
