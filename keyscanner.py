@@ -6,7 +6,7 @@
 #  ╚██████╔╝╚██████╔╝   ██║   ██║ ╚═╝ ██║╚██████╔╝██████╔╝╚██████╔╝███████╗███████╗███████║
 #   ╚═════╝  ╚═════╝    ╚═╝   ╚═╝     ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝
 #
-#   OFFICIAL USERNAMES: @goymodules | @samsepi0l_ovf
+#   OFFICIAL USERNAMES: @GoyMods | @samsepi0l_ovf
 #   MODULE: keyscanner
 #
 #   THIS MODULE IS LICENSED UNDER GNU AGPLv3, PROTECTED AGAINST UNAUTHORIZED COPYING/RESALE,
@@ -14,11 +14,11 @@
 #   ALL OFFICIAL UPDATES, RELEASE NOTES, AND PATCHES ARE PUBLISHED IN THE TELEGRAM CHANNEL @goymodules.
 # ====================================================================================================================
 # meta banner: https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/keyscanner.png
-# meta developer: @GoyModules
+# meta developer: @GoyMods
 # meta tags: key-scanner, leak-detection, credentials, security, heroku, поиск-ключей, обнаружение-утечек, безопасность, хероку
 # requires: aiohttp aiohttp-socks
 
-__version__ = (2, 5, 8)
+__version__ = (2, 9, 0)
 
 import base64
 import binascii
@@ -53,34 +53,13 @@ except ImportError:
     ProxyConnector = None
 
 
-BANNER_URL = "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/keyscanner.png"
 KEY_TOPIC_EMOJI_ID = 6005570495603282482
 KEYSCANNER_HEROKU_TOPIC_TITLE = "KeyScanner Logs"
-EMPTY_LOADING_BUTTON_TEXT = "⁣"
 
-# ── authorship anchor ─────────────────────────────────────────────────────────
-# This value is used as a namespace salt for all database keys.
-# Removing or changing it corrupts the entire persistent storage layer.
 _GM_ANCHOR = hashlib.md5(
     b"github.com/sepiol026-wq/GoyModules\x00@GoyModules\x008577283679"
-).hexdigest()  # = structural db salt, do not remove
-# ─────────────────────────────────────────────────────────────────────────────
+).hexdigest()
 
-
-PROVIDER_BANNERS = {
-    "openai":      "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/OpenAI_Logo.svg/512px-OpenAI_Logo.svg.png",
-    "anthropic":   "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Anthropic_logo.svg/512px-Anthropic_logo.svg.png",
-    "gemini":      "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Google_Gemini_logo.svg/512px-Google_Gemini_logo.svg.png",
-    "groq":        "https://groq.com/favicon.ico",
-    "mistral":     "https://mistral.ai/favicon.ico",
-    "deepseek":    "https://deepseek.com/favicon.ico",
-    "cohere":      "https://cohere.com/favicon.ico",
-    "perplexity":  "https://www.perplexity.ai/static/icons/favicon.ico",
-    "together":    "https://together.ai/favicon.ico",
-    "openrouter":  "https://openrouter.ai/favicon.ico",
-    "huggingface": "https://huggingface.co/front/assets/huggingface_logo-noborder.svg",
-    "voyage":      "https://blog.voyageai.com/wp-content/uploads/2023/10/cropped-logo.png",
-}
 
 E_OK    = "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji>"
 E_ERR   = "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji>"
@@ -123,7 +102,7 @@ class KeyScanner(loader.Module):
     strings = {
         "name": "KeyScanner",
         "scanning":      f"{E_SLOW} <b>Fast scanning via search...</b>\n{E_FOLD} Searching up to {{limit}} messages per prefix.",
-        "found":         f"{E_OK} <b>Scan complete!</b>\n{E_FIRE} Valid keys found: <b>{{valid_count}}</b>\n{E_BATT} Saved to database.",
+        "found":         f"{E_OK} <b>Scan complete!</b>\n{E_FIRE} Valid keys found: <b>{{valid_count}}/{{raw_count}}</b>\n{E_BATT} Saved to database.",
         "auto_on":       f"{E_BELL} Auto-scan <b>enabled</b> for this chat.\n{E_MSG} Catching: new messages · edits · files",
         "auto_off":      f"{E_MUTE} Auto-scan <b>disabled</b> for this chat.",
         "auto_on_global":  f"{E_BELL} Global auto-scan <b>enabled</b>.\n{E_MSG} Catching new messages, edits and files in <b>all chats</b>.",
@@ -138,12 +117,20 @@ class KeyScanner(loader.Module):
         "btn_stats":     "📍 Stats",
         "btn_clear":     "🗑 Clear All",
         "btn_list":      "📝 Key List",
-        "btn_check_all": "🔃 Validate All",
+        "btn_check_all": "🔃 Validate Keys",
+        "btn_check_status_on": "📊 Status: ON",
+        "btn_check_status_off": "📊 Status: OFF",
+        "btn_check_start": "▶️ Start Check",
+        "check_menu_title": "🔃 Check Keys",
+        "btn_del_selected": "🗑 Remove Selected",
+        "btn_del_yes": "✅ Yes, remove",
+        "del_confirm_title": "⚠️ Remove <b>{count}</b> keys?",
+        "del_single_confirm": "⚠️ Remove this key?",
         "btn_back":      "⬅️ Back",
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 Clear Invalid",
-        "models_cache_missing": f"{E_ERR} <b>Model cache is not ready yet.</b>\n{E_GEAR} Please press <b>💳 Sort Paid / Free</b> first.",
+        "models_cache_missing": f"{E_ERR} <b>Model cache is not ready yet.</b>\n{E_GEAR} Press <b>🔃 Validate Keys</b> first.",
         "log_target_help": f"{E_LINK} <b>Log chat is not set.</b>\nUse <code>.kslogchat &lt;chat link / @username / chat_id&gt; [topic title]</code> to set it.",
         "log_target_set": f"{E_OK} <b>Log chat saved.</b>",
         "log_target_topic": f"{E_OK} <b>Forum topic ready.</b>",
@@ -155,9 +142,9 @@ class KeyScanner(loader.Module):
         "btn_log_help": "ℹ️ Log Help",
         "new_key_auto":  f"{E_BELL} <b>Auto-caught key!</b>\nProvider: <b>{{provider}}</b>",
         "list_title":    f"{E_LIST} <b>Keys List</b>\nPage <b>{{page}}/{{total_pages}}</b> · {{sort_label}} · {{filter_label}}\n{{shown_count}} keys on screen",
-        "key_info":      f"{E_PIN} <b>Key Info:</b>\n\n{E_TAG} <b>Provider:</b> {{provider}}\n{E_CARD} <b>Plan:</b> {{tier}}\n{E_LIST} <b>Models:</b> {{models_count}}\n{E_BATT} <b>Quota:</b> {{quota}}\n{E_LOCK} <b>Key:</b> <code>{{key}}</code>",
+        "key_info":      f"{E_PIN} <b>Key Info:</b>\n\n{E_TAG} <b>Provider:</b> {{provider}}\n{E_CARD} <b>Plan:</b> {{tier}}\n{E_LIST} <b>Models:</b> {{models_count}}\n{E_BATT} <b>Balance:</b> {{quota}}\n{E_LOCK} <b>Key:</b> <code>{{key}}</code>",
         "btn_check_single": "🔃 Check Key",
-        "btn_del_single":   "🗑 Delete Key",
+        "btn_del_single":   "🗑 Remove Key",
         "btn_models_single": "📚 Models ({count})",
         "btn_refresh_balance": "💰 Refresh Balance",
         "key_models_title": f"{E_LIST} <b>Models for {{provider}}</b> · {{count}}\n\n{{models}}",
@@ -165,15 +152,15 @@ class KeyScanner(loader.Module):
         "quota_refreshing": f"{E_SYNC} <b>Refreshing key balance...</b>",
         "quota_unsupported": "not exposed by provider",
         "quota_error": "refresh failed",
-        "quota_rate": f"{E_OK} Rate:\nReq: <b>{{req}}</b> | Tok: <b>{{tok}}</b> | Req reset: <b>{{reset}}</b> ({{age}} ago)",
-        "quota_usage": f"{E_OK} Usage: <b>{{usage}}</b> | Limit: <b>{{limit}}</b> | Left: <b>{{left}}</b>",
+        "quota_rate": f"{E_OK} <b>Rate limits</b>\nrequests <b>{{req}}</b> · tokens <b>{{tok}}</b> · reset in <b>{{reset}}</b>",
+        "quota_usage": f"{E_OK} <b>Balance</b>\nused <b>{{usage}}</b> · limit <b>{{limit}}</b> · left <b>{{left}}</b>",
         "checking_all":  f"{E_SYNC} <b>Validating {{done}}/{{total}} keys...</b> Please wait.",
-        "check_res_all": f"{E_OK} <b>Validation Complete</b>\n\n<b>Total:</b> {{total}}\n<b>Valid:</b> {{v}}\n<b>Invalid:</b> {{i}}\n\n{E_PIN} <b>Providers:</b>\n{{prov_stats}}",
+        "check_res_all": f"{E_OK} <b>Validation Complete</b>\n\n<b>Total:</b> {{total}}\n<b>Valid:</b> {{v}}/{{total}}\n<b>Invalid:</b> {{i}}/{{total}}\n\n{E_PIN} <b>Providers:</b>\n{{prov_stats}}",
         "check_res_single": f"{E_SYNC} <b>Validation Result:</b>\n\n<b>Provider:</b> {{provider}}\n<b>Status:</b> {{status}}",
         "status_valid":   f"{E_OK} Valid",
         "status_invalid": f"{E_ERR} Invalid",
         "importing":     f"{E_SYNC} <b>Importing keys...</b>",
-        "imported":      f"{E_OK} <b>Successfully imported {{count}} unique keys.</b>",
+        "imported":      f"{E_OK} <b>Successfully imported {{count}}/{{total}} unique keys.</b>",
         "import_err":    f"{E_ERR} Reply to a message/file or provide a raw URL.",
         "btn_settings":  "⚙️ Settings",
         "settings_title": f"{E_GEAR} <b>Settings:</b>\n\n{E_BELL} Logging: <b>{{log_mode}}</b>\n{E_FOLD} File scan: <b>{{file_scan}}</b>\n{E_SYNC} Edit scan: <b>{{edit_scan}}</b>",
@@ -212,13 +199,13 @@ class KeyScanner(loader.Module):
         "provider_menu_title": f"{E_TAG} <b>Provider Filter</b>\nSelect one provider.",
         "sort_menu_title": f"{E_SYNC} <b>Sorting</b>\nChoose how keys should be ordered.",
         "btn_sort_paid_free": "💳 Sort Paid / Free",
-        "btn_del_free":       "🗑 Delete Free",
-        "btn_del_paid":       "🗑 Delete Paid",
+        "btn_del_free":       "🗑 Remove Free",
+        "btn_del_paid":       "🗑 Remove Paid",
         "btn_exp_paid":       "💳 Export Paid",
         "btn_exp_free":       "🔋 Export Free",
         "sorting":       f"{E_SYNC} <b>Sorting keys by paid/free...</b>\n{{done}}/{{total}}",
-        "sort_done":     f"{E_OK} <b>Sort complete!</b>\n\n{E_CARD} <b>Paid:</b> {{paid}}\n{E_BATT} <b>Free:</b> {{free}}\n❓ <b>Unknown:</b> {{unknown}}",
-        "deleted_filter": f"{E_TRASH} Deleted <b>{{count}}</b> keys.",
+        "sort_done":     f"{E_OK} <b>Sort complete!</b>\n\n{E_CARD} <b>Paid:</b> {{paid}}\n{E_BATT} <b>Free:</b> {{free}}\n❓ <b>Unknown:</b> {{unknown}}\n{E_LIST} <b>Total:</b> {{total}}",
+        "deleted_filter": f"{E_TRASH} Removed <b>{{count}}</b> keys.",
         "settings_overview": (
             f"{E_GEAR} <b>Settings Hub</b>\n\n"
             f"{E_BELL} Capture: chat <b>{{auto_chat}}</b> · global <b>{{auto_global}}</b>\n"
@@ -242,7 +229,6 @@ class KeyScanner(loader.Module):
             f"Auto-hide keys: <b>{{auto_hide}}</b>\n"
             f"Premium emoji: <b>{{premium_emoji}}</b>\n"
             f"Color buttons: <b>{{color_buttons}}</b>\n"
-            f"Show preview: <b>{{show_preview}}</b>\n"
             f"Page size: <b>{{page_size}}</b>\n"
             f"Default sort: <b>{{default_sort}}</b>"
         ),
@@ -264,14 +250,12 @@ class KeyScanner(loader.Module):
         "btn_toggle_autohide": "🙈 Auto-Hide Key",
         "btn_toggle_premium_emoji": "© Premium Emoji",
         "btn_toggle_color_buttons": "🎨 Color Buttons",
-        "btn_toggle_preview":    "🖼 Show Preview",
         "btn_open_list": "📝 Open List",
         "btn_open_export": "⬇️ Export",
         "state_on": "ON",
         "state_off": "OFF",
         "tier_paid_label": f"{E_CARD} Paid",
         "tier_free_label": f"{E_BATT} Free",
-        "loading": f"{E_BOX2} <b>Loading...</b>",
         "tier_unknown": "❓ Unknown",
         "export_scope_paid": "paid",
         "export_scope_free": "free",
@@ -327,14 +311,12 @@ class KeyScanner(loader.Module):
         "clear_next": "Next",
         "clear_final_yes": "Yes, delete everything",
         "clear_all_done": f"{E_TRASH} Entire database removed.",
-        # ── authorship watermark ── used by _export_payload footer ────────────
         "_": "\u200bgithub.com/sepiol026-wq/GoyModules\u200b · \u200bt.me/GoyModules\u200b",
-        # ─────────────────────────────────────────────────────────────────────
     }
 
     strings_ru = {
         "scanning":      f"{E_SLOW} <b>Быстрый поиск ключей...</b>\n{E_FOLD} Поиск до {{limit}} сообщений на префикс.",
-        "found":         f"{E_OK} <b>Сканирование завершено!</b>\n{E_FIRE} Новых валидных ключей: <b>{{valid_count}}</b>\n{E_BATT} Сохранено.",
+        "found":         f"{E_OK} <b>Сканирование завершено!</b>\n{E_FIRE} Новых валидных ключей: <b>{{valid_count}}/{{raw_count}}</b>\n{E_BATT} Сохранено.",
         "auto_on":       f"{E_BELL} Авто-ловля <b>включена</b>.\n{E_MSG} Ловлю: новые сообщения · правки · файлы",
         "auto_off":      f"{E_MUTE} Авто-ловля <b>выключена</b>.",
         "auto_on_global":  f"{E_BELL} Глобальная авто-ловля <b>включена</b>.\n{E_MSG} Ловлю новые сообщения, правки и файлы <b>во всех чатах</b>.",
@@ -349,12 +331,20 @@ class KeyScanner(loader.Module):
         "btn_stats":     "📍 Статистика",
         "btn_clear":     "🗑 Очистить все",
         "btn_list":      "📝 Список",
-        "btn_check_all": "🔃 Проверить все",
+        "btn_check_all": "🔃 Проверить ключи",
+        "btn_check_status_on": "📊 Статус: ВКЛ",
+        "btn_check_status_off": "📊 Статус: ВЫКЛ",
+        "btn_check_start": "▶️ Начать проверку",
+        "check_menu_title": "🔃 Проверка ключей",
+        "btn_del_selected": "🗑 Убрать выбранные",
+        "btn_del_yes": "✅ Да, убрать",
+        "del_confirm_title": "⚠️ Убрать <b>{count}</b> ключей?",
+        "del_single_confirm": "⚠️ Убрать этот ключ?",
         "btn_back":      "⬅️ Назад",
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 Удалить невалид",
-        "models_cache_missing": f"{E_ERR} <b>Кэш моделей не готов.</b>\n{E_GEAR} Сначала нажми <b>💳 Сортировать Платн / Беспл</b>.",
+        "models_cache_missing": f"{E_ERR} <b>Кэш моделей не готов.</b>\n{E_GEAR} Сначала нажми <b>🔃 Проверить ключи</b>.",
         "log_target_help": f"{E_LINK} <b>Чат логов не задан.</b>\nИспользуй <code>.kslogchat &lt;ссылка / @username / chat_id&gt; [название топика]</code>.",
         "log_target_set": f"{E_OK} <b>Чат логов сохранён.</b>",
         "log_target_topic": f"{E_OK} <b>Топик форума готов.</b>",
@@ -366,7 +356,7 @@ class KeyScanner(loader.Module):
         "btn_log_help": "ℹ️ Помощь по логам",
         "new_key_auto":  f"{E_BELL} <b>Пойман новый ключ!</b>\nПровайдер: <b>{{provider}}</b>",
         "list_title":    f"{E_LIST} <b>Список ключей</b>\nСтр. <b>{{page}}/{{total_pages}}</b> · {{sort_label}} · {{filter_label}}\nНа экране: <b>{{shown_count}}</b>",
-        "key_info":      f"{E_PIN} <b>Информация о ключе:</b>\n\n{E_TAG} <b>Провайдер:</b> {{provider}}\n{E_CARD} <b>План:</b> {{tier}}\n{E_LIST} <b>Модели:</b> {{models_count}}\n{E_BATT} <b>Квота:</b> {{quota}}\n{E_LOCK} <b>Ключ:</b> <code>{{key}}</code>",
+        "key_info":      f"{E_PIN} <b>Информация о ключе:</b>\n\n{E_TAG} <b>Провайдер:</b> {{provider}}\n{E_CARD} <b>План:</b> {{tier}}\n{E_LIST} <b>Модели:</b> {{models_count}}\n{E_BATT} <b>Баланс:</b> {{quota}}\n{E_LOCK} <b>Ключ:</b> <code>{{key}}</code>",
         "btn_check_single": "🔃 Проверить",
         "btn_del_single":   "🗑 Удалить",
         "btn_models_single": "📚 Модели ({count})",
@@ -376,15 +366,15 @@ class KeyScanner(loader.Module):
         "quota_refreshing": f"{E_SYNC} <b>Обновляю баланс ключа...</b>",
         "quota_unsupported": "провайдер не отдаёт",
         "quota_error": "ошибка обновления",
-        "quota_rate": f"{E_OK} Rate:\nReq: <b>{{req}}</b> | Tok: <b>{{tok}}</b> | Req reset: <b>{{reset}}</b> ({{age}} назад)",
-        "quota_usage": f"{E_OK} Usage: <b>{{usage}}</b> | Limit: <b>{{limit}}</b> | Left: <b>{{left}}</b>",
+        "quota_rate": f"{E_OK} <b>Лимиты</b>\nзапросы <b>{{req}}</b> · токены <b>{{tok}}</b> · сброс через <b>{{reset}}</b>",
+        "quota_usage": f"{E_OK} <b>Баланс</b>\nиспользовано <b>{{usage}}</b> · лимит <b>{{limit}}</b> · осталось <b>{{left}}</b>",
         "checking_all":  f"{E_SYNC} <b>Проверяю {{done}}/{{total}} ключей...</b>",
-        "check_res_all": f"{E_OK} <b>Проверка завершена</b>\n\n<b>Всего:</b> {{total}}\n<b>Валидно:</b> {{v}}\n<b>Невалидно:</b> {{i}}\n\n{E_PIN} <b>Провайдеры:</b>\n{{prov_stats}}",
+        "check_res_all": f"{E_OK} <b>Проверка завершена</b>\n\n<b>Всего:</b> {{total}}\n<b>Валидно:</b> {{v}}/{{total}}\n<b>Невалидно:</b> {{i}}/{{total}}\n\n{E_PIN} <b>Провайдеры:</b>\n{{prov_stats}}",
         "check_res_single": f"{E_SYNC} <b>Результат проверки:</b>\n\n<b>Провайдер:</b> {{provider}}\n<b>Статус:</b> {{status}}",
         "status_valid":   f"{E_OK} Валид",
         "status_invalid": f"{E_ERR} Невалид",
         "importing":     f"{E_SYNC} <b>Импорт ключей...</b>",
-        "imported":      f"{E_OK} <b>Успешно импортировано {{count}} новых ключей.</b>",
+        "imported":      f"{E_OK} <b>Успешно импортировано {{count}}/{{total}} новых ключей.</b>",
         "import_err":    f"{E_ERR} Реплай на сообщение/файл или укажите raw ссылку.",
         "btn_settings":  "⚙️ Настройки",
         "settings_title": f"{E_GEAR} <b>Настройки:</b>\n\n{E_BELL} Логи: <b>{{log_mode}}</b>\n{E_FOLD} Файлы: <b>{{file_scan}}</b>\n{E_SYNC} Правки: <b>{{edit_scan}}</b>",
@@ -428,7 +418,7 @@ class KeyScanner(loader.Module):
         "btn_exp_paid":       "💳 Выгрузить платные",
         "btn_exp_free":       "🔋 Выгрузить бесплатные",
         "sorting":       f"{E_SYNC} <b>Сортировка платные/бесплатные...</b>\n{{done}}/{{total}}",
-        "sort_done":     f"{E_OK} <b>Сортировка завершена!</b>\n\n{E_CARD} <b>Платных:</b> {{paid}}\n{E_BATT} <b>Бесплатных:</b> {{free}}\n❓ <b>Неизвестно:</b> {{unknown}}",
+        "sort_done":     f"{E_OK} <b>Сортировка завершена!</b>\n\n{E_CARD} <b>Платных:</b> {{paid}}\n{E_BATT} <b>Бесплатных:</b> {{free}}\n❓ <b>Неизвестно:</b> {{unknown}}\n{E_LIST} <b>Всего:</b> {{total}}",
         "deleted_filter": f"{E_TRASH} Удалено <b>{{count}}</b> ключей.",
         "settings_overview": (
             f"{E_GEAR} <b>Центр настроек</b>\n\n"
@@ -474,14 +464,12 @@ class KeyScanner(loader.Module):
         "btn_toggle_autohide": "🙈 Скрывать ключ",
         "btn_toggle_premium_emoji": "© Премиум эмодзи",
         "btn_toggle_color_buttons": "🎨 Цветные кнопки",
-        "btn_toggle_preview":    "🖼 Превью карточки",
         "btn_open_list": "📝 Открыть список",
         "btn_open_export": "⬇️ Экспорт",
         "state_on": "ON",
         "state_off": "OFF",
         "tier_paid_label": f"{E_CARD} Платный",
         "tier_free_label": f"{E_BATT} Бесплатный",
-        "loading": f"{E_BOX2} <b>Загрузка...</b>",
         "tier_unknown": "❓ Неизвестно",
         "export_scope_paid": "платные",
         "export_scope_free": "бесплатные",
@@ -540,10 +528,7 @@ class KeyScanner(loader.Module):
     }
 
     def __init__(self):
-        # _scan_semaphore concurrency value is derived from the authorship anchor
-        # so that the module's scan behaviour is linked to its identity.
-        # Removing _GM_ANCHOR breaks this computation.
-        _sem = int(_GM_ANCHOR[0], 16) % 4 + 2  # always 2–5, structural
+        _sem = int(_GM_ANCHOR[0], 16) % 4 + 2
         self.key_regex = re.compile(
             r"\b("
             r"sk-[a-zA-Z0-9\-_]{20,}|"
@@ -579,28 +564,21 @@ class KeyScanner(loader.Module):
         self._scan_semaphore = asyncio.Semaphore(_sem)
         self._validation_semaphore = asyncio.Semaphore(8)
         self._max_file_scan_size = 1_500_000
-
-    def _default_settings(self):
-        return {
-            "log_mode": "none",
-            "file_scan": True,
-            "edit_scan": True,
-            "notify_new_keys": True,
-            "list_compact": True,
-            "list_page_size": 5,
-            "default_sort": "recent",
-            "auto_hide_keys": True,
-            "premium_emoji": True,
-            "color_buttons": True,
-            "safe_auto_checks": True,
-            "log_full_keys": False,
-            "check_proxy": "",
-            "log_target": {
-                "chat_id": None,
-                "thread_id": None,
-                "topic_title": "Logs",
-            },
-        }
+        self.config = loader.ModuleConfig(
+            loader.ConfigValue("log_mode", "none", "Log mode: none / saved / heroku / custom", validator=loader.validators.Choice(["none", "saved", "heroku", "custom"])),
+            loader.ConfigValue("file_scan", True, "Scan text in attached files", validator=loader.validators.Boolean()),
+            loader.ConfigValue("edit_scan", True, "Scan edited messages", validator=loader.validators.Boolean()),
+            loader.ConfigValue("notify_new_keys", True, "Notify when a new key is caught", validator=loader.validators.Boolean()),
+            loader.ConfigValue("list_compact", True, "Compact list view", validator=loader.validators.Boolean()),
+            loader.ConfigValue("list_page_size", 5, "Keys per list page", validator=loader.validators.Integer(minimum=1, maximum=50)),
+            loader.ConfigValue("default_sort", "recent", "Default list sort: recent / alpha / provider / tier", validator=loader.validators.Choice(["recent", "alpha", "provider", "tier"])),
+            loader.ConfigValue("auto_hide_keys", True, "Hide keys in the list until tapped", validator=loader.validators.Boolean()),
+            loader.ConfigValue("premium_emoji", True, "Use premium custom emoji in messages", validator=loader.validators.Boolean()),
+            loader.ConfigValue("color_buttons", True, "Colored inline buttons", validator=loader.validators.Boolean()),
+            loader.ConfigValue("safe_auto_checks", True, "Safe key validation without spending", validator=loader.validators.Boolean()),
+            loader.ConfigValue("log_full_keys", False, "Log full keys instead of masked", validator=loader.validators.Boolean()),
+            loader.ConfigValue("check_proxy", "", "Proxy for key checks (HTTP/SOCKS/VLESS/...)", validator=loader.validators.Hidden(loader.validators.String())),
+        )
 
     async def client_ready(self, client, db):
         self.client       = client
@@ -618,20 +596,26 @@ class KeyScanner(loader.Module):
             self._model_cache = {}
         if not isinstance(self._proxy_health, dict):
             self._proxy_health = {}
-        self._settings    = self.get("ks_settings", self._default_settings())
-        defaults = self._default_settings()
-        if not isinstance(self._settings, dict):
-            self._settings = defaults
-        else:
-            log_target = self._settings.get("log_target")
-            self._settings = {**defaults, **self._settings}
-            if not isinstance(log_target, dict):
-                log_target = {}
-            self._settings["log_target"] = {
-                **defaults["log_target"],
-                **log_target,
-            }
-
+        if isinstance(self._keys, dict):
+            repaired = False
+            for k, prov in list(self._keys.items()):
+                if prov == "Unknown":
+                    meta_prov = (self._key_meta.get(k) or {}).get("provider")
+                    if meta_prov and meta_prov != "Unknown":
+                        self._keys[k] = meta_prov
+                        repaired = True
+            if repaired:
+                self.set("keys_v2", self._keys)
+        legacy = self.get("ks_settings", None)
+        legacy = legacy if isinstance(legacy, dict) else {}
+        for key in ("log_mode", "file_scan", "edit_scan", "notify_new_keys", "list_compact", "list_page_size", "default_sort", "auto_hide_keys", "premium_emoji", "color_buttons", "safe_auto_checks", "log_full_keys", "check_proxy"):
+            if key in legacy:
+                self.config[key] = legacy.pop(key)
+        log_target = legacy.get("log_target")
+        if not isinstance(log_target, dict):
+            log_target = {"chat_id": None, "thread_id": None, "topic_title": "Logs"}
+        self._settings = {"log_target": log_target}
+        self.set("ks_settings", self._settings)
 
         try:
             await self._bootstrap_heroku_logs()
@@ -677,7 +661,6 @@ class KeyScanner(loader.Module):
 
         return chat_ref, thread_id
 
-    # ── authorship helpers ────────────────────────────────────────────────────
 
     def _db_ns(self, key: str) -> str:
         """Namespaced db key using the authorship anchor. Removing this breaks _save."""
@@ -694,7 +677,6 @@ class KeyScanner(loader.Module):
             (_GM_ANCHOR + "t.me/GoyModules").encode()
         ).hexdigest()[:12]
 
-    # ─────────────────────────────────────────────────────────────────────────
 
     def _save(self):
         self.set("keys_v2",      self._keys)
@@ -704,7 +686,6 @@ class KeyScanner(loader.Module):
         self.set("keys_meta_v1", getattr(self, "_key_meta", {}))
         self.set("models_v2",    getattr(self, "_model_cache", {}))
         self.set("proxy_health_v1", getattr(self, "_proxy_health", {}))
-        # structural integrity record — absent on unlicensed forks
         try:
             self.set(self._db_ns("_origin"), {
                 "repo":    "github.com/sepiol026-wq/GoyModules",
@@ -839,7 +820,7 @@ class KeyScanner(loader.Module):
         return "\n".join(normalized), None
 
     def _load_proxy_specs(self):
-        raw = self._settings.get("check_proxy", "")
+        raw = self.config["check_proxy"]
         specs = []
         seen = set()
         for entry in self._split_proxy_entries(raw):
@@ -1180,7 +1161,6 @@ class KeyScanner(loader.Module):
         scope_slug = re.sub(r"[^a-z0-9]+", "_", scope.lower()).strip("_") or "all"
 
         if fmt == "json_map":
-            # _meta carries authorship fingerprint — required for schema validation
             payload = {
                 "_meta": {
                     "src": "github.com/sepiol026-wq/GoyModules",
@@ -1273,15 +1253,12 @@ class KeyScanner(loader.Module):
     def _get_main_markup(self):
         return [
             [
-                self._btn(self.strings["btn_list"], self.ks_list, (0, "all", self._settings.get("default_sort", "recent")), "primary"),
-                self._btn(self.strings["btn_check_all"], self.ks_val_all, style="success"),
+                self._btn(self.strings["btn_list"], self.ks_list, (0, "all", self.config["default_sort"]), "primary"),
+                self._btn(self.strings["btn_check_all"], self.ks_check_menu, style="success"),
             ],
             [
                 self._btn(self.strings["btn_export"], self.ks_exp_menu, style="primary"),
                 self._btn(self.strings["btn_stats"], self.ks_stats, style="primary"),
-            ],
-            [
-                self._btn(self.strings["btn_sort_paid_free"], self.ks_sort_paid_free, style="success"),
             ],
             [
                 self._btn(self.strings["btn_settings"], self.ks_settings_menu, ("main",), "primary"),
@@ -1316,19 +1293,19 @@ class KeyScanner(loader.Module):
     def _normalize_sort_mode(self, sort_mode: str | None) -> str:
         if sort_mode in {"recent", "alpha", "provider", "tier"}:
             return sort_mode
-        return self._settings.get("default_sort", "recent")
+        return self.config["default_sort"]
 
     def _setting_state(self, value: bool):
         return self.strings["state_on"] if value else self.strings["state_off"]
 
     def _page_size(self):
-        size = self._settings.get("list_page_size", 5)
+        size = self.config["list_page_size"]
         if size not in {4, 5, 6, 8}:
             size = 5
         return size
 
     def _models_page_size(self):
-        size = self._settings.get("models_page_size", 12)
+        size = 12
         if size not in {8, 10, 12, 15, 20}:
             size = 12
         return size
@@ -1344,7 +1321,7 @@ class KeyScanner(loader.Module):
         provider = self._keys.get(key, "Unknown")
         tier_icon = {"paid": "💳", "free": "🔋"}.get(self._paid_status.get(key, ""), "❓")
         masked = self._mask_key(key, True)
-        if self._settings.get("list_compact", True):
+        if self.config["list_compact"]:
             return f"{tier_icon} {provider} · {masked}"
         models = self._ensure_model_cache().get(key, [])
         suffix = f" · {len(models)} models" if models else ""
@@ -1445,7 +1422,7 @@ class KeyScanner(loader.Module):
         text = self._message_text_for_scan(message)
         if text:
             texts.append(text)
-        if include_files and self._settings.get("file_scan", True) and self._is_text_file_message(message):
+        if include_files and self.config["file_scan"] and self._is_text_file_message(message):
             try:
                 raw = await self.client.download_media(message, bytes)
                 if raw:
@@ -1570,7 +1547,7 @@ class KeyScanner(loader.Module):
 
         valid_count = 0
         if found:
-            safe_mode = bool(self._settings.get("safe_auto_checks", True))
+            safe_mode = bool(self.config["safe_auto_checks"])
             async with self._http_session() as session:
                 tasks = [self._validate_key(session, k, allow_spend=not safe_mode) for k in found]
                 results = await self._gather_chunked(tasks)
@@ -1591,10 +1568,10 @@ class KeyScanner(loader.Module):
                         )
             self._save()
 
-        await self._answer(msg, self.strings["found"].format(valid_count=valid_count, raw_count=len(found), scanned_count=scanned_count))
+        await self._answer(msg, self.strings["found"].format(valid_count=valid_count, raw_count=len(found), scanned_count=scanned_count, limit=limit))
 
     def _style(self, kind: str | None):
-        if not self._settings.get("color_buttons", True):
+        if not self.config["color_buttons"]:
             return None
         return {"danger": "danger", "success": "success", "primary": "primary"}.get(kind or "", None)
 
@@ -1610,7 +1587,7 @@ class KeyScanner(loader.Module):
     def _ui_text(self, text):
         if not isinstance(text, str):
             return text
-        if self._settings.get("premium_emoji", True):
+        if self.config["premium_emoji"]:
             return text
         return re.sub(r"<tg-emoji\b[^>]*>(.*?)</tg-emoji>", r"\1", text, flags=re.S)
 
@@ -1623,110 +1600,21 @@ class KeyScanner(loader.Module):
             item = dict(markup)
             if "text" in item:
                 item["text"] = self._ui_text(item["text"])
-            if not self._settings.get("color_buttons", True):
+            if not self.config["color_buttons"]:
                 item.pop("style", None)
             return item
         return markup
 
-    async def _answer(self, message, text, *, preview_banner=None, **kwargs):
+    async def _answer(self, message, text, **kwargs):
         if "reply_markup" in kwargs:
             kwargs["reply_markup"] = self._ui_markup(kwargs["reply_markup"])
-        safe_url = preview_banner if preview_banner and preview_banner.startswith("http") else ""
         final_text = self._ui_text(text)
-        if safe_url:
-            final_text = f'<a href="{safe_url}">&#8203;</a>\n{final_text}'
-            if "reply_markup" not in kwargs:
-                kwargs["link_preview"] = True
         return await utils.answer(message, final_text, **kwargs)
 
-    def _preview_banner(self, provider: str | None = None) -> str | None:
-        """Return banner URL for preview. Uses provider-specific banner if available."""
-        if not self._settings.get("show_preview", True):
-            return None
-        if provider:
-            key = str(provider).lower().strip()
-            banner = PROVIDER_BANNERS.get(key)
-            if banner:
-                return banner
-        return BANNER_URL
-
-    async def _empty_loading_button(self, call):
-        try:
-            await call.answer(EMPTY_LOADING_BUTTON_TEXT)
-        except Exception:
-            pass
-
-    async def _edit(self, call, *, text=None, reply_markup=None, preview_banner=None, **kwargs):
-        kbd = None
-        if reply_markup is not None:
-            kbd = self._ui_markup(reply_markup)
-
-        safe_url = preview_banner if preview_banner and preview_banner.startswith("http") else ""
-        final_text = self._ui_text(text) if text is not None else kwargs.get("text", "")
-        if safe_url:
-            final_text = f'<a href="{safe_url}">&#8203;</a>\n{final_text}'
-
-        if hasattr(call, "inline_manager") and getattr(call, "inline_manager", None):
-            try:
-                imgr = call.inline_manager
-                uid = getattr(call, "unit_id", None)
-                if uid and hasattr(call, "_units") and uid in call._units and kbd is not None:
-                    call._units[uid]["buttons"] = kbd
-                kws = {}
-                if getattr(call, "inline_message_id", None):
-                    kws["inline_message_id"] = call.inline_message_id
-                elif getattr(call, "chat_id", None) and getattr(call, "message_id", None):
-                    kws["chat_id"] = call.chat_id
-                    kws["message_id"] = call.message_id
-                if kws:
-                    mk = imgr.generate_markup(kbd) if kbd is not None else None
-                    if hasattr(imgr.bot, "edit_message_text"):
-                        await imgr.bot.edit_message_text(
-                            text=final_text,
-                            **kws,
-                            reply_markup=mk,
-                            link_preview_options={
-                                "url": safe_url,
-                                "prefer_large_media": True,
-                                "show_above_text": True,
-                            } if safe_url else None,
-                            parse_mode="HTML",
-                        )
-                    else:
-                        await imgr.bot.edit_message(
-                            kws.get("inline_message_id") or kws.get("chat_id"),
-                            kws.get("message_id"),
-                            text=final_text,
-                            parse_mode="HTML",
-                            link_preview=True if safe_url else False,
-                            invert_media=True if safe_url else False,
-                            buttons=mk,
-                        )
-                    return
-            except Exception:
-                pass
-
-        try:
-            edit_kwargs = {k: v for k, v in kwargs.items() if k not in ("text", "reply_markup")}
-            edit_kwargs["text"] = final_text
-            edit_kwargs["disable_web_page_preview"] = False
-            if kbd is not None:
-                edit_kwargs["reply_markup"] = kbd
-            if hasattr(call, "edit"):
-                await call.edit(**edit_kwargs)
-            else:
-                await utils.answer(call, **edit_kwargs)
-        except TypeError:
-            if kbd is not None:
-                if hasattr(call, "edit"):
-                    await call.edit(final_text, reply_markup=kbd)
-                else:
-                    await utils.answer(call, final_text, reply_markup=kbd)
-            else:
-                if hasattr(call, "edit"):
-                    await call.edit(final_text)
-                else:
-                    await utils.answer(call, final_text)
+    async def _edit(self, call, *, text=None, reply_markup=None, **kwargs):
+        final_text = self._ui_text(text) if text is not None else kwargs.pop("text", "")
+        kbd = self._ui_markup(reply_markup) if reply_markup is not None else None
+        await utils.answer(call, final_text, reply_markup=kbd, **kwargs)
 
     def _models_text(self, models, limit: int = 5, provider: str | None = None):
         models = [m for m in dict.fromkeys(models or []) if m]
@@ -1794,25 +1682,42 @@ class KeyScanner(loader.Module):
             "req_reset": req_reset,
         }
 
+    @staticmethod
+    def _fmt_balance_value(v):
+        if v in (None, "", "—"):
+            return "—"
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return str(v)
+        if abs(f) >= 1000:
+            return f"{f:,.0f}"
+        if abs(f) >= 1:
+            return f"{f:,.2f}".rstrip("0").rstrip(".")
+        if abs(f) >= 0.01:
+            return f"{f:.4f}".rstrip("0").rstrip(".")
+        if f == 0:
+            return "0"
+        return f"{f:.6f}".rstrip("0").rstrip(".")
+
     def _format_quota(self, quota):
         if not isinstance(quota, dict):
             return self.strings["quota_unknown"]
         if quota.get("kind") == "rate":
-            req_left = quota.get("req_left") or "—"
-            req_limit = quota.get("req_limit") or "—"
-            tok_left = quota.get("tok_left") or "—"
-            tok_limit = quota.get("tok_limit") or "—"
+            req_left = self._fmt_balance_value(quota.get("req_left"))
+            req_limit = self._fmt_balance_value(quota.get("req_limit"))
+            tok_left = self._fmt_balance_value(quota.get("tok_left"))
+            tok_limit = self._fmt_balance_value(quota.get("tok_limit"))
             return self.strings["quota_rate"].format(
                 req=f"{req_left}/{req_limit}",
                 tok=f"{tok_left}/{tok_limit}",
                 reset=quota.get("req_reset") or "—",
-                age=self._age_text(quota.get("checked_at")),
             )
         if quota.get("kind") == "usage":
             return self.strings["quota_usage"].format(
-                usage=quota.get("usage", "—"),
-                limit=quota.get("limit", "—"),
-                left=quota.get("left", "—"),
+                usage=self._fmt_balance_value(quota.get("usage")),
+                limit=self._fmt_balance_value(quota.get("limit")),
+                left=self._fmt_balance_value(quota.get("left")),
             )
         if quota.get("kind") == "unsupported":
             return self.strings["quota_unsupported"]
@@ -2026,7 +1931,7 @@ class KeyScanner(loader.Module):
                     models = self._candidate_text_models("Gemini", raw_models)
         except Exception:
             models = []
-        fallback_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        fallback_models = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"]
         for model in models[:5] or fallback_models:
             try:
                 async with session.post(
@@ -2061,7 +1966,7 @@ class KeyScanner(loader.Module):
         }
         last_headers = {}
         last_text = ""
-        for model in ("claude-3-5-haiku-latest", "claude-3-haiku-20240307"):
+        for model in ("claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5"):
             payload = {
                 "model": model,
                 "max_tokens": 1,
@@ -2285,14 +2190,14 @@ class KeyScanner(loader.Module):
 
     def _gemini_free_model_markers(self) -> tuple[str, ...]:
         return (
+            "gemini-3.7-flash",
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemini-3-flash",
             "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-lite",
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-8b",
-            "gemini-1.5-pro",
-            "gemini-2.5-pro",
         )
 
     def _gemini_paid_only_markers(self) -> tuple[str, ...]:
@@ -2301,9 +2206,11 @@ class KeyScanner(loader.Module):
             "lyria-",
             "computer-use",
             "imagen",
-            "ultra",
-            "pro-preview-customtools",
-            "gemini-3.1-pro-preview",
+            "nano-banana",
+            "omni",
+            "pro-image",
+            "flash-image",
+            "pro-preview",
         )
 
     def _gemini_is_paid_only_model(self, name: str) -> bool:
@@ -2342,32 +2249,65 @@ class KeyScanner(loader.Module):
             return "unknown"
         return "unknown"
 
-    def _openrouter_tier_from_models(self, models) -> str | None:
-        names = self._model_names_normalized(models)
-        if not names:
-            return None
-        if any(not name.endswith(":free") for name in names):
-            return "paid"
-        if all(name.endswith(":free") for name in names):
-            return "free"
-        return None
+    def _openai_is_free_model(self, name: str) -> bool:
+        low = str(name or "").strip().lower()
+        if not low:
+            return False
+        return any(m in low for m in (
+            "-mini", "-nano", "text-embedding", "whisper", "tts-", "dall-e-2",
+            "moderation", "gpt-oss", "gpt-3.5-turbo", "babbage-", "ada-", "curie-",
+        ))
+
+    def _openai_is_paid_model(self, name: str) -> bool:
+        low = str(name or "").strip().lower()
+        if not low:
+            return False
+        if self._openai_is_free_model(low):
+            return False
+        return any(m in low for m in (
+            "gpt-4", "gpt-5", "o1", "o3", "o4", "davinci", "codex", "dall-e-3", "sora",
+        ))
 
     def _openai_tier_from_models(self, models) -> str | None:
         names = self._model_names_normalized(models)
         if not names:
             return None
-        if any(name.startswith(("gpt-", "o", "text-embedding-", "omni-")) for name in names):
+        if any(self._openai_is_paid_model(n) for n in names):
             return "paid"
-        return "unknown"
+        if any(self._openai_is_free_model(n) for n in names):
+            return "free"
+        return None
 
     def _anthropic_tier_from_models(self, models) -> str | None:
         names = self._model_names_normalized(models)
         if not names:
             return None
-        if any(name.startswith("claude") for name in names):
+        if any("opus" in n or "sonnet" in n or "fable" in n for n in names):
             return "paid"
+        if any("haiku" in n for n in names):
+            return "free"
         return None
 
+    async def _deepseek_tier_from_balance(self, session, key: str) -> str:
+        try:
+            async with session.get(
+                "https://api.deepseek.com/user/balance",
+                headers={"Authorization": f"Bearer {key}"},
+                timeout=5,
+            ) as r:
+                if r.status != 200:
+                    return "unknown"
+                data = await r.json()
+                infos = data.get("balance_infos") or []
+                for info in infos:
+                    if float(info.get("topped_up_balance") or 0) > 0:
+                        return "paid"
+                for info in infos:
+                    if float(info.get("granted_balance") or 0) > 0:
+                        return "free"
+        except Exception:
+            pass
+        return "unknown"
 
     def _log_target(self):
         target = self._settings.get("log_target", {}) or {}
@@ -2523,7 +2463,7 @@ class KeyScanner(loader.Module):
 
         if topic is None:
             try:
-                icon_emoji_id = KEY_TOPIC_EMOJI_ID if self._settings.get("premium_emoji", True) else None
+                icon_emoji_id = KEY_TOPIC_EMOJI_ID if self.config["premium_emoji"] else None
                 try:
                     create_result = await self.client(
                         CreateForumTopicRequest(
@@ -2572,7 +2512,7 @@ class KeyScanner(loader.Module):
             forums_cache.setdefault(entity_key, {})[title] = getattr(topic, "id", cached_topic_id)
             
             if (
-                self._settings.get("premium_emoji", True)
+                self.config["premium_emoji"]
                 and getattr(topic, "icon_emoji_id", None) != KEY_TOPIC_EMOJI_ID
             ):
                 try:
@@ -2684,7 +2624,7 @@ class KeyScanner(loader.Module):
         return chat_ref, thread_id
 
     async def _send_log_text(self, text: str):
-        mode = self._settings.get("log_mode", "none")
+        mode = self.config["log_mode"]
         if mode == "none":
             return
 
@@ -2848,17 +2788,25 @@ class KeyScanner(loader.Module):
         models = [m for m in (models or []) if m]
         if provider == "Gemini":
             return self._gemini_tier_from_models(models) or "unknown"
-        if provider == "OpenRouter":
-            return self._openrouter_tier_from_models(models)
         if provider == "OpenAI":
-            return self._openai_tier_from_models(models)
+            return self._openai_tier_from_models(models) or "unknown"
         if provider == "Anthropic":
-            return self._anthropic_tier_from_models(models)
+            return self._anthropic_tier_from_models(models) or "unknown"
+        if provider == "XAI":
+            return "paid"
         return None
 
-    async def _validate_key_bundle(self, session, key: str):
+    async def _validate_key_bundle(self, session, key: str, with_status: bool = True):
         async with self._validation_semaphore:
             provider, ok = await self._validate_key(session, key)
+            if provider == "Unknown":
+                stored = self._keys.get(key)
+                if stored and stored != "Unknown":
+                    provider = stored
+                else:
+                    meta_prov = (self._key_meta.get(key) or {}).get("provider")
+                    if meta_prov and meta_prov != "Unknown":
+                        provider = meta_prov
             result = {
                 "key": key,
                 "provider": provider,
@@ -2876,6 +2824,9 @@ class KeyScanner(loader.Module):
                 }
                 return result
 
+            if not with_status:
+                return result
+
             models = await self._discover_models(session, key, provider)
             if models:
                 models = self._sort_models(provider, models)
@@ -2888,7 +2839,7 @@ class KeyScanner(loader.Module):
             result["quota"] = await self._fetch_key_quota(session, key, provider)
             return result
 
-    def _apply_validated_key_bundle(self, bundle: dict):
+    def _apply_validated_key_bundle(self, bundle: dict, with_status: bool = True):
         key = bundle["key"]
         provider = bundle["provider"]
         ok = bool(bundle["ok"])
@@ -2899,6 +2850,8 @@ class KeyScanner(loader.Module):
 
         if ok:
             self._keys[key] = provider
+            if not with_status:
+                return True
             models = bundle.get("models") or []
             if models:
                 self._ensure_model_cache()[key] = models
@@ -2912,11 +2865,12 @@ class KeyScanner(loader.Module):
             meta["models_count"] = len(models)
             return True
 
-        self._paid_status[key] = "unknown"
-        self._ensure_model_cache().pop(key, None)
-        meta["quota"] = bundle.get("quota")
-        meta["tier"] = "unknown"
-        meta["models_count"] = 0
+        if with_status:
+            self._paid_status[key] = "unknown"
+            self._ensure_model_cache().pop(key, None)
+            meta["quota"] = bundle.get("quota")
+            meta["tier"] = "unknown"
+            meta["models_count"] = 0
         return False
 
     async def _register_key(
@@ -2970,14 +2924,14 @@ class KeyScanner(loader.Module):
         source_chat_username: str | None = None,
         message_link_chat_id=None,
     ):
-        mode = self._settings.get("log_mode", "none")
-        if mode == "none" or not self._settings.get("notify_new_keys", True):
+        mode = self.config["log_mode"]
+        if mode == "none" or not self.config["notify_new_keys"]:
             return
         link_cid = message_link_chat_id if message_link_chat_id is not None else source_chat_id
         message_row = self._new_key_message_row_html(link_cid, source_message_id, source_chat_username)
         text = self.strings["new_key_notif"].format(
             provider=provider,
-            key=key if self._settings.get("log_full_keys", False) else self._mask_key(key, True),
+            key=key if self.config["log_full_keys"] else self._mask_key(key, True),
             chat_id=source_chat_id,
             via=via,
             message_row=message_row,
@@ -3008,7 +2962,7 @@ class KeyScanner(loader.Module):
             return 0
         count = 0
         async with self._scan_semaphore:
-            safe_mode = bool(self._settings.get("safe_auto_checks", True))
+            safe_mode = bool(self.config["safe_auto_checks"])
             async with self._http_session() as session:
                 tasks   = [self._validate_key(session, k, allow_spend=not safe_mode) for k in new_keys]
                 results = await self._gather_chunked(tasks)
@@ -3034,27 +2988,27 @@ class KeyScanner(loader.Module):
         openai_like = {
             "OpenRouter": {
                 "base_url": "https://openrouter.ai/api/v1",
-                "fallback_models": ["openai/gpt-4o-mini", "openai/gpt-4.1-nano", "anthropic/claude-3.5-haiku"],
+                "fallback_models": ["openai/gpt-5.4-nano", "openai/gpt-5.6-luna", "anthropic/claude-haiku-4-5-20251001", "google/gemini-3.5-flash"],
                 "headers": None,
             },
             "Groq": {
                 "base_url": "https://api.groq.com/openai/v1",
-                "fallback_models": ["llama-3.1-8b-instant", "llama3-8b-8192"],
+                "fallback_models": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
                 "headers": None,
             },
             "Cerebras": {
                 "base_url": "https://api.cerebras.ai/v1",
-                "fallback_models": ["llama3.1-8b", "llama-3.3-70b"],
+                "fallback_models": ["llama-3.3-70b", "llama3.1-8b"],
                 "headers": None,
             },
             "Perplexity": {
                 "base_url": "https://api.perplexity.ai",
-                "fallback_models": ["sonar", "sonar-pro"],
+                "fallback_models": ["sonar", "sonar-pro", "sonar-reasoning-pro"],
                 "headers": None,
             },
             "Together": {
                 "base_url": "https://api.together.xyz/v1",
-                "fallback_models": ["meta-llama/Llama-3.3-70B-Instruct-Turbo", "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"],
+                "fallback_models": ["meta-llama/Llama-3.3-70B-Instruct-Turbo", "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "Qwen/Qwen2.5-Coder-32B-Instruct"],
                 "headers": None,
             },
             "Fireworks": {
@@ -3064,7 +3018,7 @@ class KeyScanner(loader.Module):
             },
             "XAI": {
                 "base_url": "https://api.x.ai/v1",
-                "fallback_models": ["grok-2-latest", "grok-3-mini-latest"],
+                "fallback_models": ["grok-4.6", "grok-4.1-fast", "grok-4-fast"],
                 "headers": None,
             },
             "DeepSeek": {
@@ -3075,12 +3029,12 @@ class KeyScanner(loader.Module):
             },
             "Mistral": {
                 "base_url": "https://api.mistral.ai/v1",
-                "fallback_models": ["mistral-small-latest", "open-mistral-7b"],
+                "fallback_models": ["mistral-small-latest", "mistral-large-latest"],
                 "headers": None,
             },
             "Novita": {
                 "base_url": "https://api.novita.ai/v3/openai",
-                "fallback_models": ["meta-llama/llama-3.1-8b-instruct", "deepseek/deepseek-v3-turbo"],
+                "fallback_models": ["meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-v3-turbo"],
                 "headers": None,
             },
             "SiliconFlow": {
@@ -3090,17 +3044,17 @@ class KeyScanner(loader.Module):
             },
             "DeepInfra": {
                 "base_url": "https://api.deepinfra.com/v1/openai",
-                "fallback_models": ["meta-llama/Meta-Llama-3.1-8B-Instruct", "Qwen/Qwen2.5-7B-Instruct"],
+                "fallback_models": ["meta-llama/Meta-Llama-3.3-70B-Instruct", "Qwen/Qwen2.5-7B-Instruct"],
                 "headers": None,
             },
             "ZhipuAI": {
                 "base_url": "https://open.bigmodel.cn/api/paas/v4",
-                "fallback_models": ["glm-4-flash", "glm-4-air"],
+                "fallback_models": ["glm-4-flash", "glm-4.5-air"],
                 "headers": None,
             },
             "OpenAI": {
                 "base_url": "https://api.openai.com/v1",
-                "fallback_models": ["gpt-4.1-nano", "gpt-4o-mini", "gpt-3.5-turbo"],
+                "fallback_models": ["gpt-5.6-luna", "gpt-5.4-nano", "gpt-oss-120b"],
                 "headers": None,
             },
         }
@@ -3219,64 +3173,34 @@ class KeyScanner(loader.Module):
             if provider == "Gemini" or key.startswith("AIza"):
                 return self._gemini_tier_from_models(models) or await self._gemini_paid_check(session, key)
 
-            if provider == "OpenAI" or (key.startswith("sk-") and not key.startswith(("sk-or-v1-", "sk-ant-"))):
-                tier = self._openai_tier_from_models(models)
-                if tier:
-                    return tier
-                async with session.get("https://api.openai.com/v1/models", headers=headers, timeout=5) as r:
-                    if r.status == 200:
-                        d = await r.json()
-                        return self._openai_tier_from_models([item.get("id") for item in d.get("data", [])]) or "unknown"
-                    return "unknown"
-
-            elif provider == "Anthropic" or key.startswith("sk-ant-"):
-                tier = self._anthropic_tier_from_models(models)
-                return tier or "unknown"
-
-            elif provider == "OpenRouter" or key.startswith("sk-or-v1-"):
-                tier = self._openrouter_tier_from_models(models)
+            if provider == "OpenRouter" or key.startswith("sk-or-v1-"):
                 async with session.get("https://openrouter.ai/api/v1/key",
                                        headers=headers, timeout=5) as r:
                     if r.status == 200:
-                        d       = await r.json()
-                        info = d.get("data", {})
+                        d = await r.json()
+                        info = d.get("data", d) if isinstance(d, dict) else {}
                         is_free = info.get("is_free_tier")
                         if is_free is True:
-                            return tier or "free"
+                            return "free"
                         if is_free is False:
                             return "paid"
-                        return tier or "unknown"
-
-            elif provider in ("Gemini",) or key.startswith("AIza"):
                 return "unknown"
 
-            elif provider == "HuggingFace" or key.startswith("hf_"):
+            if provider == "HuggingFace" or key.startswith("hf_"):
                 async with session.get("https://huggingface.co/api/whoami-v2", headers=headers, timeout=5) as r:
                     if r.status == 200:
                         d = await r.json()
                         return "paid" if self._hf_has_zerogpu(d) or d.get("isPro") else "free"
                 return "unknown"
 
-            elif provider == "Groq" or key.startswith("gsk_"):
-                return "free"
-
-            elif provider == "Cohere":
-                return "unknown"
-
-            elif provider == "Voyage":
-                return "unknown"
-
-            elif provider == "Cerebras":
-                return "free"
-
-            elif provider == "Replicate":
-                return "unknown"
-
-            elif provider in {"Perplexity", "Together", "Fireworks"}:
-                return "unknown"
-
-            elif provider == "XAI":
-                return "paid" if models else "unknown"
+            if provider in ("OpenAI", "Anthropic", "DeepSeek", "XAI"):
+                if provider == "OpenAI":
+                    return self._openai_tier_from_models(models) or "unknown"
+                if provider == "Anthropic":
+                    return self._anthropic_tier_from_models(models) or "unknown"
+                if provider == "DeepSeek":
+                    return await self._deepseek_tier_from_balance(session, key)
+                return "paid"
 
         except Exception:
             pass
@@ -3285,7 +3209,7 @@ class KeyScanner(loader.Module):
     
     strings_uk = {
         "scanning":      f"{E_SLOW} <b>Швидкий пошук ключів...</b>\n{E_FOLD} Пошук до {{limit}} повідомлень на префікс.",
-        "found":         f"{E_OK} <b>Сканування завершено!</b>\n{E_FIRE} Нових валідних ключів: <b>{{valid_count}}</b>\n{E_BATT} Збережено.",
+        "found":         f"{E_OK} <b>Сканування завершено!</b>\n{E_FIRE} Нових валідних ключів: <b>{{valid_count}}/{{raw_count}}</b>\n{E_BATT} Збережено.",
         "auto_on":       f"{E_BELL} Авто-ловля <b>увімкнена</b>.\n{E_MSG} Ловлю: нові повідомлення · правки · файли",
         "auto_off":      f"{E_MUTE} Авто-ловля <b>вимкнена</b>.",
         "db_stats":      f"{E_BOX} <b>База ключів:</b> {{total}}\n{E_CARD} Платних: <b>{{paid}}</b>  {E_BATT} Безкоштовних: <b>{{free}}</b>  ❓ Невідомо: <b>{{unk}}</b>\n\n{E_GEAR} <b>Управління:</b>",
@@ -3298,12 +3222,12 @@ class KeyScanner(loader.Module):
         "btn_stats":     "📍 Статистика",
         "btn_clear":     "🗑 Очистити все",
         "btn_list":      "📝 Список",
-        "btn_check_all": "🔃 Перевірити все",
+        "btn_check_all": "🔃 Перевірити ключі",
         "btn_back":      "⬅️ Назад",
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 Видалити невалід",
-        "models_cache_missing": f"{E_ERR} <b>Кеш моделей не готовий.</b>\n{E_GEAR} Спочатку натисни <b>💳 Сортувати Платн / Безкошт</b>.",
+        "models_cache_missing": f"{E_ERR} <b>Кеш моделей не готовий.</b>\n{E_GEAR} Спочатку натисни <b>🔃 Перевірити ключі</b>.",
         "log_target_help": f"{E_LINK} <b>Чат логів не задано.</b>\nВикористовуй <code>.kslogchat &lt;посилання / @username / chat_id&gt; [назва топіку]</code>.",
         "log_target_set": f"{E_OK} <b>Чат логів збережено.</b>",
         "log_target_topic": f"{E_OK} <b>Топік форуму готовий.</b>",
@@ -3315,7 +3239,7 @@ class KeyScanner(loader.Module):
         "btn_log_help": "ℹ️ Допомога по логах",
         "new_key_auto":  f"{E_BELL} <b>Спійманий новий ключ!</b>\nПровайдер: <b>{{provider}}</b>",
         "list_title":    f"{E_LIST} <b>Список (Стор. {{page}}/{{total_pages}}):</b>",
-        "key_info":      f"{E_PIN} <b>Інформація про ключ:</b>\n\n{E_TAG} <b>Провайдер:</b> {{provider}}\n{E_CARD} <b>План:</b> {{tier}}\n{E_LIST} <b>Моделі:</b> {{models_count}}\n{E_BATT} <b>Квота:</b> {{quota}}\n{E_LOCK} <b>Ключ:</b> <code>{{key}}</code>",
+        "key_info":      f"{E_PIN} <b>Інформація про ключ:</b>\n\n{E_TAG} <b>Провайдер:</b> {{provider}}\n{E_CARD} <b>План:</b> {{tier}}\n{E_LIST} <b>Моделі:</b> {{models_count}}\n{E_BATT} <b>Баланс:</b> {{quota}}\n{E_LOCK} <b>Ключ:</b> <code>{{key}}</code>",
         "btn_check_single": "🔃 Перевірити",
         "btn_del_single":   "🗑 Видалити",
         "btn_models_single": "📚 Моделі ({count})",
@@ -3325,15 +3249,15 @@ class KeyScanner(loader.Module):
         "quota_refreshing": f"{E_SYNC} <b>Оновлюю баланс ключа...</b>",
         "quota_unsupported": "провайдер не віддає",
         "quota_error": "помилка оновлення",
-        "quota_rate": f"{E_OK} Rate:\nReq: <b>{{req}}</b> | Tok: <b>{{tok}}</b> | Req reset: <b>{{reset}}</b> ({{age}} тому)",
-        "quota_usage": f"{E_OK} Usage: <b>{{usage}}</b> | Limit: <b>{{limit}}</b> | Left: <b>{{left}}</b>",
-        "checking_all":  f"{E_SYNC} <b>Перевіряю {{total}} ключів...</b>",
-        "check_res_all": f"{E_OK} <b>Перевірка завершена</b>\n\n<b>Всього:</b> {{total}}\n<b>Валідно:</b> {{v}}\n<b>Невалідно:</b> {{i}}\n\n{E_PIN} <b>Провайдери:</b>\n{{prov_stats}}",
+        "quota_rate": f"{E_OK} <b>Ліміти</b>\nзапити <b>{{req}}</b> · токени <b>{{tok}}</b> · скидання через <b>{{reset}}</b>",
+        "quota_usage": f"{E_OK} <b>Баланс</b>\nвикористано <b>{{usage}}</b> · ліміт <b>{{limit}}</b> · залишилось <b>{{left}}</b>",
+        "checking_all":  f"{E_SYNC} <b>Перевіряю {{done}}/{{total}} ключів...</b>",
+        "check_res_all": f"{E_OK} <b>Перевірка завершена</b>\n\n<b>Всього:</b> {{total}}\n<b>Валідно:</b> {{v}}/{{total}}\n<b>Невалідно:</b> {{i}}/{{total}}\n\n{E_PIN} <b>Провайдери:</b>\n{{prov_stats}}",
         "check_res_single": f"{E_SYNC} <b>Результат перевірки:</b>\n\n<b>Провайдер:</b> {{provider}}\n<b>Статус:</b> {{status}}",
         "status_valid":   f"{E_OK} Валід",
         "status_invalid": f"{E_ERR} Невалід",
         "importing":     f"{E_SYNC} <b>Імпорт ключів...</b>",
-        "imported":      f"{E_OK} <b>Успішно імпортовано {{count}} нових ключів.</b>",
+        "imported":      f"{E_OK} <b>Успішно імпортовано {{count}}/{{total}} нових ключів.</b>",
         "import_err":    f"{E_ERR} Реплай на повідомлення/файл або вкажіть raw посилання.",
         "btn_settings":  "⚙️ Налаштування",
         "settings_title": f"{E_GEAR} <b>Налаштування:</b>\n\n{E_BELL} Логи: <b>{{log_mode}}</b>\n{E_FOLD} Файли: <b>{{file_scan}}</b>\n{E_SYNC} Правки: <b>{{edit_scan}}</b>",
@@ -3361,7 +3285,7 @@ class KeyScanner(loader.Module):
         "btn_exp_paid":       "💳 Вивантажити платні",
         "btn_exp_free":       "🔋 Вивантажити безкоштовні",
         "sorting":       f"{E_SYNC} <b>Сортування платні/безкоштовні...</b>\n{{done}}/{{total}}",
-        "sort_done":     f"{E_OK} <b>Сортування завершено!</b>\n\n{E_CARD} <b>Платних:</b> {{paid}}\n{E_BATT} <b>Безкоштовних:</b> {{free}}\n❓ <b>Невідомо:</b> {{unknown}}",
+        "sort_done":     f"{E_OK} <b>Сортування завершено!</b>\n\n{E_CARD} <b>Платних:</b> {{paid}}\n{E_BATT} <b>Безкоштовних:</b> {{free}}\n❓ <b>Невідомо:</b> {{unknown}}\n{E_LIST} <b>Всього:</b> {{total}}",
         "deleted_filter": f"{E_TRASH} Видалено <b>{{count}}</b> ключів.",
         "btn_toggle_premium_emoji": "© Преміум емодзі",
         "btn_toggle_color_buttons": "🎨 Кольорові кнопки",
@@ -3369,7 +3293,7 @@ class KeyScanner(loader.Module):
 
     strings_de = {
         "scanning":      f"{E_SLOW} <b>Schnellsuche nach Schlüsseln...</b>\n{E_FOLD} Suche bis zu {{limit}} Nachrichten pro Präfix.",
-        "found":         f"{E_OK} <b>Scan abgeschlossen!</b>\n{E_FIRE} Neue gültige Schlüssel: <b>{{valid_count}}</b>\n{E_BATT} Gespeichert.",
+        "found":         f"{E_OK} <b>Scan abgeschlossen!</b>\n{E_FIRE} Neue gültige Schlüssel: <b>{{valid_count}}/{{raw_count}}</b>\n{E_BATT} Gespeichert.",
         "auto_on":       f"{E_BELL} Auto-Scan <b>aktiviert</b>.\n{E_MSG} Erfasse: neue Nachrichten · Bearbeitungen · Dateien",
         "auto_off":      f"{E_MUTE} Auto-Scan <b>deaktiviert</b>.",
         "db_stats":      f"{E_BOX} <b>Schlüsseldatenbank:</b> {{total}}\n{E_CARD} Bezahlt: <b>{{paid}}</b>  {E_BATT} Kostenlos: <b>{{free}}</b>  ❓ Unbekannt: <b>{{unk}}</b>\n\n{E_GEAR} <b>Verwaltung:</b>",
@@ -3382,12 +3306,12 @@ class KeyScanner(loader.Module):
         "btn_stats":     "📍 Statistik",
         "btn_clear":     "🗑 Alles löschen",
         "btn_list":      "📝 Liste",
-        "btn_check_all": "🔃 Alle prüfen",
+        "btn_check_all": "🔃 Schlüssel prüfen",
         "btn_back":      "⬅️ Zurück",
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 Ungültige löschen",
-        "models_cache_missing": f"{E_ERR} <b>Modell-Cache noch nicht bereit.</b>\n{E_GEAR} Bitte zuerst <b>💳 Bezahlt / Kostenlos sortieren</b> drücken.",
+        "models_cache_missing": f"{E_ERR} <b>Modell-Cache noch nicht bereit.</b>\n{E_GEAR} Bitte zuerst <b>🔃 Schlüssel prüfen</b> drücken.",
         "log_target_help": f"{E_LINK} <b>Log-Chat nicht gesetzt.</b>\nNutze <code>.kslogchat &lt;Link / @username / chat_id&gt; [Thema]</code>.",
         "log_target_set": f"{E_OK} <b>Log-Chat gespeichert.</b>",
         "log_target_topic": f"{E_OK} <b>Forum-Thema bereit.</b>",
@@ -3399,7 +3323,7 @@ class KeyScanner(loader.Module):
         "btn_log_help": "ℹ️ Log-Hilfe",
         "new_key_auto":  f"{E_BELL} <b>Neuer Schlüssel gefangen!</b>\nAnbieter: <b>{{provider}}</b>",
         "list_title":    f"{E_LIST} <b>Schlüsselliste (Seite {{page}}/{{total_pages}}):</b>",
-        "key_info":      f"{E_PIN} <b>Schlüsselinfo:</b>\n\n{E_TAG} <b>Anbieter:</b> {{provider}}\n{E_CARD} <b>Plan:</b> {{tier}}\n{E_LIST} <b>Modelle:</b> {{models_count}}\n{E_BATT} <b>Quota:</b> {{quota}}\n{E_LOCK} <b>Schlüssel:</b> <code>{{key}}</code>",
+        "key_info":      f"{E_PIN} <b>Schlüsselinfo:</b>\n\n{E_TAG} <b>Anbieter:</b> {{provider}}\n{E_CARD} <b>Plan:</b> {{tier}}\n{E_LIST} <b>Modelle:</b> {{models_count}}\n{E_BATT} <b>Guthaben:</b> {{quota}}\n{E_LOCK} <b>Schlüssel:</b> <code>{{key}}</code>",
         "btn_check_single": "🔃 Prüfen",
         "btn_del_single":   "🗑 Löschen",
         "btn_models_single": "📚 Modelle ({count})",
@@ -3409,15 +3333,15 @@ class KeyScanner(loader.Module):
         "quota_refreshing": f"{E_SYNC} <b>Key-Balance wird aktualisiert...</b>",
         "quota_unsupported": "vom Provider nicht verfügbar",
         "quota_error": "Aktualisierung fehlgeschlagen",
-        "quota_rate": f"{E_OK} Rate:\nReq: <b>{{req}}</b> | Tok: <b>{{tok}}</b> | Req reset: <b>{{reset}}</b> (vor {{age}})",
-        "quota_usage": f"{E_OK} Usage: <b>{{usage}}</b> | Limit: <b>{{limit}}</b> | Left: <b>{{left}}</b>",
-        "checking_all":  f"{E_SYNC} <b>Prüfe {{total}} Schlüssel...</b>",
-        "check_res_all": f"{E_OK} <b>Prüfung abgeschlossen</b>\n\n<b>Gesamt:</b> {{total}}\n<b>Gültig:</b> {{v}}\n<b>Ungültig:</b> {{i}}\n\n{E_PIN} <b>Anbieter:</b>\n{{prov_stats}}",
+        "quota_rate": f"{E_OK} <b>Ratenlimits</b>\nAnfragen <b>{{req}}</b> · Tokens <b>{{tok}}</b> · Reset in <b>{{reset}}</b>",
+        "quota_usage": f"{E_OK} <b>Guthaben</b>\nverbraucht <b>{{usage}}</b> · Limit <b>{{limit}}</b> · übrig <b>{{left}}</b>",
+        "checking_all":  f"{E_SYNC} <b>Prüfe {{done}}/{{total}} Schlüssel...</b>",
+        "check_res_all": f"{E_OK} <b>Prüfung abgeschlossen</b>\n\n<b>Gesamt:</b> {{total}}\n<b>Gültig:</b> {{v}}/{{total}}\n<b>Ungültig:</b> {{i}}/{{total}}\n\n{E_PIN} <b>Anbieter:</b>\n{{prov_stats}}",
         "check_res_single": f"{E_SYNC} <b>Prüfergebnis:</b>\n\n<b>Anbieter:</b> {{provider}}\n<b>Status:</b> {{status}}",
         "status_valid":   f"{E_OK} Gültig",
         "status_invalid": f"{E_ERR} Ungültig",
         "importing":     f"{E_SYNC} <b>Schlüssel werden importiert...</b>",
-        "imported":      f"{E_OK} <b>Erfolgreich {{count}} neue Schlüssel importiert.</b>",
+        "imported":      f"{E_OK} <b>Erfolgreich {{count}}/{{total}} neue Schlüssel importiert.</b>",
         "import_err":    f"{E_ERR} Antworte auf eine Nachricht/Datei oder gib eine Raw-URL an.",
         "btn_settings":  "⚙️ Einstellungen",
         "settings_title": f"{E_GEAR} <b>Einstellungen:</b>\n\n{E_BELL} Logging: <b>{{log_mode}}</b>\n{E_FOLD} Dateiscan: <b>{{file_scan}}</b>\n{E_SYNC} Bearbeitungsscan: <b>{{edit_scan}}</b>",
@@ -3445,7 +3369,7 @@ class KeyScanner(loader.Module):
         "btn_exp_paid":       "💳 Bezahlte exportieren",
         "btn_exp_free":       "🔋 Kostenlose exportieren",
         "sorting":       f"{E_SYNC} <b>Sortiere bezahlt/kostenlos...</b>\n{{done}}/{{total}}",
-        "sort_done":     f"{E_OK} <b>Sortierung abgeschlossen!</b>\n\n{E_CARD} <b>Bezahlt:</b> {{paid}}\n{E_BATT} <b>Kostenlos:</b> {{free}}\n❓ <b>Unbekannt:</b> {{unknown}}",
+        "sort_done":     f"{E_OK} <b>Sortierung abgeschlossen!</b>\n\n{E_CARD} <b>Bezahlt:</b> {{paid}}\n{E_BATT} <b>Kostenlos:</b> {{free}}\n❓ <b>Unbekannt:</b> {{unknown}}\n{E_LIST} <b>Gesamt:</b> {{total}}",
         "deleted_filter": f"{E_TRASH} <b>{{count}}</b> Schlüssel gelöscht.",
         "btn_toggle_premium_emoji": "© Premium-Emoji",
         "btn_toggle_color_buttons": "🎨 Farbige Buttons",
@@ -3453,7 +3377,7 @@ class KeyScanner(loader.Module):
 
     strings_jp = {
         "scanning":      f"{E_SLOW} <b>キースキャン中...</b>\n{E_FOLD} 各プレフィックスで最大 {{limit}} 件検索。",
-        "found":         f"{E_OK} <b>スキャン完了！</b>\n{E_FIRE} 新規有効キー: <b>{{valid_count}}</b>\n{E_BATT} 保存済み。",
+        "found":         f"{E_OK} <b>スキャン完了！</b>\n{E_FIRE} 新規有効キー: <b>{{valid_count}}/{{raw_count}}</b>\n{E_BATT} 保存済み。",
         "auto_on":       f"{E_BELL} 自動キャッチ <b>有効</b>。\n{E_MSG} 対象: 新着メッセージ · 編集 · ファイル",
         "auto_off":      f"{E_MUTE} 自動キャッチ <b>無効</b>。",
         "auto_on_global":  f"{E_BELL} グローバル自動キャッチ <b>有効</b>。\n{E_MSG} <b>全チャット</b>の新着メッセージ・編集・ファイルを監視します。",
@@ -3468,12 +3392,12 @@ class KeyScanner(loader.Module):
         "btn_stats":     "📍 統計",
         "btn_clear":     "🗑 全削除",
         "btn_list":      "📝 リスト",
-        "btn_check_all": "🔃 全検証",
+        "btn_check_all": "🔃 キー検証",
         "btn_back":      "⬅️ 戻る",
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 無効削除",
-        "models_cache_missing": f"{E_ERR} <b>モデルキャッシュ未準備。</b>\n{E_GEAR} 先に <b>💳 有料/無料ソート</b> を押してください。",
+        "models_cache_missing": f"{E_ERR} <b>モデルキャッシュ未準備。</b>\n{E_GEAR} 先に <b>🔃 キー検証</b> を押してください。",
         "log_target_help": f"{E_LINK} <b>ログチャット未設定。</b>\n<code>.kslogchat &lt;リンク / @username / chat_id&gt; [トピック名]</code> で設定。",
         "log_target_set": f"{E_OK} <b>ログチャット保存済み。</b>",
         "log_target_topic": f"{E_OK} <b>フォーラムトピック準備完了。</b>",
@@ -3485,7 +3409,7 @@ class KeyScanner(loader.Module):
         "btn_log_help": "ℹ️ ログヘルプ",
         "new_key_auto":  f"{E_BELL} <b>新規キーをキャッチ！</b>\nプロバイダ: <b>{{provider}}</b>",
         "list_title":    f"{E_LIST} <b>キー一覧</b>\nページ <b>{{page}}/{{total_pages}}</b> ・ {{sort_label}} ・ {{filter_label}}\n表示中: <b>{{shown_count}}</b>",
-        "key_info":      f"{E_PIN} <b>キー情報:</b>\n\n{E_TAG} <b>プロバイダ:</b> {{provider}}\n{E_CARD} <b>プラン:</b> {{tier}}\n{E_LIST} <b>モデル:</b> {{models_count}}\n{E_BATT} <b>クォータ:</b> {{quota}}\n{E_LOCK} <b>キー:</b> <code>{{key}}</code>",
+        "key_info":      f"{E_PIN} <b>キー情報:</b>\n\n{E_TAG} <b>プロバイダ:</b> {{provider}}\n{E_CARD} <b>プラン:</b> {{tier}}\n{E_LIST} <b>モデル:</b> {{models_count}}\n{E_BATT} <b>残高:</b> {{quota}}\n{E_LOCK} <b>キー:</b> <code>{{key}}</code>",
         "btn_check_single": "🔃 検証",
         "btn_del_single":   "🗑 削除",
         "btn_models_single": "📚 モデル ({count})",
@@ -3495,15 +3419,15 @@ class KeyScanner(loader.Module):
         "quota_refreshing": f"{E_SYNC} <b>キー残高を更新中...</b>",
         "quota_unsupported": "プロバイダ未対応",
         "quota_error": "更新失敗",
-        "quota_rate": f"{E_OK} Rate:\nReq: <b>{{req}}</b> | Tok: <b>{{tok}}</b> | Req reset: <b>{{reset}}</b> ({{age}} ago)",
-        "quota_usage": f"{E_OK} Usage: <b>{{usage}}</b> | Limit: <b>{{limit}}</b> | Left: <b>{{left}}</b>",
-        "checking_all":  f"{E_SYNC} <b>{{total}} 件のキーを検証中...</b>",
-        "check_res_all": f"{E_OK} <b>検証完了</b>\n\n<b>合計:</b> {{total}}\n<b>有効:</b> {{v}}\n<b>無効:</b> {{i}}\n\n{E_PIN} <b>プロバイダ:</b>\n{{prov_stats}}",
+        "quota_rate": f"{E_OK} <b>レート制限</b>\nリクエスト <b>{{req}}</b> · トークン <b>{{tok}}</b> · リセット <b>{{reset}}</b>",
+        "quota_usage": f"{E_OK} <b>残高</b>\n使用 <b>{{usage}}</b> · 上限 <b>{{limit}}</b> · 残り <b>{{left}}</b>",
+        "checking_all":  f"{E_SYNC} <b>{{done}}/{{total}} 件のキーを検証中...</b>",
+        "check_res_all": f"{E_OK} <b>検証完了</b>\n\n<b>合計:</b> {{total}}\n<b>有効:</b> {{v}}/{{total}}\n<b>無効:</b> {{i}}/{{total}}\n\n{E_PIN} <b>プロバイダ:</b>\n{{prov_stats}}",
         "check_res_single": f"{E_SYNC} <b>検証結果:</b>\n\n<b>プロバイダ:</b> {{provider}}\n<b>ステータス:</b> {{status}}",
         "status_valid":   f"{E_OK} 有効",
         "status_invalid": f"{E_ERR} 無効",
         "importing":     f"{E_SYNC} <b>キーをインポート中...</b>",
-        "imported":      f"{E_OK} <b>{{count}} 件の新規キーをインポートしました。</b>",
+        "imported":      f"{E_OK} <b>{{count}}/{{total}} 件の新規キーをインポートしました。</b>",
         "import_err":    f"{E_ERR} メッセージ/ファイルにリプライするか、raw URLを指定してください。",
         "btn_settings":  "⚙️ 設定",
         "settings_title": f"{E_GEAR} <b>設定:</b>\n\n{E_BELL} ログ: <b>{{log_mode}}</b>\n{E_FOLD} ファイルスキャン: <b>{{file_scan}}</b>\n{E_SYNC} 編集スキャン: <b>{{edit_scan}}</b>",
@@ -3547,7 +3471,7 @@ class KeyScanner(loader.Module):
         "btn_exp_paid":       "💳 有料をエクスポート",
         "btn_exp_free":       "🔋 無料をエクスポート",
         "sorting":       f"{E_SYNC} <b>有料/無料ソート中...</b>\n{{done}}/{{total}}",
-        "sort_done":     f"{E_OK} <b>ソート完了！</b>\n\n{E_CARD} <b>有料:</b> {{paid}}\n{E_BATT} <b>無料:</b> {{free}}\n❓ <b>不明:</b> {{unknown}}",
+        "sort_done":     f"{E_OK} <b>ソート完了！</b>\n\n{E_CARD} <b>有料:</b> {{paid}}\n{E_BATT} <b>無料:</b> {{free}}\n❓ <b>不明:</b> {{unknown}}\n{E_LIST} <b>合計:</b> {{total}}",
         "deleted_filter": f"{E_TRASH} <b>{{count}}</b> 件のキーを削除。",
         "settings_overview": (
             f"{E_GEAR} <b>設定ハブ</b>\n\n"
@@ -3601,7 +3525,7 @@ class KeyScanner(loader.Module):
 
     strings_neofit = {
         "scanning":      f"{E_SLOW} <b>Scanning keys, boss...</b>\n{E_FOLD} Searching up to {{limit}} messages per prefix.",
-        "found":         f"{E_OK} <b>Scan finished nice.</b>\n{E_FIRE} Valid keys found: <b>{{valid_count}}</b>\n{E_BATT} Saved in database.",
+        "found":         f"{E_OK} <b>Scan finished nice.</b>\n{E_FIRE} Valid keys found: <b>{{valid_count}}/{{raw_count}}</b>\n{E_BATT} Saved in database.",
         "auto_on":       f"{E_BELL} Auto-catch <b>enabled</b> for this chat.\n{E_MSG} Watching: new msgs · edits · files",
         "auto_off":      f"{E_MUTE} Auto-catch <b>disabled</b> for this chat.",
         "auto_on_global":  f"{E_BELL} Global auto-catch <b>enabled</b>.\n{E_MSG} Now watching new msgs, edits and files in <b>all chats</b>.",
@@ -3610,18 +3534,18 @@ class KeyScanner(loader.Module):
         "stats":         f"{E_PIN} <b>Providers / keys / models:</b>\n{{stats_text}}",
         "exported":      f"{E_COPY} <b>Keys exported to Saved Messages.</b>",
         "empty":         f"{E_ERR} Key base is empty.",
-        "deleted":       f"{E_TRASH} Key deleted.",
+        "deleted":       f"{E_TRASH} Key removed.",
         "not_found":     f"{E_ERR} Key not found.",
         "btn_export":    "⬇️ Export",
         "btn_stats":     "📍 Stats",
         "btn_clear":     "🗑 Clear All",
         "btn_list":      "📝 Key List",
-        "btn_check_all": "🔃 Check All",
+        "btn_check_all": "🔃 Check Keys",
         "btn_back":      "⬅️ Back",
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 Clear Invalid",
-        "models_cache_missing": f"{E_ERR} <b>Model cache not ready yet.</b>\n{E_GEAR} Press <b>💳 Sort Paid / Free</b> first.",
+        "models_cache_missing": f"{E_ERR} <b>Model cache not ready yet.</b>\n{E_GEAR} Press <b>🔃 Check Keys</b> first.",
         "log_target_help": f"{E_LINK} <b>Log chat is not set.</b>\nUse <code>.kslogchat &lt;chat link / @username / chat_id&gt; [topic title]</code>.",
         "log_target_set": f"{E_OK} <b>Log chat saved.</b>",
         "log_target_topic": f"{E_OK} <b>Forum topic ready.</b>",
@@ -3633,9 +3557,9 @@ class KeyScanner(loader.Module):
         "btn_log_help": "ℹ️ Log Help",
         "new_key_auto":  f"{E_BELL} <b>New key catched.</b>\nProvider: <b>{{provider}}</b>",
         "list_title":    f"{E_LIST} <b>Key list (page {{page}}/{{total_pages}} · {{sort_label}}):</b>",
-        "key_info":      f"{E_PIN} <b>Key info:</b>\n\n{E_TAG} <b>Provider:</b> {{provider}}\n{E_CARD} <b>Plan:</b> {{tier}}\n{E_LIST} <b>Models:</b> {{models_count}}\n{E_BATT} <b>Quota:</b> {{quota}}\n{E_LOCK} <b>Key:</b> <code>{{key}}</code>",
+        "key_info":      f"{E_PIN} <b>Key info:</b>\n\n{E_TAG} <b>Provider:</b> {{provider}}\n{E_CARD} <b>Plan:</b> {{tier}}\n{E_LIST} <b>Models:</b> {{models_count}}\n{E_BATT} <b>Balance:</b> {{quota}}\n{E_LOCK} <b>Key:</b> <code>{{key}}</code>",
         "btn_check_single": "🔃 Check Key",
-        "btn_del_single":   "🗑 Delete Key",
+        "btn_del_single":   "🗑 Remove Key",
         "btn_models_single": "📚 Models ({count})",
         "btn_refresh_balance": "💰 Refresh Balance",
         "key_models_title": f"{E_LIST} <b>Models for {{provider}}</b> · {{count}}\n\n{{models}}",
@@ -3643,15 +3567,15 @@ class KeyScanner(loader.Module):
         "quota_refreshing": f"{E_SYNC} <b>Refreshing key balance...</b>",
         "quota_unsupported": "not exposed by provider",
         "quota_error": "refresh failed",
-        "quota_rate": f"{E_OK} Rate:\nReq: <b>{{req}}</b> | Tok: <b>{{tok}}</b> | Req reset: <b>{{reset}}</b> ({{age}} ago)",
-        "quota_usage": f"{E_OK} Usage: <b>{{usage}}</b> | Limit: <b>{{limit}}</b> | Left: <b>{{left}}</b>",
-        "checking_all":  f"{E_SYNC} <b>Checking {{total}} keys now...</b>",
-        "check_res_all": f"{E_OK} <b>Check finished nice</b>\n\n<b>Total:</b> {{total}}\n<b>Valid:</b> {{v}}\n<b>Invalid:</b> {{i}}\n\n{E_PIN} <b>Providers:</b>\n{{prov_stats}}",
+        "quota_rate": f"{E_OK} <b>Rate limits</b>\nrequests <b>{{req}}</b> · tokens <b>{{tok}}</b> · reset in <b>{{reset}}</b>",
+        "quota_usage": f"{E_OK} <b>Balance</b>\nused <b>{{usage}}</b> · limit <b>{{limit}}</b> · left <b>{{left}}</b>",
+        "checking_all":  f"{E_SYNC} <b>Checking {{done}}/{{total}} keys now...</b>",
+        "check_res_all": f"{E_OK} <b>Check finished nice</b>\n\n<b>Total:</b> {{total}}\n<b>Valid:</b> {{v}}/{{total}}\n<b>Invalid:</b> {{i}}/{{total}}\n\n{E_PIN} <b>Providers:</b>\n{{prov_stats}}",
         "check_res_single": f"{E_SYNC} <b>Result is here:</b>\n\n<b>Provider:</b> {{provider}}\n<b>Status:</b> {{status}}",
         "status_valid":   f"{E_OK} Valid",
         "status_invalid": f"{E_ERR} Invalid",
         "importing":     f"{E_SYNC} <b>Importing keys...</b>",
-        "imported":      f"{E_OK} <b>Imported {{count}} unique keys.</b>",
+        "imported":      f"{E_OK} <b>Imported {{count}}/{{total}} unique keys.</b>",
         "import_err":    f"{E_ERR} Reply to a msg/file or give raw URL.",
         "btn_settings":  "⚙️ Settings",
         "settings_title": f"{E_GEAR} <b>Settings:</b>\n\n{E_BELL} Logging: <b>{{log_mode}}</b>\n{E_FOLD} File scan: <b>{{file_scan}}</b>\n{E_SYNC} Edit scan: <b>{{edit_scan}}</b>",
@@ -3682,21 +3606,20 @@ class KeyScanner(loader.Module):
         "sort_label_provider": "Provider",
         "sort_label_tier":     "Tier",
         "btn_sort_paid_free": "💳 Sort Paid / Free",
-        "btn_del_free":       "🗑 Delete Free",
-        "btn_del_paid":       "🗑 Delete Paid",
+        "btn_del_free":       "🗑 Remove Free",
+        "btn_del_paid":       "🗑 Remove Paid",
         "btn_exp_paid":       "💳 Export Paid",
         "btn_exp_free":       "🔋 Export Free",
         "sorting":       f"{E_SYNC} <b>Sorting keys by paid/free...</b>\n{{done}}/{{total}}",
-        "sort_done":     f"{E_OK} <b>Sort finished!</b>\n\n{E_CARD} <b>Paid:</b> {{paid}}\n{E_BATT} <b>Free:</b> {{free}}\n❓ <b>Unknown:</b> {{unknown}}",
-        "deleted_filter": f"{E_TRASH} Deleted <b>{{count}}</b> keys.",
+        "sort_done":     f"{E_OK} <b>Sort finished!</b>\n\n{E_CARD} <b>Paid:</b> {{paid}}\n{E_BATT} <b>Free:</b> {{free}}\n❓ <b>Unknown:</b> {{unknown}}\n{E_LIST} <b>Total:</b> {{total}}",
+        "deleted_filter": f"{E_TRASH} Removed <b>{{count}}</b> keys.",
         "btn_toggle_premium_emoji": "© Premium Emoji",
         "btn_toggle_color_buttons": "🎨 Color Buttons",
-        "btn_toggle_preview":    "🖼 Show Preview",
     }
 
     strings_tiktok = {
         "scanning":      f"{E_SLOW} <b>сканим кейсы...</b>\n{E_FOLD} ищем до {{limit}} сообщений на префикс.",
-        "found":         f"{E_OK} <b>скан готов!</b>\n{E_FIRE} валид кейсов: <b>{{valid_count}}</b>\n{E_BATT} сохранено в дб.",
+        "found":         f"{E_OK} <b>скан готов!</b>\n{E_FIRE} валид кейсов: <b>{{valid_count}}/{{raw_count}}</b>\n{E_BATT} сохранено в дб.",
         "auto_on":       f"{E_BELL} авто скан <b>вкл</b>.\n{E_MSG} ловлю: месаги · едиты · файлы",
         "auto_off":      f"{E_MUTE} авто скан <b>выкл</b>.",
         "db_stats":      f"{E_BOX} <b>дб:</b> {{total}} кейсов\n{E_CARD} пейд: <b>{{paid}}</b>  {E_BATT} фри: <b>{{free}}</b>  ❓ анноун: <b>{{unk}}</b>\n\n{E_GEAR} <b>менеджмент:</b>",
@@ -3709,12 +3632,12 @@ class KeyScanner(loader.Module):
         "btn_stats":     "📍 статы",
         "btn_clear":     "🗑 клир ол",
         "btn_list":      "📝 лист",
-        "btn_check_all": "🔃 валидейт ол",
+        "btn_check_all": "🔃 валидейт кейсы",
         "btn_back":      "⬅️ бек",
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 клир инвалид",
-        "models_cache_missing": f"{E_ERR} <b>модел кэш не реди.</b>\n{E_GEAR} сначала нажми <b>💳 сорт пейд/фри</b>.",
+        "models_cache_missing": f"{E_ERR} <b>модел кэш не реди.</b>\n{E_GEAR} сначала нажми <b>🔃 валидейт кейсы</b>.",
         "log_target_help": f"{E_LINK} <b>лог чат не сетнут.</b>\nюзай <code>.kslogchat</code> чтобы сетнуть.",
         "log_target_set": f"{E_OK} <b>лог чат сейвнут.</b>",
         "log_target_topic": f"{E_OK} <b>форум топик реди.</b>",
@@ -3736,15 +3659,15 @@ class KeyScanner(loader.Module):
         "quota_refreshing": f"{E_SYNC} <b>рефрешу баланс кея...</b>",
         "quota_unsupported": "провайдер не отдает",
         "quota_error": "рефреш упал",
-        "quota_rate": f"{E_OK} Rate:\nReq: <b>{{req}}</b> | Tok: <b>{{tok}}</b> | Req reset: <b>{{reset}}</b> ({{age}} назад)",
-        "quota_usage": f"{E_OK} Usage: <b>{{usage}}</b> | Limit: <b>{{limit}}</b> | Left: <b>{{left}}</b>",
-        "checking_all":  f"{E_SYNC} <b>валидейтим {{total}} кейсов...</b>",
-        "check_res_all": f"{E_OK} <b>валидейшн дан</b>\n\n<b>тотал:</b> {{total}}\n<b>валид:</b> {{v}}\n<b>инвалид:</b> {{i}}\n\n{E_PIN} <b>провайдеры:</b>\n{{prov_stats}}",
+        "quota_rate": f"{E_OK} <b>Лимиты</b>\nзапросы <b>{{req}}</b> · токены <b>{{tok}}</b> · сброс через <b>{{reset}}</b>",
+        "quota_usage": f"{E_OK} <b>Баланс</b>\nиспользовано <b>{{usage}}</b> · лимит <b>{{limit}}</b> · осталось <b>{{left}}</b>",
+        "checking_all":  f"{E_SYNC} <b>валидейтим {{done}}/{{total}} кейсов...</b>",
+        "check_res_all": f"{E_OK} <b>валидейшн дан</b>\n\n<b>тотал:</b> {{total}}\n<b>валид:</b> {{v}}/{{total}}\n<b>инвалид:</b> {{i}}/{{total}}\n\n{E_PIN} <b>провайдеры:</b>\n{{prov_stats}}",
         "check_res_single": f"{E_SYNC} <b>резалт:</b>\n\n<b>провайдер:</b> {{provider}}\n<b>статус:</b> {{status}}",
         "status_valid":   f"{E_OK} валид",
         "status_invalid": f"{E_ERR} инвалид",
         "importing":     f"{E_SYNC} <b>импортим кейсы...</b>",
-        "imported":      f"{E_OK} <b>импортнул {{count}} кейсов.</b>",
+        "imported":      f"{E_OK} <b>импортнул {{count}}/{{total}} кейсов.</b>",
         "import_err":    f"{E_ERR} реплай на месагу/файл или кинь raw урл.",
         "btn_settings":  "⚙️ сеттингс",
         "settings_title": f"{E_GEAR} <b>сеттингс:</b>\n\n{E_BELL} логи: <b>{{log_mode}}</b>\n{E_FOLD} файл скан: <b>{{file_scan}}</b>\n{E_SYNC} едит скан: <b>{{edit_scan}}</b>",
@@ -3772,7 +3695,7 @@ class KeyScanner(loader.Module):
         "btn_exp_paid":       "💳 экспорт пейд",
         "btn_exp_free":       "🔋 экспорт фри",
         "sorting":       f"{E_SYNC} <b>сортим...</b>\n{{done}}/{{total}}",
-        "sort_done":     f"{E_OK} <b>сорт дан!</b>\n\n{E_CARD} <b>пейд:</b> {{paid}}\n{E_BATT} <b>фри:</b> {{free}}\n❓ <b>анноун:</b> {{unknown}}",
+        "sort_done":     f"{E_OK} <b>сорт дан!</b>\n\n{E_CARD} <b>пейд:</b> {{paid}}\n{E_BATT} <b>фри:</b> {{free}}\n❓ <b>анноун:</b> {{unknown}}\n{E_LIST} <b>тотал:</b> {{total}}",
         "deleted_filter": f"{E_TRASH} делитнул <b>{{count}}</b> кейсов.",
         "btn_toggle_premium_emoji": "© прем эмодзи",
         "btn_toggle_color_buttons": "🎨 цвет кнопки",
@@ -3780,7 +3703,7 @@ class KeyScanner(loader.Module):
 
     strings_leet = {
         "scanning":      f"{E_SLOW} <b>5c4nn1ng k3y5...</b>\n{E_FOLD} 5e4rch1ng up t0 {{limit}} m5g5 p3r pr3f1x.",
-        "found":         f"{E_OK} <b>5c4n c0mpl3t3!</b>\n{E_FIRE} v4l1d k3y5: <b>{{valid_count}}</b>\n{E_BATT} 54v3d t0 d8.",
+        "found":         f"{E_OK} <b>5c4n c0mpl3t3!</b>\n{E_FIRE} v4l1d k3y5: <b>{{valid_count}}/{{raw_count}}</b>\n{E_BATT} 54v3d t0 d8.",
         "auto_on":       f"{E_BELL} 4ut0-5c4n <b>0n</b>.\n{E_MSG} c4tch1ng: m5g5 · 3d1t5 · f1l35",
         "auto_off":      f"{E_MUTE} 4ut0-5c4n <b>0ff</b>.",
         "db_stats":      f"{E_BOX} <b>d8:</b> {{total}} k3y5\n{E_CARD} p41d: <b>{{paid}}</b>  {E_BATT} fr33: <b>{{free}}</b>  ❓ unkn0wn: <b>{{unk}}</b>\n\n{E_GEAR} <b>m3nu:</b>",
@@ -3793,12 +3716,12 @@ class KeyScanner(loader.Module):
         "btn_stats":     "📍 5t4t5",
         "btn_clear":     "🗑 cl34r 4ll",
         "btn_list":      "📝 l15t",
-        "btn_check_all": "🔃 v4l1d4t3 4ll",
+        "btn_check_all": "🔃 v4l1d4t3 k3y5",
         "btn_back":      "⬅️ b4ck",
         "btn_exp_json":  "J50N",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 cl34r 1nv4l1d",
-        "models_cache_missing": f"{E_ERR} <b>m0d3l c4ch3 n0t r34dy.</b>\n{E_GEAR} pr355 <b>💳 50rt p41d/fr33</b> f1r5t.",
+        "models_cache_missing": f"{E_ERR} <b>m0d3l c4ch3 n0t r34dy.</b>\n{E_GEAR} pr355 <b>🔃 v4l1d4t3 k3y5</b> f1r5t.",
         "log_target_help": f"{E_LINK} <b>l0g ch4t n0t 53t.</b>\nu53 <code>.kslogchat</code> t0 53t 1t.",
         "log_target_set": f"{E_OK} <b>l0g ch4t 54v3d.</b>",
         "log_target_topic": f"{E_OK} <b>f0rum t0p1c r34dy.</b>",
@@ -3820,15 +3743,15 @@ class KeyScanner(loader.Module):
         "quota_refreshing": f"{E_SYNC} <b>r3fr35h1ng k3y b4l4nc3...</b>",
         "quota_unsupported": "n0t 3xp053d by pr0v1d3r",
         "quota_error": "r3fr35h f41l3d",
-        "quota_rate": f"{E_OK} R4t3:\nR3q: <b>{{req}}</b> | T0k: <b>{{tok}}</b> | R3q r353t: <b>{{reset}}</b> ({{age}} 4g0)",
-        "quota_usage": f"{E_OK} U54g3: <b>{{usage}}</b> | L1m1t: <b>{{limit}}</b> | L3ft: <b>{{left}}</b>",
-        "checking_all":  f"{E_SYNC} <b>v4l1d4t1ng {{total}} k3y5...</b>",
-        "check_res_all": f"{E_OK} <b>v4l1d4t10n d0n3</b>\n\n<b>t0t4l:</b> {{total}}\n<b>v4l1d:</b> {{v}}\n<b>1nv4l1d:</b> {{i}}\n\n{E_PIN} <b>pr0v1d3r5:</b>\n{{prov_stats}}",
+        "quota_rate": f"{E_OK} <b>Rate limits</b>\nrequests <b>{{req}}</b> · tokens <b>{{tok}}</b> · reset in <b>{{reset}}</b>",
+        "quota_usage": f"{E_OK} <b>Balance</b>\nused <b>{{usage}}</b> · limit <b>{{limit}}</b> · left <b>{{left}}</b>",
+        "checking_all":  f"{E_SYNC} <b>v4l1d4t1ng {{done}}/{{total}} k3y5...</b>",
+        "check_res_all": f"{E_OK} <b>v4l1d4t10n d0n3</b>\n\n<b>t0t4l:</b> {{total}}\n<b>v4l1d:</b> {{v}}/{{total}}\n<b>1nv4l1d:</b> {{i}}/{{total}}\n\n{E_PIN} <b>pr0v1d3r5:</b>\n{{prov_stats}}",
         "check_res_single": f"{E_SYNC} <b>r35ult:</b>\n\n<b>pr0v1d3r:</b> {{provider}}\n<b>5t4tu5:</b> {{status}}",
         "status_valid":   f"{E_OK} v4l1d",
         "status_invalid": f"{E_ERR} 1nv4l1d",
         "importing":     f"{E_SYNC} <b>1mp0rt1ng k3y5...</b>",
-        "imported":      f"{E_OK} <b>1mp0rt3d {{count}} k3y5.</b>",
+        "imported":      f"{E_OK} <b>1mp0rt3d {{count}}/{{total}} k3y5.</b>",
         "import_err":    f"{E_ERR} r3ply t0 4 m5g/f1l3 0r g1v3 4 r4w url.",
         "btn_settings":  "⚙️ 53tt1ng5",
         "settings_title": f"{E_GEAR} <b>53tt1ng5:</b>\n\n{E_BELL} l0gg1ng: <b>{{log_mode}}</b>\n{E_FOLD} f1l3 5c4n: <b>{{file_scan}}</b>\n{E_SYNC} 3d1t 5c4n: <b>{{edit_scan}}</b>",
@@ -3856,7 +3779,7 @@ class KeyScanner(loader.Module):
         "btn_exp_paid":       "💳 3xp p41d",
         "btn_exp_free":       "🔋 3xp fr33",
         "sorting":       f"{E_SYNC} <b>50rt1ng...</b>\n{{done}}/{{total}}",
-        "sort_done":     f"{E_OK} <b>50rt3d!</b>\n\n{E_CARD} <b>p41d:</b> {{paid}}\n{E_BATT} <b>fr33:</b> {{free}}\n❓ <b>unkn0wn:</b> {{unknown}}",
+        "sort_done":     f"{E_OK} <b>50rt3d!</b>\n\n{E_CARD} <b>p41d:</b> {{paid}}\n{E_BATT} <b>fr33:</b> {{free}}\n❓ <b>unkn0wn:</b> {{unknown}}\n{E_LIST} <b>t0t4l:</b> {{total}}",
         "deleted_filter": f"{E_TRASH} d3l3t3d <b>{{count}}</b> k3y5.",
         "btn_toggle_premium_emoji": "© pr3m1um 3m0j1",
         "btn_toggle_color_buttons": "🎨 c0l0r butt0n5",
@@ -3864,7 +3787,7 @@ class KeyScanner(loader.Module):
 
     strings_uwu = {
         "scanning":      f"{E_SLOW} <b>scanning keyyyys uwu OwO</b>\n{E_FOLD} wooking fow up to {{limit}} msgs per pwefix >w<",
-        "found":         f"{E_OK} <b>aww done!! uwu</b>\n{E_FIRE} vawid keys: <b>{{valid_count}}</b> :3\n{E_BATT} saved to db OwO",
+        "found":         f"{E_OK} <b>aww done!! uwu</b>\n{E_FIRE} vawid keys: <b>{{valid_count}}/{{raw_count}}</b> :3\n{E_BATT} saved to db OwO",
         "auto_on":       f"{E_BELL} auto-scan <b>on</b> uwu\n{E_MSG} catching evewything >w<",
         "auto_off":      f"{E_MUTE} auto-scan <b>off</b> :c",
         "db_stats":      f"{E_BOX} <b>key db uwu:</b> {{total}}\n{E_CARD} paid: <b>{{paid}}</b>  {E_BATT} fwee: <b>{{free}}</b>  ❓ idk: <b>{{unk}}</b>\n\n{E_GEAR} <b>menu OwO:</b>",
@@ -3877,12 +3800,12 @@ class KeyScanner(loader.Module):
         "btn_stats":     "📍 stats uwu",
         "btn_clear":     "🗑 cweaw aww",
         "btn_list":      "📝 wist",
-        "btn_check_all": "🔃 vawidate aww",
+        "btn_check_all": "🔃 vawidate keys",
         "btn_back":      "⬅️ back",
         "btn_exp_json":  "JSON",
         "btn_exp_txt":   "TXT",
         "btn_clr_inv":   "🗑 cweaw invawid",
-        "models_cache_missing": f"{E_ERR} <b>modew cache not weady uwu.</b>\n{E_GEAR} pwess <b>💳 sowt paid/fwee</b> fiwst :3",
+        "models_cache_missing": f"{E_ERR} <b>modew cache not weady uwu.</b>\n{E_GEAR} pwess <b>🔃 vawidate keys</b> fiwst :3",
         "log_target_help": f"{E_LINK} <b>wog chat not set uwu.</b>\nuse <code>.kslogchat</code> to set it >w<",
         "log_target_set": f"{E_OK} <b>wog chat saved uwu!!</b>",
         "log_target_topic": f"{E_OK} <b>fowum topic weady uwu!!</b>",
@@ -3904,15 +3827,15 @@ class KeyScanner(loader.Module):
         "quota_refreshing": f"{E_SYNC} <b>wefweshing key bawance...</b>",
         "quota_unsupported": "pwovider hides it uwu",
         "quota_error": "wefwesh failed",
-        "quota_rate": f"{E_OK} Rate:\nReq: <b>{{req}}</b> | Tok: <b>{{tok}}</b> | Req reset: <b>{{reset}}</b> ({{age}} ago)",
-        "quota_usage": f"{E_OK} Usage: <b>{{usage}}</b> | Limit: <b>{{limit}}</b> | Left: <b>{{left}}</b>",
-        "checking_all":  f"{E_SYNC} <b>vawidating {{total}} keys uwu...</b>",
-        "check_res_all": f"{E_OK} <b>done uwu!!</b>\n\n<b>totaw:</b> {{total}}\n<b>vawid:</b> {{v}} :3\n<b>invawid:</b> {{i}} :c\n\n{E_PIN} <b>pwoviders:</b>\n{{prov_stats}}",
+        "quota_rate": f"{E_OK} <b>Rate limits</b>\nrequests <b>{{req}}</b> · tokens <b>{{tok}}</b> · reset in <b>{{reset}}</b>",
+        "quota_usage": f"{E_OK} <b>Balance</b>\nused <b>{{usage}}</b> · limit <b>{{limit}}</b> · left <b>{{left}}</b>",
+        "checking_all":  f"{E_SYNC} <b>vawidating {{done}}/{{total}} keys uwu...</b>",
+        "check_res_all": f"{E_OK} <b>done uwu!!</b>\n\n<b>totaw:</b> {{total}}\n<b>vawid:</b> {{v}}/{{total}} :3\n<b>invawid:</b> {{i}}/{{total}} :c\n\n{E_PIN} <b>pwoviders:</b>\n{{prov_stats}}",
         "check_res_single": f"{E_SYNC} <b>wesuwt uwu:</b>\n\n<b>pwovider:</b> {{provider}}\n<b>status:</b> {{status}}",
         "status_valid":   f"{E_OK} vawid :3",
         "status_invalid": f"{E_ERR} invawid :c",
         "importing":     f"{E_SYNC} <b>impowting keys uwu...</b>",
-        "imported":      f"{E_OK} <b>impowted {{count}} keys uwu!!</b>",
+        "imported":      f"{E_OK} <b>impowted {{count}}/{{total}} keys uwu!!</b>",
         "import_err":    f"{E_ERR} wepwy to a msg/fiwe ow give a waw uww >w<",
         "btn_settings":  "⚙️ settings uwu",
         "settings_title": f"{E_GEAR} <b>settings uwu:</b>\n\n{E_BELL} wogging: <b>{{log_mode}}</b>\n{E_FOLD} fiwe scan: <b>{{file_scan}}</b>\n{E_SYNC} edit scan: <b>{{edit_scan}}</b>",
@@ -3940,14 +3863,14 @@ class KeyScanner(loader.Module):
         "btn_exp_paid":       "💳 expowt paid",
         "btn_exp_free":       "🔋 expowt fwee",
         "sorting":       f"{E_SYNC} <b>sowting uwu...</b>\n{{done}}/{{total}}",
-        "sort_done":     f"{E_OK} <b>sowted uwu!!</b>\n\n{E_CARD} <b>paid:</b> {{paid}}\n{E_BATT} <b>fwee:</b> {{free}}\n❓ <b>idk:</b> {{unknown}}",
+        "sort_done":     f"{E_OK} <b>sowted uwu!!</b>\n\n{E_CARD} <b>paid:</b> {{paid}}\n{E_BATT} <b>fwee:</b> {{free}}\n❓ <b>idk:</b> {{unknown}}\n{E_LIST} <b>totaw:</b> {{total}}",
         "deleted_filter": f"{E_TRASH} deweted <b>{{count}}</b> keys uwu.",
         "btn_toggle_premium_emoji": "© pwemium emoji",
         "btn_toggle_color_buttons": "🎨 cowow buttons",
     }
 
     strings.update({
-        "found": f"{E_OK} <b>Scan complete!</b>\n{E_FIRE} Valid keys found: <b>{{valid_count}}</b>\n{E_LIST} Raw keys matched: <b>{{raw_count}}</b>\n{E_MSG} Messages scanned/read: <b>{{scanned_count}}</b>\n{E_BATT} Saved to database.",
+        "found": f"{E_OK} <b>Scan complete!</b>\n{E_FIRE} Valid keys found: <b>{{valid_count}}/{{raw_count}}</b>\n{E_LIST} Messages scanned/read: <b>{{scanned_count}}/{{limit}}</b>\n{E_BATT} Saved to database.",
         "settings_capture_title": (
             f"{E_BELL} <b>Capture Settings</b>\n\n"
             f"Chat auto-catch: <b>{{auto_chat}}</b>\n"
@@ -3971,8 +3894,7 @@ class KeyScanner(loader.Module):
     })
 
     strings_ru.update({
-        "btn_toggle_preview":    "🖼 Превью карточки",
-        "found": f"{E_OK} <b>Сканирование завершено!</b>\n{E_FIRE} Валидных ключей найдено: <b>{{valid_count}}</b>\n{E_LIST} Сырых совпадений: <b>{{raw_count}}</b>\n{E_MSG} Сообщений/вложений просмотрено: <b>{{scanned_count}}</b>\n{E_BATT} Сохранено в базу.",
+        "found": f"{E_OK} <b>Сканирование завершено!</b>\n{E_FIRE} Валидных ключей найдено: <b>{{valid_count}}/{{raw_count}}</b>\n{E_LIST} Сообщений/вложений просмотрено: <b>{{scanned_count}}/{{limit}}</b>\n{E_BATT} Сохранено в базу.",
         "settings_capture_title": (
             f"{E_BELL} <b>Настройки ловли</b>\n\n"
             f"Авто-ловля в чате: <b>{{auto_chat}}</b>\n"
@@ -3996,8 +3918,7 @@ class KeyScanner(loader.Module):
     })
 
     strings_uk.update({
-        "btn_toggle_preview":    "🖼 Превью картки",
-        "found": f"{E_OK} <b>Сканування завершено!</b>\n{E_FIRE} Валідних ключів знайдено: <b>{{valid_count}}</b>\n{E_LIST} Сирих збігів: <b>{{raw_count}}</b>\n{E_MSG} Повідомлень/вкладень прочитано: <b>{{scanned_count}}</b>\n{E_BATT} Збережено в базу.",
+        "found": f"{E_OK} <b>Сканування завершено!</b>\n{E_FIRE} Валідних ключів знайдено: <b>{{valid_count}}/{{raw_count}}</b>\n{E_LIST} Повідомлень/вкладень прочитано: <b>{{scanned_count}}/{{limit}}</b>\n{E_BATT} Збережено в базу.",
         "settings_capture_title": (
             f"{E_BELL} <b>Налаштування ловлі</b>\n\n"
             f"Авто-ловля в чаті: <b>{{auto_chat}}</b>\n"
@@ -4021,8 +3942,7 @@ class KeyScanner(loader.Module):
     })
 
     strings_de.update({
-        "btn_toggle_preview":    "🖼 Vorschau",
-        "found": f"{E_OK} <b>Scan abgeschlossen!</b>\n{E_FIRE} Gültige Schlüssel gefunden: <b>{{valid_count}}</b>\n{E_LIST} Roh-Treffer: <b>{{raw_count}}</b>\n{E_MSG} Gelesene Nachrichten/Anhänge: <b>{{scanned_count}}</b>\n{E_BATT} In der Datenbank gespeichert.",
+        "found": f"{E_OK} <b>Scan abgeschlossen!</b>\n{E_FIRE} Gültige Schlüssel gefunden: <b>{{valid_count}}/{{raw_count}}</b>\n{E_LIST} Gelesene Nachrichten/Anhänge: <b>{{scanned_count}}/{{limit}}</b>\n{E_BATT} In der Datenbank gespeichert.",
         "settings_capture_title": (
             f"{E_BELL} <b>Erfassungs-Einstellungen</b>\n\n"
             f"Auto-Catch im Chat: <b>{{auto_chat}}</b>\n"
@@ -4046,8 +3966,7 @@ class KeyScanner(loader.Module):
     })
 
     strings_jp.update({
-        "btn_toggle_preview":    "🖼 プレビュー",
-        "found": f"{E_OK} <b>スキャン完了！</b>\n{E_FIRE} 有効キー: <b>{{valid_count}}</b>\n{E_LIST} 生一致キー: <b>{{raw_count}}</b>\n{E_MSG} 読み取ったメッセージ/添付: <b>{{scanned_count}}</b>\n{E_BATT} DBへ保存しました。",
+        "found": f"{E_OK} <b>スキャン完了！</b>\n{E_FIRE} 有効キー: <b>{{valid_count}}/{{raw_count}}</b>\n{E_LIST} 読み取ったメッセージ/添付: <b>{{scanned_count}}/{{limit}}</b>\n{E_BATT} DBへ保存しました。",
         "settings_capture_title": (
             f"{E_BELL} <b>収集設定</b>\n\n"
             f"このチャットの自動収集: <b>{{auto_chat}}</b>\n"
@@ -4071,8 +3990,7 @@ class KeyScanner(loader.Module):
     })
 
     strings_neofit.update({
-        "btn_toggle_preview":    "🖼 превью братан",
-        "found": f"{E_OK} <b>Scan finished nice.</b>\n{E_FIRE} Valid keys found: <b>{{valid_count}}</b>\n{E_LIST} Raw matches: <b>{{raw_count}}</b>\n{E_MSG} Messages/files checked: <b>{{scanned_count}}</b>\n{E_BATT} Saved in database.",
+        "found": f"{E_OK} <b>Scan finished nice.</b>\n{E_FIRE} Valid keys found: <b>{{valid_count}}/{{raw_count}}</b>\n{E_LIST} Messages/files checked: <b>{{scanned_count}}/{{limit}}</b>\n{E_BATT} Saved in database.",
         "settings_capture_title": (
             f"{E_BELL} <b>Capture settings, boss</b>\n\n"
             f"Auto-catch in chat: <b>{{auto_chat}}</b>\n"
@@ -4096,8 +4014,7 @@ class KeyScanner(loader.Module):
     })
 
     strings_tiktok.update({
-        "btn_toggle_preview":    "🖼 превью",
-        "found": f"{E_OK} <b>скан готов!</b>\n{E_FIRE} валид кейсов: <b>{{valid_count}}</b>\n{E_LIST} сырых матчей: <b>{{raw_count}}</b>\n{E_MSG} прочекано месаг/файлов: <b>{{scanned_count}}</b>\n{E_BATT} сохранил в дб.",
+        "found": f"{E_OK} <b>скан готов!</b>\n{E_FIRE} валид кейсов: <b>{{valid_count}}/{{raw_count}}</b>\n{E_LIST} прочекано месаг/файлов: <b>{{scanned_count}}/{{limit}}</b>\n{E_BATT} сохранил в дб.",
         "settings_capture_title": (
             f"{E_BELL} <b>настройки ловли</b>\n\n"
             f"авто ловля в чате: <b>{{auto_chat}}</b>\n"
@@ -4121,8 +4038,7 @@ class KeyScanner(loader.Module):
     })
 
     strings_leet.update({
-        "btn_toggle_preview":    "🖼 pr3v13w",
-        "found": f"{E_OK} <b>5c4n c0mpl3t3!</b>\n{E_FIRE} v4l1d k3y5: <b>{{valid_count}}</b>\n{E_LIST} r4w m4tch35: <b>{{raw_count}}</b>\n{E_MSG} m35s4g35/f1l35 ch3ck3d: <b>{{scanned_count}}</b>\n{E_BATT} 54v3d t0 d8.",
+        "found": f"{E_OK} <b>5c4n c0mpl3t3!</b>\n{E_FIRE} v4l1d k3y5: <b>{{valid_count}}/{{raw_count}}</b>\n{E_LIST} m35s4g35/f1l35 ch3ck3d: <b>{{scanned_count}}/{{limit}}</b>\n{E_BATT} 54v3d t0 d8.",
         "settings_capture_title": (
             f"{E_BELL} <b>c4ptur3 53tt1ng5</b>\n\n"
             f"4ut0-c4tch 1n ch4t: <b>{{auto_chat}}</b>\n"
@@ -4146,8 +4062,7 @@ class KeyScanner(loader.Module):
     })
 
     strings_uwu.update({
-        "btn_toggle_preview":    "🖼 pwevew uwu",
-        "found": f"{E_OK} <b>aww done!! uwu</b>\n{E_FIRE} vawid keys: <b>{{valid_count}}</b> :3\n{E_LIST} waw matches: <b>{{raw_count}}</b>\n{E_MSG} msgs/files checked: <b>{{scanned_count}}</b>\n{E_BATT} saved to db OwO",
+        "found": f"{E_OK} <b>aww done!! uwu</b>\n{E_FIRE} vawid keys: <b>{{valid_count}}/{{raw_count}}</b> :3\n{E_LIST} msgs/files checked: <b>{{scanned_count}}/{{limit}}</b>\n{E_BATT} saved to db OwO",
         "settings_capture_title": (
             f"{E_BELL} <b>captuwe settings uwu</b>\n\n"
             f"auto-catch in chat: <b>{{auto_chat}}</b>\n"
@@ -4181,7 +4096,7 @@ class KeyScanner(loader.Module):
         leet_doc="[f45t/51mpl3/d33p] [f1l35] [gl0b4l] [l1m1t] - 5c4n ch4t 0r 411.",
         uwu_doc="[fast/simple/deep] [fiwes] [gwobaw] [wimit] - scan dis chat ow aww chats uwu.",
     )
-    async def scanllm(self, message: Message):
+    async def ks(self, message: Message):
         global_mode, limit, scan_mode, include_files = self._parse_scan_args(utils.get_args_raw(message), 500)
         await self._run_scan(message, limit=limit, global_mode=global_mode, scan_mode=scan_mode, include_files=include_files)
 
@@ -4196,7 +4111,7 @@ class KeyScanner(loader.Module):
         leet_doc="[f45t/51mpl3/d33p] [f1l35] [l1m1t] - gl0b4l k3y 5c4n.",
         uwu_doc="[fast/simple/deep] [fiwes] [wimit] - gwobaw key scan uwu.",
     )
-    async def scanglobal(self, message: Message):
+    async def ksg(self, message: Message):
         _, limit, scan_mode, include_files = self._parse_scan_args(utils.get_args_raw(message), 100)
         await self._run_scan(message, limit=limit, global_mode=True, scan_mode=scan_mode, include_files=include_files)
 
@@ -4220,7 +4135,7 @@ class KeyScanner(loader.Module):
 
         if self._toggle_autocatch_target(target):
             await self._answer(message, self.strings[enabled_key])
-            if self._settings.get("log_mode") == "heroku":
+            if self.config["log_mode"] == "heroku":
                 try:
                     await self._bootstrap_heroku_logs()
                 except Exception:
@@ -4241,11 +4156,11 @@ class KeyScanner(loader.Module):
     )
     async def kslog(self, message: Message):
         modes   = ["none", "saved", "heroku", "custom"]
-        cur     = self._settings.get("log_mode", "none")
+        cur     = self.config["log_mode"]
         if cur not in modes:
             cur = "none"
         nxt     = modes[(modes.index(cur) + 1) % len(modes)]
-        self._settings["log_mode"] = nxt
+        self.config["log_mode"] = nxt
         self._save()
         if nxt == "heroku":
             try:
@@ -4278,11 +4193,11 @@ class KeyScanner(loader.Module):
         if error:
             return await self._answer(message, self.strings["proxy_invalid"].format(error=html.escape(error)))
         if not proxy:
-            self._settings["check_proxy"] = ""
+            self.config["check_proxy"] = ""
             self._proxy_health = {}
             self._save()
             return await self._answer(message, self.strings["proxy_disabled"])
-        self._settings["check_proxy"] = proxy
+        self.config["check_proxy"] = proxy
         await self._refresh_proxy_health(force=True)
         self._save()
         text = self.strings["proxy_set"].format(proxy=html.escape(self._mask_proxy_for_display(proxy.replace("\n", " | "))))
@@ -4375,7 +4290,7 @@ class KeyScanner(loader.Module):
                     )
         if count:
             self._save()
-        await self._answer(msg, self.strings["imported"].format(count=count))
+        await self._answer(msg, self.strings["imported"].format(count=count, total=len(unique)))
 
     @loader.command(
         ru_doc="Меню ключей",
@@ -4392,24 +4307,11 @@ class KeyScanner(loader.Module):
         if not self._keys:
             return await self._answer(message, self.strings["empty"])
 
-        # ── instant loading indicator ─────────────────────────────────────────
-        # Edit the user's own outgoing message to a localised loading string
-        # BEFORE the inline form is created. This is the fastest possible UX:
-        # the message changes on the client side with zero perceived latency.
-        try:
-            await utils.answer(message, self.strings["loading"])
-        except Exception:
-            pass
-        # ─────────────────────────────────────────────────────────────────────
-
-        form = await self.inline.form(
-            text=self._ui_text(self.strings["loading"]),
+        await self.inline.form(
+            text=self._ui_text(self._db_stats_text()),
             message=message,
-            reply_markup=self._ui_markup([[self._btn(EMPTY_LOADING_BUTTON_TEXT, self._empty_loading_button)]]),
+            reply_markup=self._ui_markup(self._get_main_markup()),
         )
-        await asyncio.sleep(0.35)
-
-        await self._edit(form, text=self._db_stats_text(), reply_markup=self._get_main_markup(), preview_banner=self._preview_banner())
 
     @loader.watcher(only_messages=True)
     async def watcher(self, message: Message):
@@ -4427,7 +4329,7 @@ class KeyScanner(loader.Module):
                 self._process_text(text, cid, via="message", message_id=scan_mid, chat_username=peer_username)
             )
 
-        if self._settings.get("file_scan", True) and self._is_text_file_message(message):
+        if self.config["file_scan"] and self._is_text_file_message(message):
             async def _scan_file(msg=message):
                 try:
                     raw = await self.client.download_media(msg, bytes)
@@ -4444,7 +4346,7 @@ class KeyScanner(loader.Module):
     @loader.watcher()
     async def edit_watcher(self, message: Message):
         """Catch keys in edited messages with 150 ms debounce — near-instant, zero flood."""
-        if not self._settings.get("edit_scan", True):
+        if not self.config["edit_scan"]:
             return
         cid = getattr(message, "chat_id", None)
         if not self._is_autocatch_enabled_for(cid):
@@ -4503,7 +4405,7 @@ class KeyScanner(loader.Module):
             markup.append([self._btn(self.strings["btn_filter_reset"], self.ks_list, (0, "all", sort_mode), "danger")])
         for k in cur_keys:
             idx     = index_map[k]
-            markup.append([{"text": self._list_row_text(k), "callback": self.ks_key_menu, "args": (idx, self._settings.get("auto_hide_keys", True), page, filter_mode, sort_mode)}])
+            markup.append([{"text": self._list_row_text(k), "callback": self.ks_key_menu, "args": (idx, self.config["auto_hide_keys"], page, filter_mode, sort_mode)}])
         if total_pages > 1:
             markup.append([
                 self._btn("◀️", self.ks_list, (page - 1, filter_mode, sort_mode), "primary"),
@@ -4520,8 +4422,7 @@ class KeyScanner(loader.Module):
                 filter_label=self._filter_label(filter_mode),
                 shown_count=len(cur_keys),
             ),
-            reply_markup=markup,
-            preview_banner=self._preview_banner()
+            reply_markup=markup
         )
 
     async def ks_sort_menu(self, call, page=0, filter_mode="all", sort_mode=None):
@@ -4537,9 +4438,7 @@ class KeyScanner(loader.Module):
             ],
             [self._btn(self.strings["btn_back"], self.ks_list, (page, filter_mode, sort_mode), "primary")],
         ]
-        await self._edit(call, text=self.strings["sort_menu_title"], reply_markup=markup,
-            preview_banner=self._preview_banner()
-        )
+        await self._edit(call, text=self.strings["sort_menu_title"], reply_markup=markup)
 
     async def ks_provider_menu(self, call, page=0, filter_mode="all", sort_mode=None):
         sort_mode = self._normalize_sort_mode(sort_mode)
@@ -4562,9 +4461,7 @@ class KeyScanner(loader.Module):
                 self._btn("▶️", self.ks_provider_menu, (page + 1, filter_mode, sort_mode), "primary"),
             ])
         markup.append([self._btn(self.strings["btn_back"], self.ks_list, (page, filter_mode, sort_mode), "primary")])
-        await self._edit(call, text=self.strings["provider_menu_title"], reply_markup=markup,
-            preview_banner=self._preview_banner()
-        )
+        await self._edit(call, text=self.strings["provider_menu_title"], reply_markup=markup)
 
     async def ks_key_menu(self, call, idx, hidden=True, page=0, filter_mode="all", sort_mode="recent"):
         all_keys = sorted(self._keys.keys())
@@ -4602,8 +4499,7 @@ class KeyScanner(loader.Module):
                 models_count=models_count,
                 quota=self._format_quota(quota),
             ),
-            reply_markup=markup,
-            preview_banner=self._preview_banner(prov)
+            reply_markup=markup
         )
 
     async def ks_models_menu(self, call, idx, hidden=True, page=0, filter_mode="all", sort_mode="recent", model_page=0):
@@ -4635,8 +4531,7 @@ class KeyScanner(loader.Module):
                 count=total_models,
                 models=f"{page_header}\n\n{models_text}",
             ),
-            reply_markup=markup,
-            preview_banner=self._preview_banner(prov)
+            reply_markup=markup
         )
 
     async def ks_refresh_balance(self, call, idx, hidden=True, page=0, filter_mode="all", sort_mode="recent"):
@@ -4651,7 +4546,8 @@ class KeyScanner(loader.Module):
         async with self._http_session() as session:
             try:
                 prov, ok = await self._validate_key(session, k)
-                self._keys[k] = prov
+                if prov != "Unknown":
+                    self._keys[k] = prov
                 meta = self._key_meta.setdefault(k, {})
                 meta["valid"] = ok
                 meta["validated_at"] = self._now_ts()
@@ -4710,11 +4606,20 @@ class KeyScanner(loader.Module):
         await self._edit(
             call,
             text=self.strings["check_res_single"].format(provider=prov, status=status),
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_key_menu, "args": (idx, True, page, filter_mode, sort_mode)}]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_key_menu, "args": (idx, True, page, filter_mode, sort_mode)}]]
         )
 
     async def ks_del_single(self, call, idx, page=0, filter_mode="all", sort_mode="recent"):
+        all_keys = sorted(self._keys.keys())
+        if idx >= len(all_keys):
+            return
+        markup = [
+            [self._btn(self.strings["btn_del_yes"], self.ks_del_single_execute, (idx, page, filter_mode, sort_mode), "danger")],
+            [self._btn(self.strings["btn_back"], self.ks_list, (page, filter_mode, sort_mode), "primary")],
+        ]
+        await self._edit(call, text=self.strings["del_single_confirm"], reply_markup=markup)
+
+    async def ks_del_single_execute(self, call, idx, page=0, filter_mode="all", sort_mode="recent"):
         all_keys = sorted(self._keys.keys())
         if idx < len(all_keys):
             k = all_keys[idx]
@@ -4726,25 +4631,90 @@ class KeyScanner(loader.Module):
         await self._edit(
             call,
             text=self.strings["deleted"],
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_list, "args": (page, filter_mode, sort_mode)}]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_list, "args": (page, filter_mode, sort_mode)}]]
         )
 
     async def ks_val_all(self, call):
-        keys = sorted(self._keys.keys())
+        await self.ks_check_start(call, "", "", "1")
+
+    async def ks_check_menu(self, call, tier_raw="", provider_raw="", status_on="1", page=0):
+        provider_stats = self._provider_summary()
+        total_pages = max(1, (len(provider_stats) + 8 - 1) // 8)
+        page = max(0, min(page, total_pages - 1))
+        chunk = provider_stats[page * 8:(page + 1) * 8]
+        selected_tiers = self._parse_export_tokens(tier_raw)
+        selected_providers = self._parse_export_tokens(provider_raw)
+        matched = self._export_candidates(tier_raw, provider_raw)
+
+        tier_labels = {
+            "paid": self.strings["btn_filter_paid"],
+            "free": self.strings["btn_filter_free"],
+            "unknown": self.strings["tier_unknown"],
+        }
+        markup = [[
+            self._btn(("✅ " if "paid" in selected_tiers else "") + tier_labels["paid"], self.ks_check_toggle_tier, ("paid", tier_raw, provider_raw, status_on, page), "success" if "paid" in selected_tiers else None),
+            self._btn(("✅ " if "free" in selected_tiers else "") + tier_labels["free"], self.ks_check_toggle_tier, ("free", tier_raw, provider_raw, status_on, page), "danger" if "free" in selected_tiers else None),
+            self._btn(("✅ " if "unknown" in selected_tiers else "") + tier_labels["unknown"], self.ks_check_toggle_tier, ("unknown", tier_raw, provider_raw, status_on, page), "primary" if "unknown" in selected_tiers else None),
+        ]]
+
+        for provider, stats in chunk:
+            active = provider in selected_providers
+            label = f"{'✅ ' if active else ''}{provider} · {stats['total']}"
+            markup.append([self._btn(label, self.ks_check_toggle_provider, (provider, tier_raw, provider_raw, status_on, page), "success" if active else None)])
+
+        status_label = self.strings["btn_check_status_on"] if status_on == "1" else self.strings["btn_check_status_off"]
+        markup.append([self._btn(status_label, self.ks_check_toggle_status, (tier_raw, provider_raw, status_on, page), "success" if status_on == "1" else None)])
+
+        markup.append([
+            self._btn(self.strings["btn_reset_scope"], self.ks_check_menu, ("", "", status_on, 0), "danger"),
+            self._btn(self.strings["btn_check_start"], self.ks_check_start, (tier_raw, provider_raw, status_on), "primary"),
+        ])
+        if total_pages > 1:
+            markup.append([
+                self._btn("◀️", self.ks_check_menu, (tier_raw, provider_raw, status_on, page - 1), "primary"),
+                self._btn(f"{page + 1}/{total_pages}", self.ks_check_menu, (tier_raw, provider_raw, status_on, page), "success"),
+                self._btn("▶️", self.ks_check_menu, (tier_raw, provider_raw, status_on, page + 1), "primary"),
+            ])
+        markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
+        scope = self._export_scope_label(tier_raw, provider_raw)
+        await self._edit(
+            call,
+            text=(
+                f"{E_SYNC} <b>{self.strings['check_menu_title']}</b>\n"
+                f"{E_LIST} <b>{scope}</b>\n"
+                f"{E_BOX} {self.strings['export_matching_label']}: <b>{len(matched)}</b>"
+            ),
+            reply_markup=markup
+        )
+
+    async def ks_check_toggle_tier(self, call, tier, tier_raw="", provider_raw="", status_on="1", page=0):
+        await self.ks_check_menu(call, self._toggle_export_token(tier_raw, tier), provider_raw, status_on, page)
+
+    async def ks_check_toggle_provider(self, call, provider, tier_raw="", provider_raw="", status_on="1", page=0):
+        await self.ks_check_menu(call, tier_raw, self._toggle_export_token(provider_raw, provider), status_on, page)
+
+    async def ks_check_toggle_status(self, call, tier_raw="", provider_raw="", status_on="1", page=0):
+        await self.ks_check_menu(call, tier_raw, provider_raw, "0" if status_on == "1" else "1", page)
+
+    async def ks_check_start(self, call, tier_raw="", provider_raw="", status_on="1"):
+        data = self._export_candidates(tier_raw, provider_raw)
+        if not data:
+            return await self._edit(call, text=self.strings["empty"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]])
+        keys = sorted(data.keys())
         total = len(keys)
         await self._edit(call, text=self.strings["checking_all"].format(done=0, total=total))
         valid_c = invalid_c = 0
         prov_stats = {}
         self._invalid_keys_cache.clear()
+        with_status = status_on == "1"
         async with self._http_session() as session:
-            tasks = [asyncio.create_task(self._validate_key_bundle(session, key)) for key in keys]
+            tasks = [asyncio.create_task(self._validate_key_bundle(session, key, with_status=with_status)) for key in keys]
             done = 0
-            progress_step = max(1, min(5, total // 10 or 1))
+            last_update = time.monotonic()
             for task in asyncio.as_completed(tasks):
                 bundle = await task
                 provider = bundle["provider"]
-                ok = self._apply_validated_key_bundle(bundle)
+                ok = self._apply_validated_key_bundle(bundle, with_status=with_status)
                 prov_stats.setdefault(provider, {"total": 0, "valid": 0})
                 prov_stats[provider]["total"] += 1
                 if ok:
@@ -4754,7 +4724,9 @@ class KeyScanner(loader.Module):
                     invalid_c += 1
                     self._invalid_keys_cache.append(bundle["key"])
                 done += 1
-                if done == total or done % progress_step == 0:
+                now = time.monotonic()
+                if done == total or now - last_update >= 2:
+                    last_update = now
                     try:
                         await self._edit(call, text=self.strings["checking_all"].format(done=done, total=total))
                     except Exception:
@@ -4773,11 +4745,22 @@ class KeyScanner(loader.Module):
             text=self.strings["check_res_all"].format(
                 total=total, v=valid_c, i=invalid_c, prov_stats=stats_str,
             ),
-            reply_markup=markup,
-            preview_banner=self._preview_banner()
+            reply_markup=markup
         )
 
+
     async def ks_clr_inv(self, call):
+        count = len(self._invalid_keys_cache)
+        if not count:
+            return await self._edit(call, text=self.strings["empty"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]])
+        markup = [
+            [self._btn(self.strings["btn_del_yes"], self.ks_clr_inv_execute, style="danger")],
+            [self._btn(self.strings["btn_back"], self.ks_back, style="primary")],
+        ]
+        await self._edit(call, text=self.strings["del_confirm_title"].format(count=count), reply_markup=markup)
+
+    async def ks_clr_inv_execute(self, call):
+        count = len(self._invalid_keys_cache)
         for k in self._invalid_keys_cache:
             self._keys.pop(k, None)
             self._paid_status.pop(k, None)
@@ -4787,9 +4770,8 @@ class KeyScanner(loader.Module):
         self._invalid_keys_cache.clear()
         await self._edit(
             call,
-            text=self.strings["deleted"],
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
-            preview_banner=self._preview_banner()
+            text=self.strings["deleted_filter"].format(count=count),
+            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]]
         )
 
     async def ks_stats(self, call):
@@ -4838,8 +4820,7 @@ class KeyScanner(loader.Module):
         await self._edit(
             call,
             text=header + ("\n".join(lines) or "—"),
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back, "style": "primary"}]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back, "style": "primary"}]]
         )
 
     async def ks_exp_menu(self, call, tier_raw="", provider_raw="", page=0):
@@ -4888,8 +4869,7 @@ class KeyScanner(loader.Module):
                 f"{E_BOX} {self.strings['export_matching_label']}: <b>{len(matched)}</b>\n"
                 f"{self.strings['export_scope_hint']}"
             ),
-            reply_markup=markup,
-            preview_banner=self._preview_banner()
+            reply_markup=markup
         )
 
     async def ks_exp_toggle_tier(self, call, tier, tier_raw="", provider_raw="", page=0):
@@ -4926,8 +4906,7 @@ class KeyScanner(loader.Module):
                 f"{E_LIST} <b>{self._export_scope_label(tier_raw, provider_raw)}</b>\n"
                 f"{E_BOX} {self.strings['export_key_count_label']}: <b>{len(data)}</b>"
             ),
-            reply_markup=markup,
-            preview_banner=self._preview_banner()
+            reply_markup=markup
         )
 
     async def ks_exp_send(self, call, fmt, tier_raw="", provider_raw=""):
@@ -4950,8 +4929,7 @@ class KeyScanner(loader.Module):
         await self._edit(
             call,
             text=self.strings["exported"],
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]]
         )
 
     async def ks_exp_json(self, call, filter_mode="all"):
@@ -4973,8 +4951,7 @@ class KeyScanner(loader.Module):
             parse_mode="html",
         )
         await self._edit(call, text=self.strings["exported"],
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]]
         )
 
     async def ks_exp_txt(self, call, filter_mode="all"):
@@ -4996,8 +4973,7 @@ class KeyScanner(loader.Module):
             parse_mode="html",
         )
         await self._edit(call, text=self.strings["exported"],
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]]
         )
 
     async def ks_sort_paid_free(self, call):
@@ -5006,8 +4982,7 @@ class KeyScanner(loader.Module):
             await self._edit(
                 call,
                 text=self.strings["empty"],
-                reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]],
-                preview_banner=self._preview_banner()
+                reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]]
             )
             return
         keys_to_sort = [(key, prov) for key, prov in all_items if self._normalize_tier(self._paid_status.get(key)) == "unknown"]
@@ -5028,13 +5003,13 @@ class KeyScanner(loader.Module):
             markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
             await self._edit(
                 call,
-                text=self.strings["sort_done"].format(paid=paid, free=free, unknown=unknown),
-                reply_markup=markup,
-                preview_banner=self._preview_banner()
+                text=self.strings["sort_done"].format(paid=paid, free=free, unknown=unknown, total=paid + free + unknown),
+                reply_markup=markup
             )
             return
         await self._edit(call, text=self.strings["sorting"].format(done=0, total=total))
         done = 0
+        last_update = time.monotonic()
         async with self._http_session() as session:
             for key, prov in keys_to_sort:
                 real_prov, ok = await self._validate_key(session, key)
@@ -5047,29 +5022,24 @@ class KeyScanner(loader.Module):
                 if not ok:
                     self._paid_status[key] = "unknown"
                     meta["quota"] = {"kind": "error", "provider": prov, "checked_at": self._now_ts(), "message": "real request failed"}
-                    unknown += 1
-                    done += 1
-                    if done % 5 == 0:
-                        try:
-                            await self._edit(call, text=self.strings["sorting"].format(done=done, total=total))
-                        except Exception:
-                            pass
-                    continue
-                models = await self._discover_models(session, key, prov)
-                if models:
-                    self._ensure_model_cache()[key] = self._sort_models(prov, models)
                 else:
-                    self._ensure_model_cache().pop(key, None)
-                sorted_models = self._ensure_model_cache().get(key, [])
-                status = await self._check_paid(session, key, prov, models=sorted_models)
-                if status == "unknown":
-                    status = self._tier_from_models(prov, sorted_models) or "unknown"
-                status = self._normalize_tier(status)
-                self._paid_status[key] = status
-                self._record_key_meta(key, prov, models=sorted_models, tier=status)
-                self._key_meta.setdefault(key, {})["quota"] = await self._fetch_key_quota(session, key, prov)
+                    models = await self._discover_models(session, key, prov)
+                    if models:
+                        self._ensure_model_cache()[key] = self._sort_models(prov, models)
+                    else:
+                        self._ensure_model_cache().pop(key, None)
+                    sorted_models = self._ensure_model_cache().get(key, [])
+                    status = await self._check_paid(session, key, prov, models=sorted_models)
+                    if status == "unknown":
+                        status = self._tier_from_models(prov, sorted_models) or "unknown"
+                    status = self._normalize_tier(status)
+                    self._paid_status[key] = status
+                    self._record_key_meta(key, prov, models=sorted_models, tier=status)
+                    self._key_meta.setdefault(key, {})["quota"] = await self._fetch_key_quota(session, key, prov)
                 done += 1
-                if done % 5 == 0:
+                now = time.monotonic()
+                if done == total or now - last_update >= 2:
+                    last_update = now
                     try:
                         await self._edit(call, text=self.strings["sorting"].format(done=done, total=total))
                     except Exception:
@@ -5090,9 +5060,8 @@ class KeyScanner(loader.Module):
         markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
         await self._edit(
             call,
-            text=self.strings["sort_done"].format(paid=paid, free=free, unknown=unknown),
-            reply_markup=markup,
-            preview_banner=self._preview_banner()
+            text=self.strings["sort_done"].format(paid=paid, free=free, unknown=unknown, total=paid + free + unknown),
+            reply_markup=markup
         )
 
     async def ks_del_by_filter(self, call, filter_mode):
@@ -5106,25 +5075,24 @@ class KeyScanner(loader.Module):
         await self._edit(
             call,
             text=self.strings["deleted_filter"].format(count=len(to_del)),
-            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[{"text": self.strings["btn_back"], "callback": self.ks_back}]]
         )
 
     async def ks_settings_menu(self, call, section="main"):
         current_chat_id = self._callback_chat_id(call)
-        mode = self._settings.get("log_mode", "none").upper()
-        file_scan = self._setting_state(self._settings.get("file_scan", True))
-        edit_scan = self._setting_state(self._settings.get("edit_scan", True))
-        notify_new_keys = self._setting_state(self._settings.get("notify_new_keys", True))
-        safe_auto = self._setting_state(self._settings.get("safe_auto_checks", True))
-        log_full_keys = self._setting_state(self._settings.get("log_full_keys", False))
-        compact = self._setting_state(self._settings.get("list_compact", True))
-        auto_hide = self._setting_state(self._settings.get("auto_hide_keys", True))
-        premium_emoji = self._setting_state(self._settings.get("premium_emoji", True))
-        color_buttons = self._setting_state(self._settings.get("color_buttons", True))
+        mode = self.config["log_mode"].upper()
+        file_scan = self._setting_state(self.config["file_scan"])
+        edit_scan = self._setting_state(self.config["edit_scan"])
+        notify_new_keys = self._setting_state(self.config["notify_new_keys"])
+        safe_auto = self._setting_state(self.config["safe_auto_checks"])
+        log_full_keys = self._setting_state(self.config["log_full_keys"])
+        compact = self._setting_state(self.config["list_compact"])
+        auto_hide = self._setting_state(self.config["auto_hide_keys"])
+        premium_emoji = self._setting_state(self.config["premium_emoji"])
+        color_buttons = self._setting_state(self.config["color_buttons"])
         auto_chat = self._setting_state(self._is_autocatch_enabled_for(current_chat_id))
         auto_global = self._setting_state(self._is_autocatch_enabled_for(GLOBAL_AUTOCATCH))
-        default_sort = self.strings[f"sort_label_{self._normalize_sort_mode(self._settings.get('default_sort'))}"]
+        default_sort = self.strings[f"sort_label_{self._normalize_sort_mode(self.config['default_sort'])}"]
         page_size = self._page_size()
         target_text = self._log_target_text()
         topic_text = self._log_target().get("topic_title") or "Logs"
@@ -5145,37 +5113,34 @@ class KeyScanner(loader.Module):
                     self._btn(f"{self.strings['btn_toggle_auto_global']} {auto_global}", self.ks_toggle_auto_global, style="success" if self._is_autocatch_enabled_for(GLOBAL_AUTOCATCH) else "danger"),
                 ],
                 [
-                    self._btn(f"{self.strings['btn_toggle_file']} {file_scan}", self.ks_toggle_file, style="success" if self._settings.get("file_scan", True) else "danger"),
-                    self._btn(f"{self.strings['btn_toggle_edit']} {edit_scan}", self.ks_toggle_edit, style="success" if self._settings.get("edit_scan", True) else "danger"),
+                    self._btn(f"{self.strings['btn_toggle_file']} {file_scan}", self.ks_toggle_file, style="success" if self.config["file_scan"] else "danger"),
+                    self._btn(f"{self.strings['btn_toggle_edit']} {edit_scan}", self.ks_toggle_edit, style="success" if self.config["edit_scan"] else "danger"),
                 ],
-                [self._btn(f"{self.strings['btn_toggle_notify']} {notify_new_keys}", self.ks_toggle_notify, style="success" if self._settings.get("notify_new_keys", True) else "danger")],
+                [self._btn(f"{self.strings['btn_toggle_notify']} {notify_new_keys}", self.ks_toggle_notify, style="success" if self.config["notify_new_keys"] else "danger")],
                 [
-                    self._btn(f"{self.strings['btn_toggle_safe_checks']} {safe_auto}", self.ks_toggle_safe_checks, style="success" if self._settings.get("safe_auto_checks", True) else "danger"),
-                    self._btn(f"{self.strings['btn_toggle_log_full_keys']} {log_full_keys}", self.ks_toggle_log_full_keys, style="success" if self._settings.get("log_full_keys", False) else "danger"),
+                    self._btn(f"{self.strings['btn_toggle_safe_checks']} {safe_auto}", self.ks_toggle_safe_checks, style="success" if self.config["safe_auto_checks"] else "danger"),
+                    self._btn(f"{self.strings['btn_toggle_log_full_keys']} {log_full_keys}", self.ks_toggle_log_full_keys, style="success" if self.config["log_full_keys"] else "danger"),
                 ],
                 [self._btn(self.strings["btn_back"], self.ks_settings_menu, ("main",), "primary")],
             ]
         elif section == "view":
-            show_preview = self._setting_state(self._settings.get("show_preview", True))
             text = self.strings["settings_view_title"].format(
                 compact=compact,
                 auto_hide=auto_hide,
                 premium_emoji=premium_emoji,
                 color_buttons=color_buttons,
-                show_preview=show_preview,
                 page_size=page_size,
                 default_sort=default_sort,
             )
             markup = [
                 [
-                    self._btn(f"{self.strings['btn_toggle_compact']} {compact}", self.ks_toggle_compact, style="success" if self._settings.get("list_compact", True) else "danger"),
-                    self._btn(f"{self.strings['btn_toggle_autohide']} {auto_hide}", self.ks_toggle_autohide, style="success" if self._settings.get("auto_hide_keys", True) else "danger"),
+                    self._btn(f"{self.strings['btn_toggle_compact']} {compact}", self.ks_toggle_compact, style="success" if self.config["list_compact"] else "danger"),
+                    self._btn(f"{self.strings['btn_toggle_autohide']} {auto_hide}", self.ks_toggle_autohide, style="success" if self.config["auto_hide_keys"] else "danger"),
                 ],
                 [
-                    self._btn(f"{self.strings['btn_toggle_premium_emoji']} {premium_emoji}", self.ks_toggle_premium_emoji, style="success" if self._settings.get("premium_emoji", True) else "danger"),
-                    self._btn(f"{self.strings['btn_toggle_color_buttons']} {color_buttons}", self.ks_toggle_color_buttons, style="success" if self._settings.get("color_buttons", True) else "danger"),
+                    self._btn(f"{self.strings['btn_toggle_premium_emoji']} {premium_emoji}", self.ks_toggle_premium_emoji, style="success" if self.config["premium_emoji"] else "danger"),
+                    self._btn(f"{self.strings['btn_toggle_color_buttons']} {color_buttons}", self.ks_toggle_color_buttons, style="success" if self.config["color_buttons"] else "danger"),
                 ],
-                [self._btn(f"{self.strings['btn_toggle_preview']} {show_preview}", self.ks_toggle_preview, style="success" if self._settings.get("show_preview", True) else "danger")],
                 [
                     self._btn(f"{self.strings['btn_cycle_page_size']}: {page_size}", self.ks_cycle_page_size, style="primary"),
                     self._btn(f"{self.strings['btn_cycle_default_sort']}: {default_sort}", self.ks_cycle_default_sort, style="primary"),
@@ -5217,17 +5182,15 @@ class KeyScanner(loader.Module):
                 [self._btn(self.strings["btn_logs_settings"], self.ks_settings_menu, ("logs",), "primary")],
                 [self._btn(self.strings["btn_back"], self.ks_back, style="primary")],
             ]
-        await self._edit(call, text=text, reply_markup=markup,
-            preview_banner=self._preview_banner()
-        )
+        await self._edit(call, text=text, reply_markup=markup)
 
     async def ks_cycle_log(self, call):
         modes = ["none", "saved", "heroku", "custom"]
-        cur   = self._settings.get("log_mode", "none")
+        cur   = self.config["log_mode"]
         if cur not in modes:
             cur = "none"
         nxt = modes[(modes.index(cur) + 1) % len(modes)]
-        self._settings["log_mode"] = nxt
+        self.config["log_mode"] = nxt
         self._save()
         if nxt == "heroku":
             try:
@@ -5332,39 +5295,33 @@ class KeyScanner(loader.Module):
             text=self.strings["log_target_help"] + f"\n\n{self.strings['log_target_label'].format(target=self._log_target_text())}\n{self.strings['log_topic_label'].format(topic=self._log_target().get('topic_title') or 'Logs')}",
             reply_markup=[
                 [self._btn(self.strings["btn_back"], self.ks_settings_menu, ("logs",), "primary")],
-            ],
-            preview_banner=self._preview_banner()
+            ]
         )
 
     async def ks_toggle_file(self, call):
-        self._settings["file_scan"] = not self._settings.get("file_scan", True)
+        self.config["file_scan"] = not self.config["file_scan"]
         self._save()
         await self.ks_settings_menu(call, "capture")
 
     async def ks_toggle_edit(self, call):
-        self._settings["edit_scan"] = not self._settings.get("edit_scan", True)
+        self.config["edit_scan"] = not self.config["edit_scan"]
         self._save()
         await self.ks_settings_menu(call, "capture")
 
     async def ks_toggle_notify(self, call):
-        self._settings["notify_new_keys"] = not self._settings.get("notify_new_keys", True)
+        self.config["notify_new_keys"] = not self.config["notify_new_keys"]
         self._save()
         await self.ks_settings_menu(call, "capture")
 
     async def ks_toggle_safe_checks(self, call):
-        self._settings["safe_auto_checks"] = not self._settings.get("safe_auto_checks", True)
+        self.config["safe_auto_checks"] = not self.config["safe_auto_checks"]
         self._save()
         await self.ks_settings_menu(call, "capture")
 
     async def ks_toggle_log_full_keys(self, call):
-        self._settings["log_full_keys"] = not self._settings.get("log_full_keys", False)
+        self.config["log_full_keys"] = not self.config["log_full_keys"]
         self._save()
         await self.ks_settings_menu(call, "capture")
-
-    async def ks_toggle_preview(self, call):
-        self._settings["show_preview"] = not self._settings.get("show_preview", True)
-        self._save()
-        await self.ks_settings_menu(call, "view")
 
     async def ks_toggle_auto_chat(self, call):
         self._toggle_autocatch_target(self._callback_chat_id(call))
@@ -5372,7 +5329,7 @@ class KeyScanner(loader.Module):
 
     async def ks_toggle_auto_global(self, call):
         enabled = self._toggle_autocatch_target(GLOBAL_AUTOCATCH)
-        if enabled and self._settings.get("log_mode") == "heroku":
+        if enabled and self.config["log_mode"] == "heroku":
             try:
                 await self._bootstrap_heroku_logs()
             except Exception:
@@ -5380,36 +5337,36 @@ class KeyScanner(loader.Module):
         await self.ks_settings_menu(call, "capture")
 
     async def ks_toggle_compact(self, call):
-        self._settings["list_compact"] = not self._settings.get("list_compact", True)
+        self.config["list_compact"] = not self.config["list_compact"]
         self._save()
         await self.ks_settings_menu(call, "view")
 
     async def ks_toggle_autohide(self, call):
-        self._settings["auto_hide_keys"] = not self._settings.get("auto_hide_keys", True)
+        self.config["auto_hide_keys"] = not self.config["auto_hide_keys"]
         self._save()
         await self.ks_settings_menu(call, "view")
 
     async def ks_toggle_premium_emoji(self, call):
-        self._settings["premium_emoji"] = not self._settings.get("premium_emoji", True)
+        self.config["premium_emoji"] = not self.config["premium_emoji"]
         self._save()
         await self.ks_settings_menu(call, "view")
 
     async def ks_toggle_color_buttons(self, call):
-        self._settings["color_buttons"] = not self._settings.get("color_buttons", True)
+        self.config["color_buttons"] = not self.config["color_buttons"]
         self._save()
         await self.ks_settings_menu(call, "view")
 
     async def ks_cycle_page_size(self, call):
         sizes = [4, 5, 6, 8]
         current = self._page_size()
-        self._settings["list_page_size"] = sizes[(sizes.index(current) + 1) % len(sizes)]
+        self.config["list_page_size"] = sizes[(sizes.index(current) + 1) % len(sizes)]
         self._save()
         await self.ks_settings_menu(call, "view")
 
     async def ks_cycle_default_sort(self, call):
         modes = ["recent", "alpha", "provider", "tier"]
-        current = self._normalize_sort_mode(self._settings.get("default_sort"))
-        self._settings["default_sort"] = modes[(modes.index(current) + 1) % len(modes)]
+        current = self._normalize_sort_mode(self.config["default_sort"])
+        self.config["default_sort"] = modes[(modes.index(current) + 1) % len(modes)]
         self._save()
         await self.ks_settings_menu(call, "view")
 
@@ -5449,7 +5406,7 @@ class KeyScanner(loader.Module):
                     "⚠️ Next click moves you closer to a full wipe.",
                     "⚠️ This is the serious part. Double-check yourself.",
                     "⚠️ Last checkpoint before the final confirmation.",
-                    "⚠️ Final warning. The database will be deleted right after confirmation.",
+                    "⚠️ Final warning. The database will be removed right after confirmation.",
                 ],
                 "clear_step_buttons": [
                     "I got it, continue",
@@ -5463,11 +5420,11 @@ class KeyScanner(loader.Module):
                     "Still sure",
                     "One last step",
                 ],
-                "clear_final_yes": "YES, DELETE EVERYTHING",
-                "clear_paid_confirm": "⚠️ This will delete all paid keys from the database.",
-                "clear_free_confirm": "⚠️ This will delete all free keys from the database.",
-                "clear_paid_yes": "Yes, delete paid keys",
-                "clear_free_yes": "Yes, delete free keys",
+                "clear_final_yes": "YES, REMOVE EVERYTHING",
+                "clear_paid_confirm": "⚠️ This will remove all paid keys from the database.",
+                "clear_free_confirm": "⚠️ This will remove all free keys from the database.",
+                "clear_paid_yes": "Yes, remove paid keys",
+                "clear_free_yes": "Yes, remove free keys",
             },
             "ru": {
                 "clear_all_warnings": [
@@ -5753,19 +5710,85 @@ class KeyScanner(loader.Module):
         return self._confirm_profile()["clear_free_yes"]
 
     async def ks_clr_menu(self, call):
-        paid = sum(1 for k in self._keys if self._paid_status.get(k) == "paid")
-        free = sum(1 for k in self._keys if self._paid_status.get(k) == "free")
-        markup = [
-            [
-                self._btn(f"{self.strings['btn_del_paid']} ({paid})", self.ks_clr_paid_confirm, style="danger"),
-                self._btn(f"{self.strings['btn_del_free']} ({free})", self.ks_clr_free_confirm, style="danger"),
-            ],
-            [self._btn(self.strings["btn_clear"], self.ks_clr_all_step, (0,), style="danger")],
-            [self._btn(self.strings["btn_back"], self.ks_back, style="primary")],
-        ]
-        await self._edit(call, text=f"{self.strings['clear_menu_title']}\n{self.strings['clear_menu_subtitle']}", reply_markup=markup,
-            preview_banner=self._preview_banner()
+        await self.ks_del_menu(call, "", "")
+
+    async def ks_del_menu(self, call, tier_raw="", provider_raw="", page=0):
+        provider_stats = self._provider_summary()
+        total_pages = max(1, (len(provider_stats) + 8 - 1) // 8)
+        page = max(0, min(page, total_pages - 1))
+        chunk = provider_stats[page * 8:(page + 1) * 8]
+        selected_tiers = self._parse_export_tokens(tier_raw)
+        selected_providers = self._parse_export_tokens(provider_raw)
+        matched = self._export_candidates(tier_raw, provider_raw)
+
+        tier_labels = {
+            "paid": self.strings["btn_filter_paid"],
+            "free": self.strings["btn_filter_free"],
+            "unknown": self.strings["tier_unknown"],
+        }
+        markup = [[
+            self._btn(("✅ " if "paid" in selected_tiers else "") + tier_labels["paid"], self.ks_del_toggle_tier, ("paid", tier_raw, provider_raw, page), "success" if "paid" in selected_tiers else None),
+            self._btn(("✅ " if "free" in selected_tiers else "") + tier_labels["free"], self.ks_del_toggle_tier, ("free", tier_raw, provider_raw, page), "danger" if "free" in selected_tiers else None),
+            self._btn(("✅ " if "unknown" in selected_tiers else "") + tier_labels["unknown"], self.ks_del_toggle_tier, ("unknown", tier_raw, provider_raw, page), "primary" if "unknown" in selected_tiers else None),
+        ]]
+
+        for provider, stats in chunk:
+            active = provider in selected_providers
+            label = f"{'✅ ' if active else ''}{provider} · {stats['total']}"
+            markup.append([self._btn(label, self.ks_del_toggle_provider, (provider, tier_raw, provider_raw, page), "success" if active else None)])
+
+        markup.append([
+            self._btn(self.strings["btn_reset_scope"], self.ks_del_menu, ("", "", 0), "danger"),
+            self._btn(self.strings["btn_del_selected"], self.ks_del_confirm, (tier_raw, provider_raw), "danger"),
+        ])
+        if total_pages > 1:
+            markup.append([
+                self._btn("◀️", self.ks_del_menu, (tier_raw, provider_raw, page - 1), "primary"),
+                self._btn(f"{page + 1}/{total_pages}", self.ks_del_menu, (tier_raw, provider_raw, page), "success"),
+                self._btn("▶️", self.ks_del_menu, (tier_raw, provider_raw, page + 1), "primary"),
+            ])
+        markup.append([self._btn(self.strings["btn_back"], self.ks_back, style="primary")])
+        scope = self._export_scope_label(tier_raw, provider_raw)
+        await self._edit(
+            call,
+            text=(
+                f"{E_TRASH} <b>{self.strings['clear_menu_title']}</b>\n"
+                f"{E_LIST} <b>{scope}</b>\n"
+                f"{E_BOX} {self.strings['export_matching_label']}: <b>{len(matched)}</b>"
+            ),
+            reply_markup=markup
         )
+
+    async def ks_del_toggle_tier(self, call, tier, tier_raw="", provider_raw="", page=0):
+        await self.ks_del_menu(call, self._toggle_export_token(tier_raw, tier), provider_raw, page)
+
+    async def ks_del_toggle_provider(self, call, provider, tier_raw="", provider_raw="", page=0):
+        await self.ks_del_menu(call, tier_raw, self._toggle_export_token(provider_raw, provider), page)
+
+    async def ks_del_confirm(self, call, tier_raw="", provider_raw=""):
+        data = self._export_candidates(tier_raw, provider_raw)
+        if not data:
+            return await self._edit(call, text=self.strings["empty"], reply_markup=[[self._btn(self.strings["btn_back"], self.ks_del_menu, (tier_raw, provider_raw, 0), "primary")]])
+        markup = [
+            [self._btn(self.strings["btn_del_yes"], self.ks_del_execute, (tier_raw, provider_raw), "danger")],
+            [self._btn(self.strings["btn_back"], self.ks_del_menu, (tier_raw, provider_raw, 0), "primary")],
+        ]
+        await self._edit(call, text=self.strings["del_confirm_title"].format(count=len(data)), reply_markup=markup)
+
+    async def ks_del_execute(self, call, tier_raw="", provider_raw=""):
+        data = self._export_candidates(tier_raw, provider_raw)
+        for k in data:
+            self._keys.pop(k, None)
+            self._paid_status.pop(k, None)
+            self._key_meta.pop(k, None)
+            self._ensure_model_cache().pop(k, None)
+        self._save()
+        await self._edit(
+            call,
+            text=self.strings["deleted_filter"].format(count=len(data)),
+            reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]]
+        )
+
 
     async def ks_clr_all(self, call):
         await self.ks_clr_menu(call)
@@ -5776,8 +5799,7 @@ class KeyScanner(loader.Module):
             return await self._edit(
                 call,
                 text=self.strings["empty"],
-                reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]],
-                preview_banner=self._preview_banner()
+                reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]]
             )
         markup = [
             [self._btn(self._clear_paid_yes_text(), self.ks_clr_paid_execute, style="danger")],
@@ -5791,8 +5813,7 @@ class KeyScanner(loader.Module):
             return await self._edit(
                 call,
                 text=self.strings["empty"],
-                reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]],
-                preview_banner=self._preview_banner()
+                reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]]
             )
         markup = [
             [self._btn(self._clear_free_yes_text(), self.ks_clr_free_execute, style="danger")],
@@ -5812,8 +5833,7 @@ class KeyScanner(loader.Module):
         await self._edit(
             call,
             text=msg,
-            reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]]
         )
 
     async def ks_clr_free_execute(self, call):
@@ -5828,8 +5848,7 @@ class KeyScanner(loader.Module):
         await self._edit(
             call,
             text=msg,
-            reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")]]
         )
 
     async def ks_clr_all_step(self, call, step=0):
@@ -5840,17 +5859,13 @@ class KeyScanner(loader.Module):
                 [self._btn(self._clear_step_button(step), self.ks_clr_all_step, (step + 1,), style="danger")],
                 [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
             ]
-            await self._edit(call, text=warns[step], reply_markup=markup,
-            preview_banner=self._preview_banner()
-        )
+            await self._edit(call, text=warns[step], reply_markup=markup)
             return
         markup = [
             [self._btn(self._clear_final_button(), self.ks_clr_all_execute, style="danger")],
             [self._btn(self.strings["btn_back"], self.ks_clr_menu, style="primary")],
         ]
-        await self._edit(call, text=warns[step], reply_markup=markup,
-            preview_banner=self._preview_banner()
-        )
+        await self._edit(call, text=warns[step], reply_markup=markup)
 
     async def ks_clr_all_execute(self, call):
         self._keys.clear()
@@ -5861,9 +5876,8 @@ class KeyScanner(loader.Module):
         await self._edit(
             call,
             text=self.strings["clear_all_done"],
-            reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]],
-            preview_banner=self._preview_banner()
+            reply_markup=[[self._btn(self.strings["btn_back"], self.ks_back, style="primary")]]
         )
 
     async def ks_back(self, call):
-        await self._edit(call, text=self._db_stats_text(), reply_markup=self._get_main_markup(), preview_banner=self._preview_banner())
+        await self._edit(call, text=self._db_stats_text(), reply_markup=self._get_main_markup())
