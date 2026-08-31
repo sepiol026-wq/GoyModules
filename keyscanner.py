@@ -1771,9 +1771,12 @@ class KeyScanner(loader.Module):
                 continue
             name = item.get("id") or item.get("name") or item.get("model")
             if name:
-                out.append(str(name).rsplit("/", 1)[-1])
-        return [m for m in dict.fromkeys(out) if m]
-
+                name = str(name)
+                
+                if "/" in name and not name.startswith("models/"):
+                    out.append(name)
+                else:
+                    out.append(name.rsplit("/", 1)[-1])
     def _extract_reply_text(self, data) -> str:
         texts = []
         if isinstance(data, dict):
@@ -1856,7 +1859,9 @@ class KeyScanner(loader.Module):
         for model in models or []:
             if not model:
                 continue
-            name = str(model).rsplit("/", 1)[-1]
+            name = str(model)
+            if "/" not in name or name.startswith("models/"):
+                name = name.rsplit("/", 1)[-1]
             low = name.lower()
             if any(token in low for token in bad_tokens):
                 continue
@@ -2988,7 +2993,15 @@ class KeyScanner(loader.Module):
         openai_like = {
             "OpenRouter": {
                 "base_url": "https://openrouter.ai/api/v1",
-                "fallback_models": ["openai/gpt-5.4-nano", "openai/gpt-5.6-luna", "anthropic/claude-haiku-4-5-20251001", "google/gemini-3.5-flash"],
+                "fallback_models": [
+                    "openrouter/free",
+                    "nvidia/nemotron-3.5-lightning:free",
+                    "minimax/minimax-m3:free",
+                    "z-ai/glm-5.2:free",
+                    "google/gemma-4-26b-a4b-it:free",
+                    "openai/gpt-5.4-nano",
+                    "openai/gpt-5.6-luna",
+                ],
                 "headers": None,
             },
             "Groq": {
@@ -3061,7 +3074,27 @@ class KeyScanner(loader.Module):
 
         try:
             if key.startswith("sk-or-v1-"):
-                ok, _ = await self._probe_openai_compatible_response(session, "OpenRouter", key, **openai_like["OpenRouter"])
+                try:
+                    async with session.get(
+                        "https://openrouter.ai/api/v1/key",
+                        headers={"Authorization": f"Bearer {key}"},
+                        timeout=6,
+                    ) as r:
+                        if r.status == 200:
+                            if not allow_spend:
+                                return "OpenRouter", True
+                            ok, _ = await self._probe_openai_compatible_response(
+                                session, "OpenRouter", key, **openai_like["OpenRouter"]
+                            )
+                            
+                            return "OpenRouter", True if ok or r.status == 200 else False
+                        if r.status in (401, 403):
+                            return "OpenRouter", False
+                except Exception:
+                    pass
+                ok, _ = await self._probe_openai_compatible_response(
+                    session, "OpenRouter", key, **openai_like["OpenRouter"]
+                )
                 return "OpenRouter", ok
 
             elif key.startswith("gsk_"):
