@@ -1,5 +1,7 @@
 ![KeyScanner Banner](../assets/keyscanner.png)
 
+> Heroku archive only. No Hotaru port is available.
+
 # KeyScanner — README EN
 
 [![Telegram](https://img.shields.io/badge/Telegram-@goymodules-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/goymodules)
@@ -20,7 +22,7 @@ Spizdi all ai keys in any chat.
 The module scans chat history using prefix queries and regex patterns, validates discovered keys against provider APIs, and stores unique results in the database. It also includes per-chat auto mode, global scan, export/import, and provider stats.
 
 ## Module file
-- `keyscanner.hmod`
+- `heroku/keyscanner.py`
 
 ## Installation
 Download the module file, send it to Hotaru, then load it with:

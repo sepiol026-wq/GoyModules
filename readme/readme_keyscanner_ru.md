@@ -1,5 +1,7 @@
 ![KeyScanner Banner](../assets/keyscanner.png)
 
+> Только архив Heroku. Порта Hotaru нет.
+
 # KeyScanner — README RU
 
 [![Telegram](https://img.shields.io/badge/Telegram-@goymodules-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/goymodules)
@@ -20,7 +22,7 @@
 Модуль сканирует историю чата по набору префиксов и regex-шаблонам, валидирует найденные ключи по API провайдеров и сохраняет уникальные результаты в БД. Есть авто-режим для чата, глобальный скан, экспорт/импорт и статистика по провайдерам.
 
 ## Файл
-- `keyscanner.hmod`
+- `heroku/keyscanner.py`
 
 ## Установка
 Скачай файл модуля и отправь его Hotaru, затем загрузи командой:

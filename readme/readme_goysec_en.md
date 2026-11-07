@@ -1,5 +1,7 @@
 ![GoySecurity Banner](../assets/goysec.png)
 
+> Heroku archive. This module is not being ported to Hotaru.
+
 # GoySecurity — README EN
 
 [![Telegram](https://img.shields.io/badge/Telegram-@goymodules-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/goymodules)
@@ -23,7 +25,7 @@ GoySecurity is a pre-install code scanner for third-party userbot modules. It he
 - Explains why a rule was triggered and supports whitelist management.
 
 ## Module file
-- `goysec.hmod`
+- `heroku/goysec.py`
 
 ## Installation
 Download the module file, send it to Hotaru, then load it with:

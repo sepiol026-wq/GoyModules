@@ -1,5 +1,7 @@
 ![GoySecurity Banner](../assets/goysec.png)
 
+> Архив Heroku. Версия для Hotaru не портируется.
+
 # GoySecurity — README RU
 
 [![Telegram](https://img.shields.io/badge/Telegram-@goymodules-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/goymodules)
@@ -23,7 +25,7 @@ GoySecurity — модуль предварительной проверки к�
 - Даёт объяснение «почему риск» и поддерживает whitelist.
 
 ## Файл модуля
-- `goysec.hmod`
+- `heroku/goysec.py`
 
 ## Установка
 Скачай файл модуля и отправь его Hotaru, затем загрузи командой:

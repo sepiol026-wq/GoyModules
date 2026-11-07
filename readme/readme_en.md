@@ -19,15 +19,7 @@ Tap a card — it opens the target module `readme` directly.
 
 <table>
   <tr>
-    <td align="center" width="50%">
-      <a href="./readme_goysec_en.md">
-        <img src="../assets/goysec.png" alt="GoySecurity" width="100%">
-      </a>
-      <br><strong><a href="./readme_goysec_en.md">GoySecurity</a></strong>
-      <br><sub>Security</sub>
-      <br>Module scanner before installation.
-      <br><a href="./readme_goysec_en.md"><strong>Open README</strong></a>
-    </td>
+    <td width="50%"></td>
     <td align="center" width="50%">
       <a href="./readme_qwencli_en.md">
         <img src="../assets/QwenCLI.png" alt="QwenCLI" width="100%">
@@ -68,15 +60,7 @@ Tap a card — it opens the target module `readme` directly.
       <br>Recon and infra overview toolkit.
       <br><a href="./readme_recon_en.md"><strong>Open README</strong></a>
     </td>
-    <td align="center" width="50%">
-      <a href="./readme_keyscanner_en.md">
-        <img src="../assets/keyscanner.png" alt="KeyScanner" width="100%">
-      </a>
-      <br><strong><a href="./readme_keyscanner_en.md">KeyScanner</a></strong>
-      <br><sub>Security • Watcher</sub>
-      <br>API key scanner and validator.
-      <br><a href="./readme_keyscanner_en.md"><strong>Open README</strong></a>
-    </td>
+    <td width="50%"></td>
   </tr>
   <tr>
     <td align="center" width="50%">
@@ -112,6 +96,12 @@ Tap a card — it opens the target module `readme` directly.
   </tr>
 </table>
 
+<table>
+  <tr><td align="center"><a href="./readme_iris_en.md"><img src="../assets/iris.png" alt="Iris" width="100%"></a><br><strong><a href="./readme_iris_en.md">Iris</a></strong><br>Iris autofarm, bag, profile and chat rankings.</td></tr>
+  <tr><td align="center"><a href="./readme_vector_en.md"><img src="../assets/vector.png" alt="Vector" width="100%"></a><br><strong><a href="./readme_vector_en.md">Vector</a></strong><br>Vector module search and collections.</td></tr>
+  <tr><td align="center"><a href="./readme_redconstructor_en.md"><img src="../assets/RedConstructor.png" alt="RedConstructor" width="100%"></a><br><strong><a href="./readme_redconstructor_en.md">RedConstructor</a></strong><br>Module editor and constructor.</td></tr>
+</table>
+
 ## Heroku archive
 
 These modules are not being ported to Hotaru.
@@ -135,6 +125,34 @@ These modules are not being ported to Hotaru.
       <br><sub>Fun / Utility</sub>
       <br>Humorous prank module.
       <br><a href="./readme_goyvirus_en.md"><strong>Open README</strong></a>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="./readme_goysec_en.md">
+        <img src="../assets/goysec.png" alt="GoySecurity" width="100%">
+      </a>
+      <br><strong><a href="./readme_goysec_en.md">GoySecurity</a></strong>
+      <br><sub>Security</sub>
+      <br>Module scanner before installation.
+      <br><a href="./readme_goysec_en.md"><strong>Open README</strong></a>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="./readme_keyscanner_en.md">
+        <img src="../assets/keyscanner.png" alt="KeyScanner" width="100%">
+      </a>
+      <br><strong><a href="./readme_keyscanner_en.md">KeyScanner</a></strong>
+      <br><sub>Security • Watcher</sub>
+      <br>API key scanner and validator.
+      <br><a href="./readme_keyscanner_en.md"><strong>Open README</strong></a>
     </td>
   </tr>
 </table>

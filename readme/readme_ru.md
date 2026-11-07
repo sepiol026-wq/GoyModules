@@ -19,15 +19,7 @@
 
 <table>
   <tr>
-    <td align="center" width="50%">
-      <a href="./readme_goysec_ru.md">
-        <img src="../assets/goysec.png" alt="GoySecurity" width="100%">
-      </a>
-      <br><strong><a href="./readme_goysec_ru.md">GoySecurity</a></strong>
-      <br><sub>Security</sub>
-      <br>Проверка модулей перед установкой.
-      <br><a href="./readme_goysec_ru.md"><strong>Открыть README</strong></a>
-    </td>
+    <td width="50%"></td>
     <td align="center" width="50%">
       <a href="./readme_qwencli_ru.md">
         <img src="../assets/QwenCLI.png" alt="QwenCLI" width="100%">
@@ -68,15 +60,7 @@
       <br>Recon и инфраструктурный обзор.
       <br><a href="./readme_recon_ru.md"><strong>Открыть README</strong></a>
     </td>
-    <td align="center" width="50%">
-      <a href="./readme_keyscanner_ru.md">
-        <img src="../assets/keyscanner.png" alt="KeyScanner" width="100%">
-      </a>
-      <br><strong><a href="./readme_keyscanner_ru.md">KeyScanner</a></strong>
-      <br><sub>Security • Watcher</sub>
-      <br>Поиск и проверка API-ключей.
-      <br><a href="./readme_keyscanner_ru.md"><strong>Открыть README</strong></a>
-    </td>
+    <td width="50%"></td>
   </tr>
   <tr>
     <td align="center" width="50%">
@@ -112,6 +96,12 @@
   </tr>
 </table>
 
+<table>
+  <tr><td align="center"><a href="./readme_iris_ru.md"><img src="../assets/iris.png" alt="Iris" width="100%"></a><br><strong><a href="./readme_iris_ru.md">Iris</a></strong><br>Автофарм, мешок, профиль и топы Iris.</td></tr>
+  <tr><td align="center"><a href="./readme_vector_ru.md"><img src="../assets/vector.png" alt="Vector" width="100%"></a><br><strong><a href="./readme_vector_ru.md">Vector</a></strong><br>Поиск модулей и коллекции Vector.</td></tr>
+  <tr><td align="center"><a href="./readme_redconstructor_ru.md"><img src="../assets/RedConstructor.png" alt="RedConstructor" width="100%"></a><br><strong><a href="./readme_redconstructor_ru.md">RedConstructor</a></strong><br>Редактор и конструктор модулей.</td></tr>
+</table>
+
 ## Архив Heroku
 
 Эти модули не портируются в Hotaru.
@@ -135,6 +125,34 @@
       <br><sub>Fun / Utility</sub>
       <br>Шуточный prank-модуль.
       <br><a href="./readme_goyvirus_ru.md"><strong>Открыть README</strong></a>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="./readme_goysec_ru.md">
+        <img src="../assets/goysec.png" alt="GoySecurity" width="100%">
+      </a>
+      <br><strong><a href="./readme_goysec_ru.md">GoySecurity</a></strong>
+      <br><sub>Security</sub>
+      <br>Проверка модулей перед установкой.
+      <br><a href="./readme_goysec_ru.md"><strong>Открыть README</strong></a>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="./readme_keyscanner_ru.md">
+        <img src="../assets/keyscanner.png" alt="KeyScanner" width="100%">
+      </a>
+      <br><strong><a href="./readme_keyscanner_ru.md">KeyScanner</a></strong>
+      <br><sub>Security • Watcher</sub>
+      <br>Поиск и проверка API-ключей.
+      <br><a href="./readme_keyscanner_ru.md"><strong>Открыть README</strong></a>
     </td>
   </tr>
 </table>
