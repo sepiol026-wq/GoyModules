@@ -18,7 +18,7 @@
 # meta developer: @GoyMods
 # meta tags: module-catalog, search, reviews, ratings, comments, heroku, каталог-модулей, поиск, отзывы, рейтинги, комментарии, хероку
 
-__version__ = (2, 4, 7)
+__version__ = (2, 4, 11)
 
 import asyncio
 import base64
@@ -1116,7 +1116,9 @@ class Vector(loader.Module):
             await self.http.close()
             log.debug("on_unload: HTTP session closed")
 
-    async def _net_req(self, method: str, path: str, token: str = "", params: dict = None, json_data: dict = None, as_bytes: bool = False, timeout: int = 15) -> Any:
+    async def _net_req(self, method: str, path: str, token: str = "", params: dict = None, json_data: dict = None, as_bytes: bool = False, timeout: Optional[int] = None) -> Any:
+        if timeout is None:
+            timeout = 90 if path == "/api/search" else 15
         log.debug("_net_req: %s %s params=%s json=%s bytes=%s timeout=%s", method, path, bool(params), bool(json_data), as_bytes, timeout)
         if not self.http or self.http.closed:
             self.http = aiohttp.ClientSession()
@@ -1435,160 +1437,106 @@ class Vector(loader.Module):
         term = utils.escape_html(term_raw or "permanent")
         return self.strings["v_ban_notice"].format(reason=reason, term=term)
 
-    @staticmethod
-    def _plain_len(text: str) -> int:
-        n = 0
-        inside = False
-        for ch in text:
-            if ch == "<":
-                inside = True
-            elif ch == ">":
-                inside = False
-            elif not inside:
-                n += 1
-        return n
+    def _rich_buttons(self, response: str, markup: list) -> str:
+        self.inline.generate_markup(markup)
+        rows = []
+        for row in markup:
+            buttons = []
+            for button in row:
+                text = utils.escape_html(str(button.get("text", "")))
+                if "url" in button:
+                    value = utils.escape_html(str(button["url"])).replace('"', "&quot;")
+                    attrs = f'type="url" url="{value}"'
+                elif "copy" in button:
+                    value = utils.escape_html(str(button["copy"])).replace('"', "&quot;")
+                    attrs = f'type="copy_text" text="{value}"'
+                elif "callback" in button:
+                    data = base64.urlsafe_b64encode(str(button["_callback_data"]).encode()).decode()
+                    attrs = f'type="callback_data" data="{data}"'
+                else:
+                    continue
+                style = button.get("style")
+                style_attr = f' style="{style}"' if style in {"primary", "danger", "success"} else ""
+                buttons.append(f"<tg-button {attrs}{style_attr}>{text}</tg-button>")
+            if buttons:
+                rows.append(f"<tg-button-row>{''.join(buttons)}</tg-button-row>")
+        return f"{response}{''.join(rows)}"
 
-    @staticmethod
-    def _tag_safe_truncate(text: str, cap: int) -> str:
-        if len(text) <= cap:
-            return text
-        plain = ""
-        inside = False
-        tag = ""
-        last_close = 0
-        for i, ch in enumerate(text):
-            if ch == "<":
-                inside = True
-                tag = "<"
-            elif ch == ">" and inside:
-                inside = False
-                if tag.startswith("</"):
-                    last_close = i + 1
-                tag = ""
-            elif inside:
-                tag += ch
-            else:
-                plain += ch
-            if len(plain) >= cap and not inside:
-                raw = text[:i + 1]
-                if tag.startswith("</"):
-                    raw = text[:last_close or i + 1]
-                return raw.rstrip() + "..."
-        return text
+    async def _answer(self, target: Any, response: str = "", **kwargs: Any) -> Any:
+        photo = kwargs.pop("photo", None)
+        if photo and str(photo).startswith(("https://", "http://")):
+            image = f'<figure><img src="{utils.escape_html(str(photo)).replace(chr(34), "&quot;")}"/></figure>'
+            response = f"{image}\n{response}"
+        markup = kwargs.pop("reply_markup", None)
+        rich_message = kwargs.pop("rich_message", None)
+        response = rich_message if rich_message is not None else response
+        inline_target = hasattr(target, "inline_manager") and hasattr(target, "inline_message_id")
+        rich_form = bool((getattr(target, "form", None) or {}).get("rich_message"))
+        rich_mode = rich_message is not None or photo or rich_form
+        if markup and rich_mode:
+            response = self._rich_buttons(response, markup)
+            if inline_target:
+                return await target.edit(rich_message=response)
+            return await self.inline.form(
+                text=" ",
+                message=target if getattr(target, "out", False) else utils.get_chat_id(target),
+                reply_markup=[],
+                rich_message=response,
+                reply_to=kwargs.get("reply_to") or getattr(target, "reply_to_msg_id", None) or utils.get_topic(target),
+                silent=kwargs.get("silent", True),
+                ttl=kwargs.get("ttl", 600),
+            )
+        if rich_mode:
+            if inline_target:
+                return await target.edit(rich_message=response)
+            return await utils.answer(target, rich_message=response, **kwargs)
+        return await utils.answer(target, response, reply_markup=markup, **kwargs)
 
     def _build_html(self, m_data: dict, current_idx: int, total_cnt: int) -> str:
         log.debug("_build_html: name=%s idx=%d/%d", m_data.get("name", "?"), current_idx, total_cnt)
-        CAP = 900
-
         name = utils.escape_html(str(m_data.get("name", "Unknown")))
         author = utils.escape_html(str(m_data.get("author", "@Unknown")))
         ver = str(m_data.get("version", "?.?.?"))
-
-        header = f"{self.emj['module']} <code>{name}</code> <b>{self.strings['v_dev_lbl']}</b> <code>{author}</code>"
-        if ver != "?.?.?":
-            header += f" (<code>v{utils.escape_html(ver)}</code>)"
+        blocks = []
+        banner = str(m_data.get("banner") or "")
+        if banner.startswith(("https://", "http://")):
+            banner = utils.escape_html(banner).replace('"', "&quot;")
+            blocks.append(f'<figure><img src="{banner}"/></figure>')
+        blocks.append(f"<h1>{self.emj['module']} {name}</h1>")
         status_text = self.strings["v_dev_ofc"] if m_data.get("official") else self.strings["v_dev_unofc"]
-        status = f"{self.emj['verified']} <b>{self.strings['v_dev_str']}</b> <code>{status_text}</code>"
-        page = f"{self.emj['modules_list']} <i>{self.strings['v_page'].format(idx=current_idx, total=total_cnt)}</i>" if total_cnt > 1 else ""
-
-        pfx = [header, status]
-        if page:
-            pfx.append(page)
-        used = len("\n".join(pfx))
-
-        desc = m_data.get("description")
-        desc_block = ""
-        if desc and used < CAP - 20:
-            desc_raw = re.sub(r'(https?://\S+|www\.\S+)', r'<code>\1</code>', utils.escape_html(str(desc)))
-            hdr = f"\n{self.emj['description']} <b>{self.strings['v_info']}</b>\n<blockquote expandable>"
-            ftr = "</blockquote>"
-            room = CAP - used - len(hdr) - len(ftr) - 8
-            if room > 0:
-                if len(desc_raw) > room:
-                    desc_raw = desc_raw[:room - 3].rstrip() + "..."
-                if desc_raw:
-                    desc_block = f"{hdr}{desc_raw}{ftr}"
-
-        cmds = m_data.get("commands", [])
-        cmd_block = ""
-        if cmds:
-            est = used + len(desc_block) + 30
-            if est < CAP:
-                hdr = f"\n\n{self.emj['command']} <b>{self.strings['v_cmds']}</b>\n<blockquote expandable>"
-                ftr = "</blockquote>"
-                room = CAP - used - len(desc_block) - len(hdr) - len(ftr) - 5
-                if room > 0:
-                    cl = []
-                    for c in cmds:
-                        cn = utils.escape_html(str(c.get("name", "")))
-                        cd = utils.escape_html(str(c.get("description", ""))).split("\n")[0]
-                        if c.get("is_placeholder"):
-                            line = f"<code>{{{cn}}}</code> {cd}"
-                        elif c.get("is_inline"):
-                            bot = getattr(getattr(self, "inline", None), "bot_username", None) or "bot"
-                            line = f"<code>@{utils.escape_html(bot)} {cn}</code> {cd}"
-                        else:
-                            line = f"<code>{self.get_prefix()}{cn}</code> {cd}"
-                        if room - len(line) - 1 < 0:
-                            break
-                        cl.append(line)
-                        room -= len(line) + 1
-                    if cl:
-                        if len(cl) < len(cmds):
-                            cl.append(f"... +{len(cmds) - len(cl)} more")
-                        cmd_block = f"{hdr}{chr(10).join(cl)}{ftr}"
-
-        pfx_plain = self._plain_len("\n".join(pfx))
-        desc_plain = self._plain_len(desc_block)
-        cmd_plain = self._plain_len(cmd_block)
-        cur_plain = pfx_plain + desc_plain + cmd_plain
-
-        tags = m_data.get("tags", [])
-        tags_block = ""
-        log.debug("_build_html: name=%s tags=%s", m_data.get("name", "?"), tags)
-        if tags:
-            hdr = f"\n\n{self.emj['tag']} <b>{self.strings.get('v_tags', 'Tags')}</b>\n<blockquote expandable>"
-            ftr = "</blockquote>"
-            hdr_plain = self._plain_len(hdr)
-            room = CAP - cur_plain - hdr_plain - self._plain_len(ftr)
-            log.debug("_build_html tags: cur_plain=%d room=%d", cur_plain, room)
-            if room > 0:
-                tl = []
-                for t in tags:
-                    tt = utils.escape_html(str(t))
-                    room_needed = self._plain_len(f"<em>{tt}</em>") + 3
-                    if room - room_needed < 0:
-                        break
-                    tl.append(f"<em>{tt}</em>")
-                    room -= room_needed
-                if tl:
-                    tags_block = f"{hdr}{' · '.join(tl)}{ftr}"
-                    log.debug("_build_html tags: built %d tags", len(tl))
+        blocks.append(f"<p>{self.emj['verified']} <b>{utils.escape_html(status_text)}</b></p>")
+        byline = f"{self.strings['v_dev_lbl']}: {author}"
+        if ver != "?.?.?":
+            byline += f" · <code>v{utils.escape_html(ver)}</code>"
+        blocks.append(f"<p>{byline}</p>")
+        if total_cnt > 1:
+            blocks.append(f"<p><i>{self.strings['v_page'].format(idx=current_idx, total=total_cnt)}</i></p>")
+        desc = str(m_data.get("description") or "").strip()
+        if desc:
+            desc_html = utils.escape_html(desc).replace("\n", "<br>")
+            blocks.append(f"<details><summary>{self.emj['description']} {self.strings['v_info']}</summary><p>{desc_html}</p></details>")
+        commands = m_data.get("commands", [])
+        if commands:
+            bot = getattr(getattr(self, "inline", None), "bot_username", None) or "bot"
+            rows = []
+            for command in commands:
+                command_name = utils.escape_html(str(command.get("name", "")))
+                command_desc = utils.escape_html(str(command.get("description", ""))).replace("\n", "<br>")
+                if command.get("is_placeholder"):
+                    command_text = f"<code>{{{command_name}}}</code>"
+                elif command.get("is_inline"):
+                    command_text = f"<code>@{utils.escape_html(bot)} {command_name}</code>"
                 else:
-                    log.debug("_build_html tags: tl empty, skipping")
-            else:
-                log.debug("_build_html tags: room <= 0, skipping")
-
-        deps = m_data.get("dependencies", [])
-        dep_block = ""
-        if deps:
-            hdr = f"\n\n{self.emj['dependency']} <b>{self.strings.get('v_deps', 'Dependencies')}</b>\n<blockquote expandable>"
-            ftr = "</blockquote>"
-            tags_plain = self._plain_len(tags_block)
-            room = CAP - cur_plain - tags_plain - self._plain_len(hdr) - self._plain_len(ftr)
-            if room > 0:
-                dl = []
-                for d in deps:
-                    dt = utils.escape_html(str(d))
-                    room_needed = self._plain_len(f"<code>{dt}</code>") + 3
-                    if room - room_needed < 0:
-                        break
-                    dl.append(f"<code>{dt}</code>")
-                    room -= room_needed
-                if dl:
-                    dep_block = f"{hdr}{', '.join(dl)}{ftr}"
-
-        return self._tag_safe_truncate(("\n".join(pfx) + desc_block + cmd_block + tags_block + dep_block).rstrip(), CAP)
+                    command_text = f"<code>{self.get_prefix()}{command_name}</code>"
+                rows.append(f"<li>{command_text}{': ' + command_desc if command_desc else ''}</li>")
+            blocks.append(f"<details><summary>{self.emj['command']} {self.strings['v_cmds']} ({len(commands)})</summary><ul>{''.join(rows)}</ul></details>")
+        tags = m_data.get("tags", [])
+        if tags:
+            blocks.append(f"<details><summary>{self.emj['tag']} {self.strings.get('v_tags', 'Tags')} ({len(tags)})</summary><p>{' · '.join(utils.escape_html(str(tag)) for tag in tags)}</p></details>")
+        dependencies = m_data.get("dependencies", [])
+        if dependencies:
+            blocks.append(f"<details><summary>{self.emj['dependency']} {self.strings.get('v_deps', 'Dependencies')} ({len(dependencies)})</summary><ul>{''.join(f'<li><code>{utils.escape_html(str(dependency))}</code></li>' for dependency in dependencies)}</ul></details>")
+        return "\n".join(blocks)
 
     def _build_kbd(self, item: dict, idx: int, group: list, search_phrase: str, is_expanded: bool = False, comments_pg: int = 0) -> list:
         log.debug("_build_kbd: name=%s idx=%d expanded=%s", item.get("name", "?"), idx, is_expanded)
@@ -1674,13 +1622,13 @@ class Vector(loader.Module):
     async def _show_search_fail(self, target: Any, m_list: list, token_ok: bool, q: str) -> None:
         if not token_ok:
             log.warning("vectorcmd: no token")
-            await utils.answer(target, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+            await self._answer(target, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
         elif m_list is None:
             log.error("vectorcmd: API unreachable")
-            await utils.answer(target, f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+            await self._answer(target, f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
         elif not m_list:
             log.debug("vectorcmd: no results")
-            await utils.answer(target, f"{self.emj['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
+            await self._answer(target, f"{self.emj['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{utils.escape_html(q)}</code>')}</b>", reply_markup=[[{"text": self.strings["v_upd_cancel"], "action": "close"}]])
 
     @loader.command(
         en_doc="<query> — search modules in Vector.",
@@ -1698,18 +1646,18 @@ class Vector(loader.Module):
         log.info("vectorcmd: query=%r", q)
         if not q:
             log.debug("vectorcmd: empty query, aborting")
-            return await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}</code>')}</b>")
+            return await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}</code>')}</b>")
         if len(q) > 120:
-            return await utils.answer(msg, f"{self.emj['warn']} <b>{self.strings['v_err_len']}</b>")
+            return await self._answer(msg, f"{self.emj['warn']} <b>{self.strings['v_err_len']}</b>")
 
         lang_sfx = self._detect_lang_suffix()
 
-        form = await self.inline.form(
-            f"{self.emj['search']} <b>{self.strings['v_loading_ui']}</b>",
+        form = await self._answer(
             msg,
+            f"{self.emj['search']} <b>{self.strings['v_loading_ui']}</b>",
             reply_markup=[[{"text": "ㅤ", "callback": self.cb_dummy}]],
             photo="https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vsearch.png",
-            silent=True
+            silent=True,
         )
         log.debug("vectorcmd: loading form sent, searching")
 
@@ -1724,7 +1672,7 @@ class Vector(loader.Module):
         st["exp"] = False
         kbd = self._build_kbd(item, 0, m_list, q)
         text = self._build_html(item, 1, len(m_list))
-        await utils.answer(form, text, reply_markup=kbd, photo=item.get("banner"))
+        await self._answer(form, text, reply_markup=kbd)
 
     @loader.command(
         en_doc="[-f|--force] — update Vector module.",
@@ -1750,32 +1698,32 @@ class Vector(loader.Module):
 
         if force:
             log.info("vecupdate: force flag set, installing immediately")
-            await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
+            await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
             ok = await self._safe_install(m_name, dl_url)
             if ok:
                 log.info("vecupdate: force install successful")
-                await utils.answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
+                await self._answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
             else:
                 log.warning("vecupdate: force install failed")
-                await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
+                await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
             return
 
-        await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_check']}</b>")
+        await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_check']}</b>")
 
         token = await self._get_active_token()
         if not token:
             log.warning("vecupdate: no token, aborting")
-            return await utils.answer(msg, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>")
+            return await self._answer(msg, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>")
 
         src_bytes = await self._net_req("GET", dl_path, token=token, as_bytes=True)
         if not src_bytes:
             log.warning("vecupdate: download returned no bytes, installing anyway")
-            await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
+            await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
             ok = await self._safe_install(m_name, dl_url)
             if ok:
-                await utils.answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
+                await self._answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
             else:
-                await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
+                await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
             return
 
         log.debug("vecupdate: downloaded %d bytes", len(src_bytes))
@@ -1811,9 +1759,9 @@ class Vector(loader.Module):
 
         if remote_hash == local_hash:
             log.info("vecupdate: hashes match, showing force-update prompt")
-            await self.inline.form(
-                message=msg,
-                text=f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
+            await self._answer(
+                msg,
+                f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}",
                 reply_markup=[
                     [
                         {"text": self.strings["v_upd_force_btn"], "callback": self._vecupdate_force, "args": (dl_url,), "style": "primary"},
@@ -1824,28 +1772,28 @@ class Vector(loader.Module):
             return
 
         log.info("vecupdate: hashes differ, proceeding with install")
-        await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
+        await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
 
         ok = await self._safe_install(m_name, dl_url)
         if ok:
             log.info("vecupdate: install successful")
-            await utils.answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
+            await self._answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
             log.warning("vecupdate: install failed")
-            await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
+            await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
 
     async def _vecupdate_force(self, call: Any, dl_url: str):
         log.info("_vecupdate_force: force update triggered, url=%s", dl_url)
         with suppress(Exception):
             await call.answer()
-        await call.edit(f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
+        await self._answer(call, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
         ok = await self._safe_install("Vector", dl_url)
         if ok:
             log.info("_vecupdate_force: force install successful")
-            await call.edit(f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
+            await self._answer(call, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
         else:
             log.warning("_vecupdate_force: force install failed")
-            await call.edit(f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
+            await self._answer(call, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
 
     def _hash_module_source(self, mod_instance: Any) -> Optional[str]:
         """Hash Heroku's loader-retained source, including dynamic ext modules."""
@@ -1905,22 +1853,22 @@ class Vector(loader.Module):
         slug = raw_arg.split("/collections/")[-1].split("/")[0].split("?")[0] if "/collections/" in raw_arg else raw_arg
         log.info("vecdl: raw=%r slug=%r", raw_arg, slug)
         if not slug:
-            return await utils.answer(msg, f"{self.emj['error']} {self.strings['v_vecdl_usage'].format(p=self.get_prefix())}")
+            return await self._answer(msg, f"{self.emj['error']} {self.strings['v_vecdl_usage'].format(p=self.get_prefix())}")
 
         token = await self._get_active_token()
         if not token:
-            return await utils.answer(msg, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>")
+            return await self._answer(msg, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>")
 
         raw = await self._net_req("GET", f"/api/collections/{quote(slug, safe='')}", token=token)
         if not raw or not raw.get("ok"):
-            return await utils.answer(msg, f"{self.emj['error']} <b>{self.strings['v_dlcoll_not_found']}</b>")
+            return await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_dlcoll_not_found']}</b>")
 
         col = raw["collection"]
         modules = [entry["module"] for entry in (col.get("modules") or []) if entry.get("module")]
         if not modules:
-            return await utils.answer(msg, f"{self.emj['warn']} <b>{self.strings['v_dlcoll_empty']}</b>")
+            return await self._answer(msg, f"{self.emj['warn']} <b>{self.strings['v_dlcoll_empty']}</b>")
 
-        await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_sending']}</b>")
+        await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_sending']}</b>")
 
         max_batch = int(self.config.get("max_batch", 50))
         total_orig = len(modules)
@@ -1928,14 +1876,14 @@ class Vector(loader.Module):
             modules = modules[:max_batch]
 
         col_name = col.get("name", slug)
-        await self.inline.form(
-            f"{self.emj['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}",
+        await self._answer(
             msg,
+            f"{self.emj['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}",
             reply_markup=[[
                 {"text": self.strings["v_btn_dl"], "callback": self._vecdl_install, "args": (modules, col_name)},
                 {"text": self.strings["v_upd_cancel"], "action": "close"},
             ]],
-            silent=True
+            silent=True,
         )
         return
 
@@ -1947,7 +1895,7 @@ class Vector(loader.Module):
         if total_orig > max_batch:
             modules = modules[:max_batch]
 
-        await utils.answer(cb, f"{self.emj['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.emj['search']} {self.strings['v_dlcoll_start']}", reply_markup=[[{"text": "…", "callback": self.cb_dummy}]])
+        await self._answer(cb, f"{self.emj['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=utils.escape_html(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.emj['search']} {self.strings['v_dlcoll_start']}", reply_markup=[[{"text": "…", "callback": self.cb_dummy}]])
 
         ok = 0
         failed: List[str] = []
@@ -1970,13 +1918,11 @@ class Vector(loader.Module):
 
         result += f"\n<b>{ok}/{len(modules)}</b>"
         if failed:
-            result += "\n\n" + "\n".join(failed[:8])
-            if len(failed) > 8:
-                result += f"\n… +{len(failed) - 8} more"
+            result += "\n\n" + "\n".join(failed)
         if total_orig > max_batch:
             result += f"\n\n<i>{self.strings['v_dlcoll_max_batch'].format(total=total_orig, max=max_batch)}</i>"
 
-        await utils.answer(cb, result, reply_markup=[[{"text": "✖️", "action": "close"}]])
+        await self._answer(cb, result, reply_markup=[[{"text": "✖️", "action": "close"}]])
 
     @loader.watcher()
     async def vector_install_payload_watcher(self, msg: Message):
@@ -2141,21 +2087,22 @@ class Vector(loader.Module):
         uwu_doc="— open Vectow as Tewegwam Mini App nya~",
     )
     async def vecmecmd(self, msg: Message):
-        await utils.answer(msg, f"{self.emj['search']} <b>{self.strings['v_sending']}</b>")
+        await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_sending']}</b>")
         bot_info = await self._net_req("GET", "/api/tg-bot")
         bot_uname = (bot_info or {}).get("username", "").strip().lstrip("@")
         if not bot_uname:
-            await utils.answer(msg, self.strings["v_err_api"])
+            await self._answer(msg, self.strings["v_err_api"])
             return
         text = f"{self.emj['shield']} <b>{self.strings['v_miniapp_title']}</b>\n\n{self.strings['v_miniapp_body']}"
         link = f"https://t.me/{bot_uname}/vector"
-        await self.inline.form(
-            text, msg,
+        await self._answer(
+            msg,
+            text,
             reply_markup=[[
                 {"text": self.strings["v_miniapp_btn"], "url": link},
                 {"text": self.strings["v_upd_cancel"], "action": "close"},
             ]],
-            silent=True
+            silent=True,
         )
 
     async def cb_dummy(self, cb: Any):
@@ -2172,7 +2119,7 @@ class Vector(loader.Module):
         with suppress(Exception): await cb.answer()
         if 0 <= target_i < len(group):
             item = group[target_i]
-            await utils.answer(cb, self._build_html(item, target_i + 1, len(group)), reply_markup=self._build_kbd(item, target_i, group, q, expanded, comments_pg), photo=item.get("banner"))
+            await self._answer(cb, self._build_html(item, target_i + 1, len(group)), reply_markup=self._build_kbd(item, target_i, group, q, expanded, comments_pg))
 
     async def cb_list(self, cb: Any, curr_i: int, group: list, q: str):
         log.debug("cb_list: curr_i=%d group_len=%d", curr_i, len(group) if group else 0)
@@ -2194,7 +2141,7 @@ class Vector(loader.Module):
             {"text": "▶️", "callback": self.cb_page, "args": (next_pg, group, q, curr_i)},
         ])
         kb.append([{"text": self.strings['v_btn_bck'], "callback": self.cb_nav, "args": (curr_i, group, q)}])
-        await utils.answer(cb, f"{self.emj['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
+        await self._answer(cb, f"{self.emj['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_page(self, cb: Any, pg: int, group: list, q: str, orig_i: int):
         uid = getattr(cb, "from_user", None) and cb.from_user.id or 0
@@ -2216,7 +2163,7 @@ class Vector(loader.Module):
             {"text": "▶️", "callback": self.cb_page, "args": (next_pg, group, q, orig_i)},
         ])
         kb.append([{"text": self.strings['v_btn_bck'], "callback": self.cb_nav, "args": (orig_i, group, q)}])
-        await utils.answer(cb, f"{self.emj['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
+        await self._answer(cb, f"{self.emj['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
 
     async def cb_toggle(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, exp: bool):
         uid = getattr(cb, "from_user", None) and cb.from_user.id or 0
@@ -2225,7 +2172,7 @@ class Vector(loader.Module):
         log.debug("cb_toggle: name=%s idx=%d exp=%s", m_name, i, exp)
         with suppress(Exception): await cb.answer()
         item = group[i] if group and 0 <= i < len(group) else {"name": m_name, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
-        await utils.answer(cb, self._build_html(item, i + 1, len(group or [item])), reply_markup=self._build_kbd(item, i, group, q, exp), photo=item.get("banner"))
+        await self._answer(cb, self._build_html(item, i + 1, len(group or [item])), reply_markup=self._build_kbd(item, i, group, q, exp))
 
     async def cb_rate(self, cb: Any, m_owner: str, m_name: str, action: str, i: int, group: list, q: str):
         log.info("cb_rate: name=%s action=%s", m_name, action)
@@ -2255,7 +2202,7 @@ class Vector(loader.Module):
         else:
             item = {"name": m_name, "likes": new_likes or 0, "dislikes": new_dislikes or 0, "source_url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
             
-        await utils.answer(cb, self._build_html(item, i + 1, len(group or [item])), reply_markup=self._build_kbd(item, i, group, q), photo=item.get("banner"))
+        await self._answer(cb, self._build_html(item, i + 1, len(group or [item])), reply_markup=self._build_kbd(item, i, group, q))
         s_val = res.get("rating", {}).get("state")
         with suppress(Exception): await cb.answer(self.strings["v_fb_rm" if s_val == "removed" else "v_fb_add"], show_alert=True)
 
@@ -2285,7 +2232,7 @@ class Vector(loader.Module):
         cached = self.seccache.get(m_name)
         if cached and cached.get("check"):
             log.debug("cb_sec_check: cache hit for %s", m_name)
-            return await utils.answer(cb, f"{self._fmt_sec(m_name, cached)}", reply_markup=_get_sec_kb(True, cached))
+            return await self._answer(cb, f"{self._fmt_sec(m_name, cached)}", reply_markup=_get_sec_kb(True, cached))
 
         with suppress(Exception): await cb.answer()
         token = await self._get_active_token()
@@ -2296,16 +2243,16 @@ class Vector(loader.Module):
         
         if not res or self.httpc >= 400:
             log.warning("cb_sec_check: API error for %s, http=%s", m_name, self.httpc)
-            return await utils.answer(cb, f"{self.emj['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=_get_sec_kb(True))
+            return await self._answer(cb, f"{self.emj['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=_get_sec_kb(True))
 
         if res.get("check"):
             self.seccache[m_name] = res
             log.debug("cb_sec_check: cached result for %s", m_name)
-        await utils.answer(cb, self._fmt_sec(m_name, res), reply_markup=_get_sec_kb(bool(res.get("check")), res))
+        await self._answer(cb, self._fmt_sec(m_name, res), reply_markup=_get_sec_kb(bool(res.get("check")), res))
 
     async def cb_sec_run(self, cb: Any, m_owner: str, m_name: str, i: int, group: list, q: str, expanded: bool = False):
         log.info("cb_sec_run: name=%s", m_name)
-        await utils.answer(cb, f"{self.emj['search']} <b>{self.strings['v_aud_proc']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
+        await self._answer(cb, f"{self.emj['search']} <b>{self.strings['v_aud_proc']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
         token = await self._get_active_token()
         if not token:
             with suppress(Exception): await cb.answer(self.bannote or self.strings["v_err_api"], show_alert=True)
@@ -2314,16 +2261,16 @@ class Vector(loader.Module):
         
         if self.httpc == 429:
             log.warning("cb_sec_run: rate limited (429)")
-            return await utils.answer(cb, f"{self.emj['warn']} <b>{self.strings['v_aud_zero']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
+            return await self._answer(cb, f"{self.emj['warn']} <b>{self.strings['v_aud_zero']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
         if not res or self.httpc >= 400:
             log.warning("cb_sec_run: API error, http=%s", self.httpc)
-            return await utils.answer(cb, f"{self.emj['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
+            return await self._answer(cb, f"{self.emj['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=[[{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}]])
 
         log.info("cb_sec_run: scan complete for %s", m_name)
         if res.get("check"):
             self.seccache[m_name] = res
             log.debug("cb_sec_run: cached result for %s", m_name)
-        await utils.answer(cb, self._fmt_sec(m_name, res), reply_markup=[
+        await self._answer(cb, self._fmt_sec(m_name, res), reply_markup=[
             [{"text": self.strings["v_btn_code"], "url": f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}],
             [{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded)}],
         ])
@@ -2353,7 +2300,7 @@ class Vector(loader.Module):
         f_blocks = []
         for hdr, key in [(self.strings["v_sig_crit"], "critical"), (self.strings["v_sig_warn"], "warning"), (self.strings["v_sig_info"], "info")]:
             arr = fnds.get(key, [])
-            if arr: f_blocks.append(f"<b>{hdr}</b>: " + ", ".join(x.get("title", "?") for x in arr[:3]))
+            if arr: f_blocks.append(f"<b>{hdr}</b>: " + ", ".join(x.get("title", "?") for x in arr))
         if f_blocks:
             lines.append(f"{self.emj['search']} <b>{self.strings['v_aud_sigs']}:</b>\n<blockquote expandable>{chr(10).join(f_blocks)}</blockquote>")
             
@@ -2405,7 +2352,7 @@ class Vector(loader.Module):
         kb.append([{"text": self.strings["v_btn_bck"], "callback": self.cb_nav, "args": (i, group or [], q, expanded, pg)}])
         
         item = group[i] if group and 0 <= i < len(group) else {}
-        await utils.answer(cb, self._fmt_comments(comments, m_name, pg), reply_markup=kb, photo=item.get("banner"))
+        await self._answer(cb, self._fmt_comments(comments, m_name, pg), reply_markup=kb, photo=item.get("banner"))
 
     async def cb_post_comment(self, cb: Any, text: str, m_owner: str, m_name: str, i: int, group: list, q: str, pg: int = 0, expanded: bool = False):
         log.info("cb_post_comment: name=%s text_len=%d", m_name, len(text) if text else 0)
@@ -2468,7 +2415,7 @@ class Vector(loader.Module):
             uname = (str(raw_uname).strip() if raw_uname else "").lstrip("@")
             meta = [f"@{utils.escape_html(uname)}"] if uname else []
             ts = str(r.get("created_at") or "").replace("T", " ").replace("Z", "").strip()
-            if ts: meta.append(utils.escape_html(ts[:16]))
+            if ts: meta.append(utils.escape_html(ts))
             meta_str = f" <i>{' · '.join(meta)}</i>" if meta else ""
             edit_mark = " *" if r.get("can_edit") else ""
             
@@ -2476,18 +2423,17 @@ class Vector(loader.Module):
             blks.append(f"╭─ {auth}\n╰─\n<blockquote>{utils.escape_html(str(r.get('body', '')))}</blockquote>")
             
             subs = chmap.get(rid, [])
-            for s in subs[:4]:
+            for s in subs:
                 raw_s_uname = s.get("author_username")
                 s_uname = (str(raw_s_uname).strip() if raw_s_uname else "").lstrip("@")
                 s_meta = [f"@{utils.escape_html(s_uname)}"] if s_uname else []
                 s_ts = str(s.get("created_at") or "").replace("T", " ").replace("Z", "").strip()
-                if s_ts: s_meta.append(utils.escape_html(s_ts[:16]))
+                if s_ts: s_meta.append(utils.escape_html(s_ts))
                 s_meta_str = f" <i>{' · '.join(s_meta)}</i>" if s_meta else ""
                 s_edit_mark = " *" if s.get("can_edit") else ""
                 
                 s_auth = f"<b>{utils.escape_html(s.get('author_name') or s.get('author_username') or 'Unknown')}</b>{s_edit_mark}{s_meta_str}"
                 blks.append(f"  {self.emj['reply']} {s_auth}\n<blockquote>{utils.escape_html(str(s.get('body', '')))}</blockquote>")
                 
-            if len(subs) > 4: blks.append(f"  <i>{self.strings['v_more_replies'].format(count=len(subs)-4)}</i>")
             
         return "\n\n".join(blks)

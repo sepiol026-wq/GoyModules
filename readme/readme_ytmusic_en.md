@@ -27,11 +27,12 @@ YTMusic is a YouTube-based music workflow module: search tracks, send audio to c
 - Supports library migration through import/export.
 
 ## Module file
-- `yt.py`
+- `yt.hmod`
 
 ## Installation
+Download the module file, send it to Hotaru, then load it with:
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/yt.py
+.ld
 ```
 
 ## Commands

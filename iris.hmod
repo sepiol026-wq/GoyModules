@@ -1,0 +1,1388 @@
+HOTARU = {
+    "id": "iris",
+    "version": "1.0.3",
+    "commands": [
+        "irf",
+        "iris",
+        "irlogs",
+        "irbag",
+        "irprofile",
+        "irsupertop",
+        "irdaytop",
+        "irreset"
+    ],
+    "capabilities": [
+        "mt",
+        "state"
+    ],
+    "watchers": [
+        "sync"
+    ],
+    "tasks": {
+        "farm": {
+            "interval": 30,
+            "autostart": True
+        },
+        "loads": {
+            "interval": 300,
+            "autostart": True
+        }
+    },
+    "config_schema": {
+        "extra_delay_min": {
+            "type": "int",
+            "default": 3,
+            "min": 0,
+            "max": 30,
+            "description": "Min random delay after Iris cooldown (minutes)"
+        },
+        "extra_delay_max": {
+            "type": "int",
+            "default": 8,
+            "min": 0,
+            "max": 60,
+            "description": "Max random delay after Iris cooldown (minutes)"
+        },
+        "max_logs": {
+            "type": "int",
+            "default": 300,
+            "min": 20,
+            "max": 1000,
+            "description": "Maximum log entries"
+        },
+        "load_refresh_minutes": {
+            "type": "int",
+            "default": 20,
+            "min": 5,
+            "max": 120,
+            "description": "How often to refresh bot load in background (minutes)"
+        },
+        "response_timeout": {
+            "type": "int",
+            "default": 120,
+            "min": 30,
+            "max": 300,
+            "description": "Bot response timeout in seconds"
+        },
+        "auto_cleanup": {
+            "type": "bool",
+            "default": True,
+            "description": "Delete service messages after requests"
+        },
+        "timezone_offset": {
+            "type": "choice",
+            "options": [
+                "UTC-12",
+                "UTC-11",
+                "UTC-10",
+                "UTC-9",
+                "UTC-8",
+                "UTC-7",
+                "UTC-6",
+                "UTC-5",
+                "UTC-4",
+                "UTC-3",
+                "UTC-2",
+                "UTC-1",
+                "UTC+0",
+                "UTC+1",
+                "UTC+2",
+                "UTC+3",
+                "UTC+4",
+                "UTC+5",
+                "UTC+6",
+                "UTC+7",
+                "UTC+8",
+                "UTC+9",
+                "UTC+10",
+                "UTC+11",
+                "UTC+12"
+            ],
+            "default": "UTC+3",
+            "description": "Display timezone"
+        }
+    },
+    "lexicon": {
+        "en": {
+            "name": "Iris",
+            "description": "Iris control: autofarm, bag, profile, chat tops across five Iris bots with load balancing.",
+            "commands": {
+                "irf": {
+                    "description": "<on/off> | iris autofarm"
+                },
+                "iris": {
+                    "description": "| iris status"
+                },
+                "irlogs": {
+                    "description": "<count/date> | farm logs"
+                },
+                "irbag": {
+                    "description": "| bag"
+                },
+                "irprofile": {
+                    "description": "| profile"
+                },
+                "irsupertop": {
+                    "description": "| super top"
+                },
+                "irdaytop": {
+                    "description": "| day top"
+                },
+                "irreset": {
+                    "description": "| reset data"
+                }
+            },
+            "strings": {
+                "state_on": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Enabled",
+                "state_off": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Disabled",
+                "unknown": "—",
+                "now": "now",
+                "not_yet": "not yet",
+                "no_data": "no data",
+                "td_h": "h",
+                "td_m": "m",
+                "td_s": "s",
+                "loading_status": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Loading Iris status...</b>",
+                "loading_logs": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Loading logs...</b>",
+                "loading_bag": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Loading bag...</b>",
+                "loading_profile": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Loading profile...</b>",
+                "loading_super_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Loading super chat top...</b>",
+                "loading_day_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Loading day chat top...</b>",
+                "loading_reset": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Resetting module data...</b>",
+                "checking_load": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Checking Iris bot load...</b>",
+                "farm_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Autofarm is already running.</b>",
+                "farm_started": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris launched</b>\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Bot: <b>{bot}</b>\n<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Load: <b>{load}%</b>\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> First run: <b>{first}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> TZ: <b>{tz}</b>",
+                "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Autofarm is already stopped.</b>",
+                "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Autofarm stopped.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Dialogue cleanup completed.",
+                "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris — status</b>",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Farm: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Uptime: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Session: <b>{session} i¢</b> | Total: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Farms in session: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Time zone: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Last: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris cooldown: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Planned run: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Target bot: <b>{active_bot}</b>\n\n<b>Bot load</b>\n{{loads}}",
+                "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
+                "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
+                "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>Logs are empty.</b>",
+                "logs_bad_arg": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Format:</b> <code>.irlogs</code>, <code>.irlogs 10</code>, <code>.irlogs 26.07</code>",
+                "logs_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Logs ({count})</b>",
+                "bag_title": "<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> <b>Bag</b> ({bot})",
+                "bag_text": "<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Owner: <b>{owner}</b>\n🍬 Candies: <b>{candies}</b> | 🌕 Iris Gold: <b>{gold}</b>\n☢️ i¢: <b>{icoins}</b> | ✨ Stars: <b>{stars}</b>{bag_extra}",
+                "bag_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Could not get bag from {bot}:</b>\n<code>{err}</code>",
+                "profile_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Profile</b> ({bot})",
+                "profile_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Could not get profile from {bot}:</b>\n<code>{err}</code>",
+                "profile_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Bot returned an empty profile.</b>",
+                "profile_text": "{title}\n\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> It's <b>{name}</b> ({status})\n🆔 <b>{handle}</b>\n\n⏱ {universe_label}: <b>{since_date}</b> ({since_span})\n👨 Gender: <b>{gender}</b>\n📆 Birthday: <b>{birth}</b>\n🗺 City: <b>{city}</b>\n📊 Activity: <b>{day}</b> | <b>{week}</b> | <b>{month}</b> | <b>{total}</b>\n✨ Rank: <b>{rank}</b>\n\n<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> Balance\n🍬 <b>{candies}</b> | ✨ <b>{stars}</b>\n☢️ <b>{icoins}</b> | 🌕 <b>{gold}</b>\n⭐️ <b>{tg_stars}</b>{profile_extra}",
+                "profile_universe": "Iris universe",
+                "tg_stars_line": "\n⭐️ TG Stars: <b>{value}</b>",
+                "donate_points_line": "\n🥯 Donate points: <b>{value}</b>",
+                "super_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Super Chat Top</b> ({bot})",
+                "day_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Day Chat Top</b> ({bot})",
+                "top_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Could not parse chat top.</b>",
+                "top_join_open": "Open join",
+                "top_join_apply": "Ask via {name}",
+                "top_card": "Catalog card",
+                "top_entry": "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                "no_response": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>No response from {bot}.</b>",
+                "reset_done": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Iris data reset completed.</b>",
+                "last_farm_line": "{time} via <b>{bot}</b> (+{coins} i¢)",
+                "start_now": "now"
+            }
+        },
+        "ru": {
+            "name": "Iris",
+            "description": "Управление Iris: автофарм, мешок, анкета, топы бесед по пяти ботам Iris с балансировкой нагрузки.",
+            "commands": {
+                "irf": {
+                    "description": "<on/off> | автофарм iris"
+                },
+                "iris": {
+                    "description": "| статус iris"
+                },
+                "irlogs": {
+                    "description": "<count/date> | логи фарма"
+                },
+                "irbag": {
+                    "description": "| мешок"
+                },
+                "irprofile": {
+                    "description": "| анкета"
+                },
+                "irsupertop": {
+                    "description": "| супер топ"
+                },
+                "irdaytop": {
+                    "description": "| топ дня"
+                },
+                "irreset": {
+                    "description": "| сброс data"
+                }
+            },
+            "strings": {
+                "state_on": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Включён",
+                "state_off": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Выключен",
+                "unknown": "—",
+                "now": "сейчас",
+                "not_yet": "ещё не было",
+                "no_data": "нет данных",
+                "td_h": "ч",
+                "td_m": "мин",
+                "td_s": "сек",
+                "loading_status": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Загружаю статус Iris...</b>",
+                "loading_logs": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Загружаю логи...</b>",
+                "loading_bag": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Загружаю мешок...</b>",
+                "loading_profile": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Загружаю анкету...</b>",
+                "loading_super_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Загружаю супер топ бесед...</b>",
+                "loading_day_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Загружаю топ дня...</b>",
+                "loading_reset": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Сбрасываю данные модуля...</b>",
+                "checking_load": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Проверяю загрузку ботов Iris...</b>",
+                "farm_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже запущен.</b>",
+                "farm_started": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris запущен</b>\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Бот: <b>{bot}</b>\n<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Нагрузка: <b>{load}%</b>\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Первый запуск: <b>{first}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Пояс: <b>{tz}</b>",
+                "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже остановлен.</b>",
+                "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Автофарм остановлен.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Очистка диалога завершена.",
+                "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris — статус</b>",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Фарм: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Аптайм: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Сессия: <b>{session} i¢</b> | Всего: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Фармов в сессии: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Часовой пояс: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Последний: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris-кд: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> План модуля: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Целевой бот: <b>{active_bot}</b>\n\n<b>Загрузка ботов</b>\n{loads}",
+                "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
+                "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
+                "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>Логи пусты.</b>",
+                "logs_bad_arg": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Формат:</b> <code>.irlogs</code>, <code>.irlogs 10</code>, <code>.irlogs 26.07</code>",
+                "logs_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Логи ({count})</b>",
+                "bag_title": "<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> <b>Мешок</b> ({bot})",
+                "bag_text": "<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Владелец: <b>{owner}</b>\n🍬 Ирисок: <b>{candies}</b> | 🌕 Ирис-голд: <b>{gold}</b>\n☢️ i¢: <b>{icoins}</b> | ✨ Звёздочек: <b>{stars}</b>{bag_extra}",
+                "bag_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить мешок у {bot}:</b>\n<code>{err}</code>",
+                "profile_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Анкета</b> ({bot})",
+                "profile_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить анкету у {bot}:</b>\n<code>{err}</code>",
+                "profile_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Бот вернул пустую анкету.</b>",
+                "profile_text": "{title}\n\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Это <b>{name}</b> ({status})\n🆔 <b>{handle}</b>\n\n⏱ {universe_label}: <b>{since_date}</b> ({since_span})\n👨 Пол: <b>{gender}</b>\n📆 Дата рождения: <b>{birth}</b>\n🗺 Город: <b>{city}</b>\n📊 Активность: <b>{day}</b> | <b>{week}</b> | <b>{month}</b> | <b>{total}</b>\n✨ Звёздность: <b>{rank}</b>\n\n<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> Баланс\n🍬 <b>{candies}</b> | ✨ <b>{stars}</b>\n☢️ <b>{icoins}</b> | 🌕 <b>{gold}</b>\n⭐️ <b>{tg_stars}</b>{profile_extra}",
+                "profile_universe": "Во вселенной Iris",
+                "tg_stars_line": "\n⭐️ Тг-звёзды: <b>{value}</b>",
+                "donate_points_line": "\n🥯 Очки доната: <b>{value}</b>",
+                "super_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Супер Топ Бесед</b> ({bot})",
+                "day_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Топ Дня</b> ({bot})",
+                "top_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось разобрать топ бесед.</b>",
+                "top_join_open": "Войти",
+                "top_join_apply": "Попроситься через {name}",
+                "top_card": "Карточка Iris",
+                "top_entry": "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                "no_response": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нет ответа от {bot}.</b>",
+                "reset_done": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Сброс данных Iris завершён.</b>",
+                "last_farm_line": "{time} через <b>{bot}</b> (+{coins} i¢)",
+                "start_now": "сейчас"
+            }
+        },
+        "uk": {
+            "name": "Iris",
+            "description": "Керування Iris: автофарм, мішок, анкета, топи чатів.",
+            "commands": {
+                "irf": {
+                    "description": "<on/off> | автофарм iris"
+                },
+                "iris": {
+                    "description": "| статус iris"
+                },
+                "irlogs": {
+                    "description": "<count/date> | логи фарму"
+                },
+                "irbag": {
+                    "description": "| мішок"
+                },
+                "irprofile": {
+                    "description": "| анкета"
+                },
+                "irsupertop": {
+                    "description": "| супер топ"
+                },
+                "irdaytop": {
+                    "description": "| топ дня"
+                },
+                "irreset": {
+                    "description": "| скинути data"
+                }
+            },
+            "strings": {
+                "state_on": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Увімкнено",
+                "state_off": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Вимкнено",
+                "unknown": "—",
+                "now": "зараз",
+                "not_yet": "ще не було",
+                "no_data": "немає даних",
+                "td_h": "год",
+                "td_m": "хв",
+                "td_s": "сек",
+                "loading_status": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Завантажую статус Iris...</b>",
+                "loading_logs": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Завантажую логи...</b>",
+                "loading_bag": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Завантажую мішок...</b>",
+                "loading_profile": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Завантажую анкету...</b>",
+                "loading_super_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Завантажую супер топ чатів...</b>",
+                "loading_day_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Завантажую топ дня...</b>",
+                "loading_reset": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Скидаю дані модуля...</b>",
+                "checking_load": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Перевіряю навантаження ботів Iris...</b>",
+                "farm_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже запущено.</b>",
+                "farm_started": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris запущен</b>\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Бот: <b>{bot}</b>\n<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Нагрузка: <b>{load}%</b>\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Первый запуск: <b>{first}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Пояс: <b>{tz}</b>",
+                "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже зупинено.</b>",
+                "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Автофарм остановлен.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Очистка диалога завершена.",
+                "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris — статус</b>",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Фарм: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Аптайм: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Сессия: <b>{session} i¢</b> | Всего: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Фармов в сессии: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Часовой пояс: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Последний: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris-кд: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> План модуля: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Целевой бот: <b>{active_bot}</b>\n\n<b>Загрузка ботов</b>\n{loads}",
+                "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
+                "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
+                "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>Логи порожні.</b>",
+                "logs_bad_arg": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Формат:</b> <code>.irlogs</code>, <code>.irlogs 10</code>, <code>.irlogs 26.07</code>",
+                "logs_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Логи ({count})</b>",
+                "bag_title": "<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> <b>Мешок</b> ({bot})",
+                "bag_text": "<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Владелец: <b>{owner}</b>\n🍬 Ирисок: <b>{candies}</b> | 🌕 Ирис-голд: <b>{gold}</b>\n☢️ i¢: <b>{icoins}</b> | ✨ Звёздочек: <b>{stars}</b>{bag_extra}",
+                "bag_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить мешок у {bot}:</b>\n<code>{err}</code>",
+                "profile_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Анкета</b> ({bot})",
+                "profile_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить анкету у {bot}:</b>\n<code>{err}</code>",
+                "profile_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Бот вернул пустую анкету.</b>",
+                "profile_text": "{title}\n\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Это <b>{name}</b> ({status})\n🆔 <b>{handle}</b>\n\n⏱ {universe_label}: <b>{since_date}</b> ({since_span})\n👨 Пол: <b>{gender}</b>\n📆 Дата рождения: <b>{birth}</b>\n🗺 Город: <b>{city}</b>\n📊 Активность: <b>{day}</b> | <b>{week}</b> | <b>{month}</b> | <b>{total}</b>\n✨ Звёздность: <b>{rank}</b>\n\n<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> Баланс\n🍬 <b>{candies}</b> | ✨ <b>{stars}</b>\n☢️ <b>{icoins}</b> | 🌕 <b>{gold}</b>\n⭐️ <b>{tg_stars}</b>{profile_extra}",
+                "profile_universe": "Во вселенной Iris",
+                "tg_stars_line": "\n⭐️ Тг-звёзды: <b>{value}</b>",
+                "donate_points_line": "\n🥯 Очки доната: <b>{value}</b>",
+                "super_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Супер Топ Бесед</b> ({bot})",
+                "day_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Топ Дня</b> ({bot})",
+                "top_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось разобрать топ бесед.</b>",
+                "top_join_open": "Войти",
+                "top_join_apply": "Попроситься через {name}",
+                "top_card": "Карточка Iris",
+                "top_entry": "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                "no_response": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нет ответа от {bot}.</b>",
+                "reset_done": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Сброс данных Iris завершён.</b>",
+                "last_farm_line": "{time} через <b>{bot}</b> (+{coins} i¢)",
+                "start_now": "сейчас"
+            }
+        },
+        "ja": {
+            "name": "Iris",
+            "description": "Iris管理：自動ファーム、バッグ、プロフィール、チャットトップ。",
+            "commands": {
+                "irf": {
+                    "description": "<on/off> | Iris自動ファーム"
+                },
+                "iris": {
+                    "description": "| Irisステータス"
+                },
+                "irlogs": {
+                    "description": "<count/date> | ファームログ"
+                },
+                "irbag": {
+                    "description": "| バッグ"
+                },
+                "irprofile": {
+                    "description": "| プロフィール"
+                },
+                "irsupertop": {
+                    "description": "| スーパー top"
+                },
+                "irdaytop": {
+                    "description": "| 日間 top"
+                },
+                "irreset": {
+                    "description": "| データリセット"
+                }
+            },
+            "strings": {
+                "state_on": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> 有効",
+                "state_off": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> 無効",
+                "unknown": "—",
+                "now": "今",
+                "not_yet": "まだありません",
+                "no_data": "データなし",
+                "td_h": "時間",
+                "td_m": "分",
+                "td_s": "秒",
+                "loading_status": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Irisステータスを読み込み中...</b>",
+                "loading_logs": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>ログを読み込み中...</b>",
+                "loading_bag": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>バッグを読み込み中...</b>",
+                "loading_profile": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>プロフィールを読み込み中...</b>",
+                "loading_super_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>スーパー掲示板ランキングを読み込み中...</b>",
+                "loading_day_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>日間ランキングを読み込み中...</b>",
+                "loading_reset": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>モジュールデータをリセット中...</b>",
+                "checking_load": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Irisボット負荷を確認中...</b>",
+                "farm_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>自動ファームは既に動作中です。</b>",
+                "farm_started": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris запущен</b>\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Бот: <b>{bot}</b>\n<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Нагрузка: <b>{load}%</b>\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Первый запуск: <b>{first}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Пояс: <b>{tz}</b>",
+                "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>自動ファームは既に停止しています。</b>",
+                "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Автофарм остановлен.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Очистка диалога завершена.",
+                "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris — статус</b>",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Фарм: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Аптайм: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Сессия: <b>{session} i¢</b> | Всего: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Фармов в сессии: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Часовой пояс: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Последний: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris-кд: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> План модуля: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Целевой бот: <b>{active_bot}</b>\n\n<b>Загрузка ботов</b>\n{loads}",
+                "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
+                "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
+                "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>ログは空です。</b>",
+                "logs_bad_arg": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Формат:</b> <code>.irlogs</code>, <code>.irlogs 10</code>, <code>.irlogs 26.07</code>",
+                "logs_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Логи ({count})</b>",
+                "bag_title": "<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> <b>Мешок</b> ({bot})",
+                "bag_text": "<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Владелец: <b>{owner}</b>\n🍬 Ирисок: <b>{candies}</b> | 🌕 Ирис-голд: <b>{gold}</b>\n☢️ i¢: <b>{icoins}</b> | ✨ Звёздочек: <b>{stars}</b>{bag_extra}",
+                "bag_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить мешок у {bot}:</b>\n<code>{err}</code>",
+                "profile_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Анкета</b> ({bot})",
+                "profile_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить анкету у {bot}:</b>\n<code>{err}</code>",
+                "profile_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Бот вернул пустую анкету.</b>",
+                "profile_text": "{title}\n\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Это <b>{name}</b> ({status})\n🆔 <b>{handle}</b>\n\n⏱ {universe_label}: <b>{since_date}</b> ({since_span})\n👨 Пол: <b>{gender}</b>\n📆 Дата рождения: <b>{birth}</b>\n🗺 Город: <b>{city}</b>\n📊 Активность: <b>{day}</b> | <b>{week}</b> | <b>{month}</b> | <b>{total}</b>\n✨ Звёздность: <b>{rank}</b>\n\n<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> Баланс\n🍬 <b>{candies}</b> | ✨ <b>{stars}</b>\n☢️ <b>{icoins}</b> | 🌕 <b>{gold}</b>\n⭐️ <b>{tg_stars}</b>{profile_extra}",
+                "profile_universe": "Во вселенной Iris",
+                "tg_stars_line": "\n⭐️ Тг-звёзды: <b>{value}</b>",
+                "donate_points_line": "\n🥯 Очки доната: <b>{value}</b>",
+                "super_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Супер Топ Бесед</b> ({bot})",
+                "day_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Топ Дня</b> ({bot})",
+                "top_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось разобрать топ бесед.</b>",
+                "top_join_open": "Войти",
+                "top_join_apply": "Попроситься через {name}",
+                "top_card": "Карточка Iris",
+                "top_entry": "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                "no_response": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нет ответа от {bot}.</b>",
+                "reset_done": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Сброс данных Iris завершён.</b>",
+                "last_farm_line": "{time} через <b>{bot}</b> (+{coins} i¢)",
+                "start_now": "сейчас"
+            }
+        }
+    },
+    "rise": "on_startup",
+    "banner": "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/iris.png"
+}
+
+# ====================================================================================================================
+#   OFFICIAL USERNAMES: @goymodules | @samsepi0l_ovf
+#   MODULE: iris
+#
+#   THIS MODULE IS LICENSED UNDER GNU AGPLv3, PROTECTED AGAINST UNAUTHORIZED COPYING/RESALE,
+#   AND ITS ORIGINAL AUTHORSHIP BELONGS TO @samsepi0l_ovf.
+#   ALL OFFICIAL UPDATES, RELEASE NOTES, AND PATCHES ARE PUBLISHED IN THE TELEGRAM CHANNEL @goymodules.
+# ====================================================================================================================
+
+import asyncio
+import html
+import random
+import re
+import time
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+
+IRIS_BOTS = [
+    "iris_black_bot",
+    "iris_dp_bot",
+    "iris_bs_bot",
+    "iris_moon_bot",
+    "iris_cm_bot",
+]
+FARM_WORDS = ["Ферма", "Фарма", "Фармить"]
+BASE_COOLDOWN = 4 * 3600
+MUTE_UNTIL = 2**31 - 1
+
+_RT = {"peers": {}, "bot_ids": {}}
+
+
+def _t(ctx, key, default="", **params):
+    try:
+        value = ctx.t("iris." + key, default, **params)
+    except Exception:
+        value = None
+    if not isinstance(value, str) or not value:
+        try:
+            value = default.format(**params)
+        except (KeyError, IndexError, ValueError):
+            value = default
+    return value
+
+
+def _parse_icoins(text):
+    m = re.search(r"([0-9][0-9 ]*)\s*i[¢c]", text, re.IGNORECASE)
+    return int(m.group(1).replace(" ", "")) if m else 0
+
+
+def _parse_cooldown_seconds(text):
+    chunk = re.search(r"через\s+([^\n\r.!]+)", text.lower())
+    if not chunk:
+        return None
+    part = chunk.group(1)
+    hours = re.search(r"(\d+)\s*час", part)
+    mins = re.search(r"(\d+)\s*мин", part)
+    secs = re.search(r"(\d+)\s*сек", part)
+    total = (
+        int(hours.group(1)) * 3600 if hours else 0
+    ) + (
+        int(mins.group(1)) * 60 if mins else 0
+    ) + (
+        int(secs.group(1)) if secs else 0
+    )
+    return total or None
+
+
+def _parse_all_loads(text):
+    result = {}
+    for bot in IRIS_BOTS:
+        match = re.search(
+            rf"t\.me/{re.escape(bot)}.{{0,450}}?Загружен:\s*([\d,.]+)\s*%",
+            text,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if match:
+            result[bot] = float(match.group(1).replace(",", "."))
+    return result
+
+
+def _msg_text(m):
+    if not isinstance(m, dict):
+        return ""
+    out = m.get("message") or ""
+    for ent in m.get("entities") or []:
+        if not isinstance(ent, dict):
+            continue
+        if ent.get("_") == "messageEntityTextUrl":
+            url = ent.get("url") or ""
+            off = ent.get("offset", 0)
+            ln = ent.get("length", 0)
+            if url and 0 <= off and off + ln <= len(out):
+                out = out[:off] + f'<a href="{html.escape(url, quote=True)}">' + out[off:off + ln] + "</a>" + out[off + ln:]
+        elif ent.get("_") == "messageEntityBold":
+            off = ent.get("offset", 0)
+            ln = ent.get("length", 0)
+            if 0 <= off and off + ln <= len(out):
+                out = out[:off] + "<b>" + html.escape(out[off:off + ln]) + "</b>" + out[off + ln:]
+    return out
+
+
+def _msg_raw(m):
+    return (m.get("message") or "") if isinstance(m, dict) else ""
+
+
+def _st(ctx):
+    raw = ctx.state.get("rt", {})
+    if not isinstance(raw, dict):
+        raw = {}
+    raw.setdefault("running", False)
+    raw.setdefault("start_ts", 0.0)
+    raw.setdefault("session_count", 0)
+    raw.setdefault("cooldown_until", 0.0)
+    raw.setdefault("next_run_at", 0.0)
+    raw.setdefault("last_farm_ts", 0.0)
+    raw.setdefault("last_farm_bot", "")
+    raw.setdefault("last_farm_coins", 0)
+    return raw
+
+
+def _st_set(ctx, st):
+    ctx.state.set("rt", st)
+
+
+def _num(ctx, key, default=0):
+    v = ctx.state.get(key, default)
+    try:
+        return float(v) if isinstance(default, float) else int(v)
+    except Exception:
+        return default
+
+
+def _tz_hours(ctx):
+    try:
+        return int(str(ctx.config.get("timezone_offset", "UTC+3")).replace("UTC", ""))
+    except Exception:
+        return 3
+
+
+def _tz(ctx):
+    return timezone(timedelta(hours=_tz_hours(ctx)))
+
+
+def _now_ts():
+    return datetime.now(timezone.utc).timestamp()
+
+
+def _format_dt(ctx, ts):
+    if not ts:
+        return _t(ctx, "unknown", "—")
+    return datetime.fromtimestamp(ts, timezone.utc).astimezone(_tz(ctx)).strftime("%H:%M")
+
+
+def _lang_code(ctx):
+    try:
+        probe = ctx.t("iris.now", "now")
+    except Exception:
+        probe = "now"
+    if probe == "now":
+        return "en"
+    if probe == "сейчас":
+        return "ru"
+    if probe == "зараз":
+        return "uk"
+    if probe == "今":
+        return "ja"
+    return "ru"
+
+
+def _format_td(ctx, seconds):
+    total = max(0, int(seconds))
+    if total <= 0:
+        return _t(ctx, "now", "now")
+    hours, rem = divmod(total, 3600)
+    mins, secs = divmod(rem, 60)
+    parts = []
+    if hours:
+        parts.append(f"{hours}{_t(ctx, 'td_h', 'h')}")
+    if mins:
+        parts.append(f"{mins}{_t(ctx, 'td_m', 'm')}")
+    if secs and not hours:
+        parts.append(f"{secs}{_t(ctx, 'td_s', 's')}")
+    return " ".join(parts) if parts else _t(ctx, "now", "now")
+
+
+def _add_log(ctx, text):
+    logs = ctx.state.get("logs", [])
+    if not isinstance(logs, list):
+        logs = []
+    stamp = datetime.now(timezone.utc).astimezone(_tz(ctx)).strftime("%d.%m %H:%M")
+    logs.append(f"[{stamp}] {text}")
+    limit = int(ctx.config.get("max_logs", 300) or 300)
+    if len(logs) > limit:
+        logs = logs[-limit:]
+    ctx.state.set("logs", logs)
+
+
+async def _peer(ctx, username):
+    cached = _RT["peers"].get(username)
+    if cached:
+        return cached
+    try:
+        res = await ctx.tg.call("contacts.resolveUsername", {"username": username.lstrip("@")})
+    except Exception:
+        return None
+    users = (res or {}).get("users") or []
+    for u in users:
+        if isinstance(u, dict) and u.get("id") and u.get("access_hash") is not None:
+            peer = {"_": "inputPeerUser", "user_id": u["id"], "access_hash": u["access_hash"]}
+            _RT["peers"][username] = peer
+            _RT["bot_ids"][u["id"]] = username
+            return peer
+    return None
+
+
+async def _send(ctx, bot, text):
+    peer = await _peer(ctx, bot)
+    if not peer:
+        return None
+    try:
+        res = await ctx.tg.call("messages.sendMessage", {
+            "peer": peer,
+            "message": text,
+            "random_id": random.randint(1, 2**62),
+        })
+    except Exception:
+        return None
+    for upd in (res or {}).get("updates") or []:
+        if isinstance(upd, dict) and upd.get("id"):
+            return {"id": upd["id"], "date": upd.get("date", 0)}
+    return {"id": 0, "date": int(time.time())}
+
+
+async def _hist(ctx, bot, limit=8):
+    peer = await _peer(ctx, bot)
+    if not peer:
+        return []
+    try:
+        res = await ctx.tg.call("messages.getHistory", {
+            "peer": peer, "offset_id": 0, "offset_date": 0, "add_offset": 0,
+            "limit": limit, "max_id": 0, "min_id": 0, "hash": 0,
+        })
+    except Exception:
+        return []
+    return [m for m in ((res or {}).get("messages") or []) if isinstance(m, dict)]
+
+
+async def _wait_response(ctx, bot, after_id, after_date, matcher=None):
+    timeout = int(ctx.config.get("response_timeout", 120) or 120)
+    fallback = None
+    for _ in range(timeout):
+        for m in await _hist(ctx, bot, 8):
+            if m.get("out") or m.get("id", 0) <= after_id:
+                continue
+            if after_date and m.get("date") and m["date"] < after_date:
+                continue
+            if matcher is None:
+                return m
+            if matcher(m):
+                return m
+            if fallback is None:
+                fallback = m
+        await asyncio.sleep(1)
+    return fallback
+
+
+async def _mark_read(ctx, bot, max_id=0):
+    peer = await _peer(ctx, bot)
+    if not peer:
+        return
+    try:
+        await ctx.tg.call("messages.readHistory", {"peer": peer, "max_id": max_id})
+    except Exception:
+        pass
+
+
+async def _delete(ctx, bot, ids):
+    if not ids:
+        return
+    peer = await _peer(ctx, bot)
+    if not peer:
+        return
+    try:
+        await ctx.tg.call("messages.deleteMessages", {"id": list(ids), "revoke": True})
+    except Exception:
+        pass
+
+
+async def _mute_bot(ctx, bot, mute):
+    peer = await _peer(ctx, bot)
+    if not peer:
+        return
+    try:
+        await ctx.tg.call("account.updateNotifySettings", {
+            "peer": {"_": "inputNotifyPeer", "peer": peer},
+            "settings": {"_": "inputPeerNotifySettings", "mute_until": MUTE_UNTIL if mute else 0},
+        })
+    except Exception:
+        pass
+
+
+async def _mute_all(ctx, mute):
+    for bot in IRIS_BOTS:
+        await _mute_bot(ctx, bot, mute)
+
+
+async def _request_bot(ctx, bot, command, matcher=None):
+    sent = []
+    try:
+        msg = await _send(ctx, bot, command)
+        if not msg:
+            return None, sent
+        sent.append(msg["id"])
+        resp = await _wait_response(ctx, bot, msg["id"], msg["date"], matcher)
+        await _mark_read(ctx, bot)
+        if resp:
+            sent.append(resp["id"])
+        return resp, sent
+    finally:
+        if ctx.config.get("auto_cleanup", True) and sent:
+            await _delete(ctx, bot, sent)
+
+
+async def _fetch_loads(ctx):
+    for probe_bot in IRIS_BOTS:
+        try:
+            await _mute_bot(ctx, probe_bot, True)
+            msg = await _send(ctx, probe_bot, "🌺 Семейство ирисовых")
+            if not msg:
+                continue
+            resp = await _wait_response(ctx, probe_bot, msg["id"], msg["date"])
+            await _mark_read(ctx, probe_bot)
+            if not resp:
+                continue
+            loads = _parse_all_loads(_msg_raw(resp))
+            if ctx.config.get("auto_cleanup", True):
+                await _delete(ctx, probe_bot, [msg["id"], resp["id"]])
+            if loads:
+                ctx.state.set("bot_loads", loads)
+                ctx.state.set("bot_loads_updated", _now_ts())
+                best = sorted(loads.items(), key=lambda item: item[1])[0][0]
+                ctx.state.set("active_bot", best)
+                return loads
+        except Exception as e:
+            ctx.logs.warning("iris: load fetch via %s failed: %s" % (probe_bot, e))
+        finally:
+            await _mute_bot(ctx, probe_bot, False)
+    ctx.state.set("bot_loads_updated", _now_ts())
+    _add_log(ctx, "⚠️ Load check failed for all Iris bots")
+    return {}
+
+
+def _best_bot(ctx):
+    loads = ctx.state.get("bot_loads", {})
+    if not isinstance(loads, dict) or not loads:
+        return IRIS_BOTS[0], -1.0
+    return sorted(loads.items(), key=lambda item: item[1])[0]
+
+
+async def _get_best_bot(ctx):
+    updated = float(ctx.state.get("bot_loads_updated", 0.0) or 0.0)
+    stale = (_now_ts() - updated) > float(ctx.config.get("load_refresh_minutes", 20) or 20) * 60
+    if not ctx.state.get("bot_loads", {}) or stale:
+        await _fetch_loads(ctx)
+    return _best_bot(ctx)
+
+
+async def _pick_request_bot(ctx):
+    bot, load = await _get_best_bot(ctx)
+    ctx.state.set("active_bot", bot)
+    return bot, load
+
+
+def _extra_delay(ctx):
+    low = int(ctx.config.get("extra_delay_min", 3) or 0) * 60
+    high = int(ctx.config.get("extra_delay_max", 8) or 0) * 60
+    if low >= high:
+        return low
+    return random.randint(low, high) + random.randint(0, 59)
+
+
+def _plan_next_run(ctx, st, cooldown_seconds):
+    base = _now_ts() + max(0, cooldown_seconds)
+    st["cooldown_until"] = base
+    st["next_run_at"] = base + _extra_delay(ctx)
+    _st_set(ctx, st)
+
+
+def _normalize_runtime_state(ctx, st):
+    now = _now_ts()
+    if not st.get("running"):
+        return
+    if st.get("last_farm_ts") and st.get("cooldown_until", 0) < st["last_farm_ts"]:
+        st["cooldown_until"] = st["last_farm_ts"] + BASE_COOLDOWN
+    if st.get("cooldown_until") and not st.get("next_run_at"):
+        st["next_run_at"] = st["cooldown_until"]
+    if st.get("next_run_at") and st.get("cooldown_until") and st["next_run_at"] < st["cooldown_until"]:
+        st["next_run_at"] = st["cooldown_until"]
+    if not st.get("start_ts"):
+        st["start_ts"] = st.get("last_farm_ts") or now
+    if st.get("cooldown_until") and (now - st["cooldown_until"]) > BASE_COOLDOWN * 3:
+        st["cooldown_until"] = 0.0
+    if st.get("next_run_at") and (now - st["next_run_at"]) > BASE_COOLDOWN * 3:
+        st["next_run_at"] = now
+    _st_set(ctx, st)
+
+
+async def _do_farm(ctx, bot):
+    st = _st(ctx)
+    sent = []
+    try:
+        msg = await _send(ctx, bot, random.choice(FARM_WORDS))
+        if not msg:
+            _add_log(ctx, f"⚠️ [{bot}] send failed")
+            return 10 * 60
+        sent.append(msg["id"])
+        resp = await _wait_response(ctx, bot, msg["id"], msg["date"])
+        await _mark_read(ctx, bot)
+        if not resp:
+            _add_log(ctx, f"⚠️ [{bot}] no response")
+            return 10 * 60
+        sent.append(resp["id"])
+        text = _msg_raw(resp)
+        upper = text.upper()
+        if "ЗАЧЁТ" in upper and "НЕЗАЧЁТ" not in upper:
+            coins = _parse_icoins(text)
+            total = _num(ctx, "total_icoins", 0) + coins
+            session = _num(ctx, "session_icoins", 0) + coins
+            ctx.state.set("total_icoins", total)
+            ctx.state.set("session_icoins", session)
+            st = _st(ctx)
+            st["session_count"] = int(st.get("session_count", 0)) + 1
+            st["last_farm_ts"] = _now_ts()
+            st["last_farm_bot"] = bot
+            st["last_farm_coins"] = coins
+            _plan_next_run(ctx, st, BASE_COOLDOWN)
+            _add_log(ctx, f"✅ [{bot}] +{coins} i¢ | total {total} i¢ | iris {_format_dt(ctx, st['cooldown_until'])} | run {_format_dt(ctx, st['next_run_at'])}")
+            return max(1, int(st["next_run_at"] - _now_ts()))
+        if "НЕЗАЧЁТ" in upper:
+            seconds = _parse_cooldown_seconds(text) or BASE_COOLDOWN
+            st = _st(ctx)
+            _plan_next_run(ctx, st, seconds)
+            _add_log(ctx, f"❌ [{bot}] cooldown {_format_td(ctx, seconds)} | iris {_format_dt(ctx, st['cooldown_until'])} | run {_format_dt(ctx, st['next_run_at'])}")
+            return max(1, int(st["next_run_at"] - _now_ts()))
+        _add_log(ctx, f"❓ [{bot}] unknown response")
+        return 10 * 60
+    finally:
+        if ctx.config.get("auto_cleanup", True):
+            await _delete(ctx, bot, sent)
+
+
+def _render_loads(ctx):
+    loads = ctx.state.get("bot_loads", {})
+    if not isinstance(loads, dict):
+        loads = {}
+    lines = []
+    for bot in IRIS_BOTS:
+        load = loads.get(bot)
+        if load is None:
+            lines.append(_t(ctx, "load_unknown", "{emoji} <b>{bot}</b>: <b>{value}</b>", emoji="❔", bot=bot, value=_t(ctx, "no_data", "no data")))
+            continue
+        emoji = "💚" if load < 20 else "💛" if load < 45 else "🧡" if load < 70 else "❤️"
+        lines.append(_t(ctx, "load_line", "{emoji} <b>{bot}</b>: <b>{load}%</b>", emoji=emoji, bot=bot, load=f"{load:.1f}"))
+    return "\n".join(lines)
+
+
+def _last_farm_text(ctx, st):
+    if not st.get("last_farm_ts"):
+        return _t(ctx, "not_yet", "not yet")
+    return _t(ctx, "last_farm_line", "{time} via <b>{bot}</b> (+{coins} i¢)",
+              time=_format_dt(ctx, st["last_farm_ts"]), bot=st.get("last_farm_bot", ""), coins=st.get("last_farm_coins", 0))
+
+
+def _schedule_text(ctx, ts):
+    if not ts:
+        return _t(ctx, "unknown", "—"), _t(ctx, "unknown", "—")
+    left = max(0, int(ts - _now_ts()))
+    return _format_td(ctx, left), _format_dt(ctx, ts)
+
+
+def _clean_iris_text(text):
+    text = html.escape((text or "").strip())
+    text = re.sub(r"(?im)^💬.*?$", "", text)
+    text = re.sub(r"(?im)^•\s*описание.*?$", "", text)
+    text = re.sub(r"(?im)^•\s*description.*?$", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _plain_text(html_text):
+    return html.unescape(re.sub(r"<[^>]+>", "", html_text or "")).strip()
+
+
+def _extract_href(html_line):
+    match = re.search(r'href="([^"]+)"', html_line or "")
+    return html.escape(match.group(1), quote=True) if match else ""
+
+
+def _is_super_top_response(text):
+    source = (text or "").lower()
+    return "топ чатов" in source or "супер топ бесед" in source
+
+
+def _is_day_top_response(text):
+    source = (text or "").lower()
+    return "топ дня" in source and "бесед" in source
+
+
+_PROFILE_LOCALIZE = {
+    "en": {
+        "status": {"был недавно": "recently online", "в сети": "online"},
+        "gender": {"не указан": "not set", "не указана": "not set"},
+        "birth": {"не указан": "not set", "не указана": "not set"},
+        "city": {"не указан": "not set", "не указана": "not set"},
+        "rank": {"🙂 ноунейм (0)": "🙂 No-name (0)"},
+    },
+    "uk": {
+        "status": {"был недавно": "був нещодавно", "в сети": "онлайн"},
+        "gender": {"не указан": "не вказано", "не указана": "не вказано"},
+        "birth": {"не указан": "не вказано", "не указана": "не вказано"},
+        "city": {"не указан": "не вказано", "не указана": "не вказано"},
+        "rank": {"🙂 ноунейм (0)": "🙂 Нонейм (0)"},
+    },
+    "ja": {
+        "status": {"был недавно": "最近オンライン", "в сети": "オンライン"},
+        "gender": {"не указан": "未設定", "не указана": "未設定"},
+        "birth": {"не указан": "未設定", "не указана": "未設定"},
+        "city": {"не указан": "未設定", "не указана": "未設定"},
+        "rank": {"🙂 ноунейм (0)": "🙂 ノーネーム (0)"},
+    },
+}
+
+
+def _localize_profile_value(ctx, value, field):
+    lang = _lang_code(ctx)
+    normalized = html.unescape((value or "").strip()).lower()
+    return html.escape(_PROFILE_LOCALIZE.get(lang, {}).get(field, {}).get(normalized, value))
+
+
+def _profile_map(ctx, text):
+    source = text or ""
+    unknown = _t(ctx, "unknown", "—")
+    data = {
+        "name": unknown, "status": unknown, "handle": unknown,
+        "since_date": unknown, "since_span": unknown,
+        "gender": unknown, "birth": unknown, "city": unknown,
+        "day": "0", "week": "0", "month": "0", "total": "0",
+        "rank": unknown, "candies": "0", "stars": "0", "icoins": "0",
+        "gold": "0", "tg_stars": "0", "donate_points": "",
+    }
+    who = re.search(r"👤\s*(?:Это|It'?s)\s+(.+?)\s+\((.+?)\)", source, re.IGNORECASE)
+    if who:
+        data["name"] = html.escape(who.group(1).strip())
+        data["status"] = _localize_profile_value(ctx, who.group(2).strip(), "status")
+    handle = re.search(r"🆔\s*([^\n\r]+)", source)
+    if handle:
+        data["handle"] = html.escape(handle.group(1).strip())
+    since = re.search(r"Во вселенной [^:]+:\s*с\s*([0-9.]+)\s*\(([^)]+)\)", source)
+    if since:
+        data["since_date"] = html.escape(since.group(1).strip())
+        data["since_span"] = html.escape(since.group(2).strip())
+    gender = re.search(r"Пол:\s*([^\n\r]+)", source)
+    if gender:
+        data["gender"] = _localize_profile_value(ctx, gender.group(1).strip(), "gender")
+    birth = re.search(r"Дата рождения:\s*([^\n\r]+)", source)
+    if birth:
+        data["birth"] = _localize_profile_value(ctx, birth.group(1).strip(), "birth")
+    city = re.search(r"Город:\s*([^\n\r]+)", source)
+    if city:
+        data["city"] = _localize_profile_value(ctx, city.group(1).strip(), "city")
+    activity = re.search(r"Активность.*?:\s*([0-9 ]+)\s*\|\s*([0-9 ]+)\s*\|\s*([0-9 ]+)\s*\|\s*([0-9 ]+)", source)
+    if activity:
+        data["day"] = activity.group(1).strip()
+        data["week"] = activity.group(2).strip()
+        data["month"] = activity.group(3).strip()
+        data["total"] = activity.group(4).strip()
+    rank = re.search(r"Зв[её]здность:\s*([^\n\r]+)", source)
+    if rank:
+        data["rank"] = _localize_profile_value(ctx, rank.group(1).strip(), "rank")
+    candies = re.search(r"🍬\s*([0-9 ]+)", source)
+    if candies:
+        data["candies"] = candies.group(1).strip()
+    stars = re.search(r"✨\s*([0-9 ]+)\s*(?:зв[её]здочек|stars?)", source, re.IGNORECASE)
+    if stars:
+        data["stars"] = stars.group(1).strip()
+    icoins = re.search(r"☢️\s*([0-9 ]+)\s*i[¢c]", source, re.IGNORECASE)
+    if icoins:
+        data["icoins"] = icoins.group(1).strip()
+    gold = re.search(r"🌕\s*([0-9 ]+)", source)
+    if gold:
+        data["gold"] = gold.group(1).strip()
+    tg_stars = re.search(r"⭐️\s*([0-9 ]+)\s*(?:tg[- ]?зв[её]зд|tg[- ]?stars?)", source, re.IGNORECASE)
+    if tg_stars:
+        data["tg_stars"] = tg_stars.group(1).strip()
+    donate_points = re.search(r"🥯\s*([0-9 ]+)\s*оч(?:к(?:ов|а)?|ки)\s*доната", source, re.IGNORECASE)
+    if donate_points:
+        data["donate_points"] = donate_points.group(1).strip()
+    return data
+
+
+def _render_bag(ctx, bot, text):
+    source = text or ""
+    owner = re.search(r"В мешке\s+(.+?):", source)
+    candies = re.search(r"🍬\s*([0-9 ]+)", source)
+    gold = re.search(r"🌕\s*([0-9 ]+)", source)
+    icoins = re.search(r"☢️\s*([0-9 ]+)\s*i[¢c]", source)
+    stars = re.search(r"✨\s*([0-9 ]+)", source)
+    tg_stars = re.search(r"⭐️\s*([0-9 ]+)", source)
+    donate_points = re.search(r"🥯\s*([0-9 ]+)\s*оч(?:к(?:ов|а)?|ки)\s*доната", source, re.IGNORECASE)
+    if owner and candies and gold and icoins and stars:
+        bag_extra = ""
+        if tg_stars:
+            bag_extra += _t(ctx, "tg_stars_line", "\n⭐️ TG Stars: <b>{value}</b>", value=tg_stars.group(1).strip())
+        if donate_points:
+            bag_extra += _t(ctx, "donate_points_line", "\n🥯 Donate points: <b>{value}</b>", value=donate_points.group(1).strip())
+        return (
+            _t(ctx, "bag_title", "<b>Bag</b> ({bot})", bot=bot) + "\n\n"
+            + _t(ctx, "bag_text", "Owner: <b>{owner}</b>",
+                 owner=html.escape(owner.group(1).strip()),
+                 candies=candies.group(1).strip(),
+                 gold=gold.group(1).strip(),
+                 icoins=icoins.group(1).strip(),
+                 stars=stars.group(1).strip(),
+                 tg_stars=tg_stars.group(1).strip() if tg_stars else "0",
+                 bag_extra=bag_extra)
+        )
+    cleaned = _clean_iris_text(source)
+    return f"{_t(ctx, 'bag_title', '<b>Bag</b> ({bot})', bot=bot)}\n\n{cleaned or _t(ctx, 'unknown', '—')}"
+
+
+def _render_profile(ctx, bot, text):
+    data = _profile_map(ctx, text)
+    unknown = _t(ctx, "unknown", "—")
+    if data["name"] == unknown and data["handle"] == unknown:
+        cleaned = _clean_iris_text(text)
+        return f"{_t(ctx, 'profile_title', '<b>Profile</b> ({bot})', bot=bot)}\n\n{cleaned or _t(ctx, 'profile_empty', 'Empty profile.')}"
+    profile_extra = ""
+    if data.get("donate_points"):
+        profile_extra += _t(ctx, "donate_points_line", "\n🥯 Donate points: <b>{value}</b>", value=data["donate_points"])
+    return _t(ctx, "profile_text", "{title}",
+              title=_t(ctx, "profile_title", "<b>Profile</b> ({bot})", bot=bot),
+              universe_label=_t(ctx, "profile_universe", "Iris universe"),
+              profile_extra=profile_extra,
+              **data)
+
+
+def _parse_top_entries(source_html):
+    entries = []
+    current = None
+    for html_line in (source_html or "").splitlines():
+        line = _plain_text(html_line)
+        if not line:
+            continue
+        top_match = re.match(r"🔸\s*(\d+)\.\s*«(.+?)»\s*\(([0-9 ][0-9 ]*)\s*i[¢c]\)", line, re.IGNORECASE)
+        if top_match:
+            if current:
+                entries.append(current)
+            current = {
+                "place": top_match.group(1).strip(),
+                "name": html.escape(top_match.group(2).strip()),
+                "coins": top_match.group(3).strip(),
+                "join_kind": "", "join_name": "", "join_url": "", "card_url": "",
+            }
+            continue
+        if not current:
+            continue
+        if "войти в чат" in line.lower():
+            current["join_kind"] = "open"
+            current["join_url"] = _extract_href(html_line)
+            continue
+        apply = re.search(r"попроситься в чат:\s*(.+)", line, re.IGNORECASE)
+        if apply:
+            current["join_kind"] = "apply"
+            current["join_name"] = html.escape(apply.group(1).strip())
+            current["join_url"] = _extract_href(html_line)
+            continue
+        if "карточка" in line.lower():
+            current["card_url"] = _extract_href(html_line)
+    if current:
+        entries.append(current)
+    return entries
+
+
+def _make_top_link(emoji, label, url):
+    rendered = f'<a href="{url}">{label}</a>' if url else label
+    return f"{emoji} <b>{rendered}</b>\n"
+
+
+def _render_top(ctx, bot, source_html, title_key, title_default):
+    entries = _parse_top_entries(source_html)
+    if not entries:
+        cleaned = _clean_iris_text(_plain_text(source_html))
+        return f"{_t(ctx, title_key, title_default, bot=bot)}\n\n{cleaned or _t(ctx, 'top_empty', 'Could not parse chat top.')}"
+    blocks = []
+    for entry in entries:
+        join_line = ""
+        if entry["join_kind"] == "open":
+            join_line = _make_top_link("🚪", _t(ctx, "top_join_open", "Open join"), entry["join_url"])
+        elif entry["join_kind"] == "apply":
+            join_line = _make_top_link("🙋", _t(ctx, "top_join_apply", "Ask via {name}", name=entry["join_name"]), entry["join_url"])
+        card_line = _make_top_link("🗂", _t(ctx, "top_card", "Catalog card"), entry["card_url"]) if entry["card_url"] else ""
+        blocks.append(_t(ctx, "top_entry", "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                         place=entry["place"], name=entry["name"], coins=entry["coins"],
+                         join_line=join_line, card_line=card_line).strip())
+    return f"{_t(ctx, title_key, title_default, bot=bot)}\n\n" + "\n\n".join(blocks)
+
+
+async def on_startup(ctx):
+    st = _st(ctx)
+    _normalize_runtime_state(ctx, st)
+    if st.get("running"):
+        await _mute_all(ctx, True)
+        _add_log(ctx, "↩️ Autofarm restored after restart")
+
+
+async def task_farm(ctx):
+    st = _st(ctx)
+    if not st.get("running"):
+        return
+    now = _now_ts()
+    if st.get("next_run_at") and now < st["next_run_at"]:
+        return
+    bot, load = await _get_best_bot(ctx)
+    ctx.state.set("active_bot", bot)
+    _add_log(ctx, f"🎯 {bot} selected ({load:.1f}% load)")
+    delay = await _do_farm(ctx, bot)
+    st = _st(ctx)
+    if not st.get("next_run_at") or st["next_run_at"] < now:
+        st["next_run_at"] = _now_ts() + delay
+        _st_set(ctx, st)
+
+
+async def task_loads(ctx):
+    st = _st(ctx)
+    if not st.get("running"):
+        return
+    fresh = await _fetch_loads(ctx)
+    if fresh:
+        line = ", ".join(f"{bot.replace('iris_', '').replace('_bot', '')}={load:.1f}%" for bot, load in sorted(fresh.items(), key=lambda item: item[1]))
+        _add_log(ctx, f"🔄 Load refresh: {line}")
+
+
+async def watcher_sync(ctx):
+    st = _st(ctx)
+    if not st.get("running"):
+        return
+    msg = getattr(ctx, "message", None)
+    if msg is None or getattr(msg, "out", False):
+        return
+    sender_id = getattr(ctx, "sender_id", None) or 0
+    username = _RT["bot_ids"].get(sender_id, "")
+    if not username:
+        peer_id = getattr(ctx, "peer_id", None)
+        username = _RT["bot_ids"].get(peer_id, "")
+    if username not in IRIS_BOTS:
+        return
+    text = getattr(msg, "raw_text", None) or getattr(msg, "message", None) or ""
+    if isinstance(text, str):
+        pass
+    else:
+        text = ""
+    upper = text.upper()
+    if "ЗАЧЁТ" in upper and "НЕЗАЧЁТ" not in upper:
+        new_cooldown = _now_ts() + BASE_COOLDOWN
+        if abs(new_cooldown - float(st.get("cooldown_until", 0.0))) > 60:
+            st["cooldown_until"] = new_cooldown
+            st["next_run_at"] = new_cooldown + _extra_delay(ctx)
+            _st_set(ctx, st)
+            _add_log(ctx, f"🔁 Watcher synced success from {username}")
+    elif "НЕЗАЧЁТ" in upper:
+        seconds = _parse_cooldown_seconds(text)
+        if seconds:
+            new_cooldown = _now_ts() + seconds
+            if abs(new_cooldown - float(st.get("cooldown_until", 0.0))) > 60:
+                st["cooldown_until"] = new_cooldown
+                st["next_run_at"] = new_cooldown + _extra_delay(ctx)
+                _st_set(ctx, st)
+                _add_log(ctx, f"🔁 Watcher synced cooldown from {username}: {_format_td(ctx, seconds)}")
+
+
+async def command_irf(ctx, invocation):
+    args = (getattr(invocation, "raw_args", "") or "").strip().lower()
+    st = _st(ctx)
+    start = args in {"", "on", "start", "старт"}
+    stop = args in {"off", "stop", "стоп"}
+    if not args:
+        start = not st.get("running")
+        stop = bool(st.get("running"))
+    if stop:
+        if not st.get("running"):
+            await ctx.respond(_t(ctx, "farm_stopped_already", "Autofarm is already stopped."), parse_mode="HTML")
+            return
+        await ctx.respond(_t(ctx, "loading_reset", "Resetting..."), parse_mode="HTML")
+        st["running"] = False
+        st["session_count"] = 0
+        st["cooldown_until"] = 0.0
+        st["next_run_at"] = 0.0
+        _st_set(ctx, st)
+        await _mute_all(ctx, False)
+        _add_log(ctx, "⛔ Manual stop")
+        await ctx.respond(_t(ctx, "farm_stopping", "Autofarm stopped."), parse_mode="HTML")
+        return
+    if st.get("running"):
+        await ctx.respond(_t(ctx, "farm_already", "Autofarm is already running."), parse_mode="HTML")
+        return
+    st["running"] = True
+    st["start_ts"] = _now_ts()
+    st["session_count"] = 0
+    st["cooldown_until"] = 0.0
+    st["next_run_at"] = 0.0
+    ctx.state.set("session_icoins", 0)
+    _st_set(ctx, st)
+    await _mute_all(ctx, True)
+    await ctx.respond(_t(ctx, "checking_load", "Checking Iris bot load..."), parse_mode="HTML")
+    best_bot, best_load = await _get_best_bot(ctx)
+    ctx.state.set("active_bot", best_bot)
+    _add_log(ctx, f"🚀 Started with {best_bot} ({best_load:.1f}%)")
+    await ctx.respond(_t(ctx, "farm_started", "Iris launched",
+                         bot=best_bot,
+                         load=f"{best_load:.1f}" if best_load >= 0 else "?",
+                         first=_t(ctx, "start_now", "now"),
+                         tz=str(ctx.config.get("timezone_offset", "UTC+3"))), parse_mode="HTML")
+
+
+async def command_iris(ctx):
+    st = _st(ctx)
+    cooldown_left, cooldown_at = _schedule_text(ctx, float(st.get("cooldown_until", 0.0)))
+    planned_left, planned_at = _schedule_text(ctx, float(st.get("next_run_at", 0.0)))
+    uptime = _format_td(ctx, _now_ts() - st["start_ts"]) if st.get("start_ts") else _t(ctx, "unknown", "—")
+    state = _t(ctx, "state_on", "Enabled") if st.get("running") else _t(ctx, "state_off", "Disabled")
+    active_bot = ctx.state.get("active_bot", "") or _t(ctx, "unknown", "—")
+    if active_bot == IRIS_BOTS[0] and ctx.state.get("bot_loads", {}):
+        active_bot = _best_bot(ctx)[0]
+    text = _t(ctx, "status", "{title}",
+              title=_t(ctx, "status_title", "Iris — status"),
+              state=state,
+              uptime=uptime,
+              session=_num(ctx, "session_icoins", 0),
+              total=_num(ctx, "total_icoins", 0),
+              count=int(st.get("session_count", 0)),
+              tz=str(ctx.config.get("timezone_offset", "UTC+3")),
+              last_farm=_last_farm_text(ctx, st),
+              cooldown_left=cooldown_left,
+              cooldown_at=cooldown_at,
+              planned_left=planned_left,
+              planned_at=planned_at,
+              active_bot=active_bot,
+              loads=_render_loads(ctx))
+    await ctx.respond(text, parse_mode="HTML")
+
+
+async def command_irlogs(ctx, invocation):
+    args = (getattr(invocation, "raw_args", "") or "").strip()
+    logs = ctx.state.get("logs", [])
+    if not isinstance(logs, list):
+        logs = []
+    logs = list(reversed(logs))
+    if not args:
+        logs = logs[:8]
+    elif re.fullmatch(r"\d{1,3}", args):
+        logs = logs[: max(1, min(int(ctx.config.get("max_logs", 300) or 300), int(args)))]
+    elif re.fullmatch(r"\d{2}\.\d{2}", args):
+        logs = [entry for entry in logs if args in entry]
+    else:
+        await ctx.respond(_t(ctx, "logs_bad_arg", "Bad format"), parse_mode="HTML")
+        return
+    if not logs:
+        await ctx.respond(_t(ctx, "logs_empty", "Logs are empty."), parse_mode="HTML")
+        return
+    await ctx.respond(_t(ctx, "logs_title", "Logs ({count})", count=len(logs)) + "\n\n" + "\n".join(logs), parse_mode="HTML")
+
+
+async def command_irbag(ctx):
+    await ctx.respond(_t(ctx, "loading_bag", "Loading bag..."), parse_mode="HTML")
+    bot, _ = await _pick_request_bot(ctx)
+    try:
+        await _mute_bot(ctx, bot, True)
+        resp, _ = await _request_bot(ctx, bot, "Мешок")
+        if not resp:
+            await ctx.respond(_t(ctx, "no_response", "No response from {bot}.", bot=bot), parse_mode="HTML")
+            return
+        await ctx.respond(_render_bag(ctx, bot, _msg_raw(resp)), parse_mode="HTML")
+    except Exception as e:
+        await ctx.respond(_t(ctx, "bag_error", "Could not get bag from {bot}: <code>{err}</code>", bot=bot, err=html.escape(str(e))), parse_mode="HTML")
+    finally:
+        await _mute_bot(ctx, bot, False)
+
+
+async def command_irprofile(ctx):
+    await ctx.respond(_t(ctx, "loading_profile", "Loading profile..."), parse_mode="HTML")
+    bot, _ = await _pick_request_bot(ctx)
+    try:
+        await _mute_bot(ctx, bot, True)
+        resp, _ = await _request_bot(ctx, bot, "Анкета")
+        if not resp:
+            await ctx.respond(_t(ctx, "no_response", "No response from {bot}.", bot=bot), parse_mode="HTML")
+            return
+        await ctx.respond(_render_profile(ctx, bot, _msg_raw(resp)), parse_mode="HTML")
+    except Exception as e:
+        await ctx.respond(_t(ctx, "profile_error", "Could not get profile from {bot}: <code>{err}</code>", bot=bot, err=html.escape(str(e))), parse_mode="HTML")
+    finally:
+        await _mute_bot(ctx, bot, False)
+
+
+async def command_irsupertop(ctx):
+    await ctx.respond(_t(ctx, "loading_super_top", "Loading super chat top..."), parse_mode="HTML")
+    bot, _ = await _pick_request_bot(ctx)
+    try:
+        await _mute_bot(ctx, bot, True)
+        resp, _ = await _request_bot(ctx, bot, "🏆 Супер Топ бесед",
+                                     matcher=lambda m: _is_super_top_response(_msg_raw(m)))
+        if not resp:
+            await ctx.respond(_t(ctx, "no_response", "No response from {bot}.", bot=bot), parse_mode="HTML")
+            return
+        await ctx.respond(_render_top(ctx, bot, _msg_text(resp), "super_top_title", "Super Chat Top ({bot})"), parse_mode="HTML")
+    except Exception as e:
+        await ctx.respond(_t(ctx, "bag_error", "Error: <code>{err}</code>", bot=bot, err=html.escape(str(e))), parse_mode="HTML")
+    finally:
+        await _mute_bot(ctx, bot, False)
+
+
+async def command_irdaytop(ctx):
+    await ctx.respond(_t(ctx, "loading_day_top", "Loading day chat top..."), parse_mode="HTML")
+    bot, _ = await _pick_request_bot(ctx)
+    try:
+        await _mute_bot(ctx, bot, True)
+        resp, _ = await _request_bot(ctx, bot, "🏅 Беседы: Топ дня",
+                                     matcher=lambda m: _is_day_top_response(_msg_raw(m)))
+        if not resp:
+            await ctx.respond(_t(ctx, "no_response", "No response from {bot}.", bot=bot), parse_mode="HTML")
+            return
+        await ctx.respond(_render_top(ctx, bot, _msg_text(resp), "day_top_title", "Day Chat Top ({bot})"), parse_mode="HTML")
+    except Exception as e:
+        await ctx.respond(_t(ctx, "bag_error", "Error: <code>{err}</code>", bot=bot, err=html.escape(str(e))), parse_mode="HTML")
+    finally:
+        await _mute_bot(ctx, bot, False)
+
+
+async def command_irreset(ctx):
+    await ctx.respond(_t(ctx, "loading_reset", "Resetting module data..."), parse_mode="HTML")
+    st = _st(ctx)
+    st.update({
+        "running": False, "start_ts": 0.0, "session_count": 0,
+        "cooldown_until": 0.0, "next_run_at": 0.0,
+        "last_farm_ts": 0.0, "last_farm_bot": "", "last_farm_coins": 0,
+    })
+    _st_set(ctx, st)
+    ctx.state.set("total_icoins", 0)
+    ctx.state.set("session_icoins", 0)
+    ctx.state.set("logs", [])
+    ctx.state.set("bot_loads", {})
+    ctx.state.set("bot_loads_updated", 0.0)
+    ctx.state.set("active_bot", IRIS_BOTS[0])
+    await ctx.respond(_t(ctx, "reset_done", "Iris data reset completed."), parse_mode="HTML")

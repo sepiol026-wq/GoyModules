@@ -1,0 +1,1248 @@
+HOTARU = {
+    "id": "recon",
+    "version": "1.2.1",
+    "commands": ["rc", "rcstop", "rcin", "shodan", "wh", "dork", "crawl", "nmap", "sqlmap"],
+    "capabilities": ["net", "shell", "state"],
+    "banner": "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/recon.png",
+    "config_schema": {
+        "shodan_key": {"type": "str", "default": "", "description": "API ключ Shodan"},
+        "use_shodan": {"type": "bool", "default": False, "description": "Юзать Shodan API в .rc"},
+    },
+    "lexicon": {
+        "en": {
+            "name": "Recon",
+            "description": "scan toolkit.",
+            "commands": {
+                "rc": {"description": "<domain/IP> - Full recon"},
+                "rcstop": {"description": "Kill process"},
+                "rcin": {"description": "<text> - Console input"},
+                "shodan": {"description": "<IP> - Shodan"},
+                "wh": {"description": "<domain/IP> - WHOIS"},
+                "dork": {"description": "<domain> - Google Dorks"},
+                "crawl": {"description": "<domain> [depth] - Crawler (default 3)"},
+                "nmap": {"description": "[args] - Nmap"},
+                "sqlmap": {"description": "[args] - SQLMap"},
+            },
+            "strings": {
+                "no_args": "<b>❗️ Specify target.</b>",
+                "processing": "<b>📟 Scanning: <code>{}</code>...</b>\n<i>Working...</i>",
+                "stopped": "<b>🚮 Process killed.</b>",
+                "no_active": "<b>❗️ No active processes.</b>",
+                "not_owner": "<b>❗️ Not your task.</b>",
+                "shodan_need": "<b>❗️ Specify IP + shodan_key in .cfg</b>",
+                "shodan_run": "<b>👤 Shodan...</b>",
+                "empty": "<b>❗️ Empty.</b>",
+                "whois_run": "<b>📟 WHOIS: {}...</b>",
+                "whois_none": "<b>❗️ No data: {}</b>",
+                "dork_run": "<b>📟 Dorks: {}...</b>",
+                "dork_none": "<b>📟 Dorks <code>{}</code>:</b> nothing (Google block?)",
+                "crawl_run": "<b>🐢 Crawl: <code>{}</code> (depth {})...</b>",
+                "nmap_missing": "<b>❗️ nmap not found. Install it manually and retry.</b>",
+                "sqlmap_missing": "<b>❗️ sqlmap-dev not found. Clone sqlmap manually into sqlmap-dev folder.</b>",
+                "rcin_hint": "<i>[.rcin for input]</i>",
+                "full_report": "<b>🖼 {}</b>\n<i>Full report in file</i>",
+            },
+        },
+        "ru": {
+            "name": "Recon",
+            "description": "scan toolkit.",
+            "commands": {
+                "rc": {"description": "<домен/IP> - Полный рекон"},
+                "rcstop": {"description": "Убить процесс"},
+                "rcin": {"description": "<текст> - Ввод в консоль"},
+                "shodan": {"description": "<IP> - Shodan"},
+                "wh": {"description": "<домен/IP> - WHOIS"},
+                "dork": {"description": "<домен> - Google Dorks"},
+                "crawl": {"description": "<домен> [глубина] - Краулер (default 3)"},
+                "nmap": {"description": "[аргументы] - Nmap"},
+                "sqlmap": {"description": "[аргументы] - SQLMap"},
+            },
+            "strings": {
+                "no_args": "<b>❗️ Укажи таргет.</b>",
+                "processing": "<b>📟 Сканирую: <code>{}</code>...</b>\n<i>Работаю...</i>",
+                "stopped": "<b>🚮 Процесс убит.</b>",
+                "no_active": "<b>❗️ Нет активных процессов.</b>",
+                "not_owner": "<b>❗️ Не твоя таска.</b>",
+                "shodan_need": "<b>❗️ Укажи IP + shodan_key в .cfg</b>",
+                "shodan_run": "<b>👤 Shodan...</b>",
+                "empty": "<b>❗️ Пусто.</b>",
+                "whois_run": "<b>📟 WHOIS: {}...</b>",
+                "whois_none": "<b>❗️ Нет данных: {}</b>",
+                "dork_run": "<b>📟 Dorks: {}...</b>",
+                "dork_none": "<b>📟 Dorks <code>{}</code>:</b> ничего (Google block?)",
+                "crawl_run": "<b>🐢 Crawl: <code>{}</code> (depth {})...</b>",
+                "nmap_missing": "<b>❗️ nmap не найден. Установи вручную и повтори.</b>",
+                "sqlmap_missing": "<b>❗️ sqlmap-dev не найден. Клонируй sqlmap вручную в папку sqlmap-dev.</b>",
+                "rcin_hint": "<i>[.rcin для ввода]</i>",
+                "full_report": "<b>🖼 {}</b>\n<i>Полный отчёт в файле</i>",
+            },
+        },
+        "uk": {
+            "name": "Recon",
+            "description": "scan toolkit.",
+            "commands": {
+                "rcstop": {"description": "Вбити процес"},
+            },
+        },
+    },
+}
+
+import asyncio
+import json
+import os
+import re
+import shutil
+import ssl
+from collections import deque
+from urllib.parse import urlparse, urljoin, quote_plus, quote
+
+HDRS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "keep-alive",
+}
+
+WAF_SIGS = {
+    "Cloudflare": ["cf-ray", "cloudflare", "__cfduid"],
+    "Sucuri": ["x-sucuri-id", "x-sucuri-cache"],
+    "Fastly": ["x-fastly-request-id", "fastly"],
+    "Akamai": ["x-akamai-request-id", "akamai"],
+    "DDoS-Guard": ["ddos-guard"],
+    "Imperva": ["incap_ses", "visid_incap", "imperva"],
+    "AWS WAF": ["x-amzn-requestid", "x-amz-cf-id"],
+    "Barracuda": ["barra", "bni__"],
+    "F5 BIG-IP": ["f5", "bigip", "ts01"],
+    "BitNinja": ["bitninja"],
+}
+
+SEC_HEADERS = [
+    "Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options",
+    "X-Content-Type-Options", "X-XSS-Protection", "Referrer-Policy",
+    "Permissions-Policy", "Cross-Origin-Opener-Policy", "Cross-Origin-Resource-Policy",
+]
+
+SVG_ICON_MAP = {
+    "🔥": ("⚡", "#ef4444"),
+    "📟": ("◉", "#3b82f6"),
+    "🛡": ("🛡", "#10b981"),
+    "🏳️": ("◎", "#14b8a6"),
+    "⤵️": ("↘", "#6366f1"),
+    "📝": ("✎", "#f59e0b"),
+    "📂": ("▣", "#f97316"),
+    "🎞": ("◫", "#8b5cf6"),
+    "🐢": ("◔", "#22c55e"),
+    "📧": ("✉", "#06b6d4"),
+    "🖼": ("◱", "#0ea5e9"),
+    "⚙️": ("⚙", "#64748b"),
+    "❗️": ("!", "#f43f5e"),
+    "👌": ("✓", "#22c55e"),
+    "📍": ("⌖", "#ec4899"),
+    "🕔": ("◴", "#a855f7"),
+    "📛": ("◆", "#e11d48"),
+    "✅": ("✔", "#16a34a"),
+    "🔓": ("⌂", "#f59e0b"),
+    "🔗": ("⛓", "#0ea5e9"),
+    "🔃": ("↻", "#2563eb"),
+}
+
+SENSITIVE_PATHS = [
+    "/.env", "/.git/config", "/.git/HEAD", "/.svn/entries", "/.DS_Store",
+    "/wp-config.php.bak", "/wp-config.php.old", "/wp-login.php", "/wp-admin/",
+    "/admin/", "/administrator/", "/login/", "/panel/", "/dashboard/",
+    "/phpmyadmin/", "/adminer.php", "/server-status", "/server-info",
+    "/.htaccess", "/.htpasswd", "/web.config", "/crossdomain.xml",
+    "/elmah.axd", "/trace.axd", "/info.php", "/phpinfo.php",
+    "/backup/", "/backup.sql", "/backup.zip", "/db.sql", "/dump.sql",
+    "/.well-known/security.txt", "/security.txt", "/humans.txt",
+    "/api/", "/api/v1/", "/api/v2/", "/swagger.json", "/api-docs",
+    "/graphql", "/graphiql", "/.dockerenv", "/Dockerfile",
+    "/composer.json", "/package.json", "/.npmrc", "/config.yml",
+    "/config.json", "/config.php", "/config.inc.php", "/.config",
+    "/debug/", "/test/", "/temp/", "/tmp/", "/log/", "/logs/",
+    "/error.log", "/access.log", "/debug.log",
+    "/.aws/credentials", "/.ssh/id_rsa", "/id_rsa",
+]
+
+TAKEOVER_SIGS = {
+    "github.io": "There isn't a GitHub Pages site here",
+    "herokuapp.com": "no such app",
+    "s3.amazonaws.com": "NoSuchBucket",
+    "cloudfront.net": "Bad request",
+    "azure": "404 Web Site not found",
+    "shopify.com": "Sorry, this shop is currently unavailable",
+    "tumblr.com": "There's nothing here",
+    "wordpress.com": "Do you want to register",
+    "ghost.io": "The thing you were looking for is no longer here",
+    "surge.sh": "project not found",
+    "bitbucket.io": "Repository not found",
+    "pantheon.io": "404 error unknown site",
+    "readme.io": "Project doesnt exist",
+    "zendesk.com": "Help Center Closed",
+}
+
+SECRET_PATTERNS = [
+    (r'(?:api[_-]?key|apikey)["\s:=]+["\']([a-zA-Z0-9_\-]{20,60})["\']', "API Key"),
+    (r'(?:secret|token|password|passwd|pwd)["\s:=]+["\']([a-zA-Z0-9_\-]{8,60})["\']', "Secret/Token"),
+    (r'(?:aws_access_key_id)["\s:=]+["\']([A-Z0-9]{20})["\']', "AWS Key"),
+    (r'(?:aws_secret_access_key)["\s:=]+["\']([a-zA-Z0-9/+=]{40})["\']', "AWS Secret"),
+    (r'(?:AKIA)[A-Z0-9]{16}', "AWS Access Key"),
+    (r'sk_live_[a-zA-Z0-9]{24,}', "Stripe Secret Key"),
+    (r'pk_live_[a-zA-Z0-9]{24,}', "Stripe Public Key"),
+    (r'ghp_[a-zA-Z0-9]{36}', "GitHub Token"),
+    (r'glpat-[a-zA-Z0-9_\-]{20}', "GitLab Token"),
+    (r'xox[baprs]-[a-zA-Z0-9\-]+', "Slack Token"),
+    (r'(?:firebase|firebaseio\.com)[^\s"]{5,}', "Firebase URL"),
+    (r'eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}', "JWT Token"),
+    (r'(?:mysql|postgres|mongodb)://[^\s"<>]{10,}', "DB Connection String"),
+    (r'(?:smtp|ftp)://[^\s"<>]{10,}', "Protocol Credential"),
+]
+
+ACTIVE_TASKS = {}
+ACTIVE_PROCESSES = {}
+
+
+def _t(ctx, key, *args):
+    en = HOTARU["lexicon"]["en"]["strings"].get(key, key)
+    try:
+        value = ctx.t("recon." + key, en)
+    except Exception:
+        value = en
+    if not isinstance(value, str) or not value:
+        value = en
+    if args:
+        value = value.format(*args)
+    return value
+
+
+def _svg_icon(char):
+    symbol, color = SVG_ICON_MAP.get(char, ("•", "#64748b"))
+    svg = (
+        "<svg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24'>"
+        f"<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop stop-color='{color}'/>"
+        f"<stop offset='1' stop-color='#0ea5e9'/></linearGradient></defs>"
+        "<circle cx='12' cy='12' r='10' fill='url(#g)'/>"
+        f"<text x='12' y='16' text-anchor='middle' fill='white' font-size='11' font-weight='700'>{symbol}</text>"
+        "</svg>"
+    )
+    return f"<img src='data:image/svg+xml;utf8,{quote(svg)}' style='width:15px;height:15px;vertical-align:-2px;margin-right:4px'/>"
+
+
+def _svgify_line(line):
+    for em in sorted(SVG_ICON_MAP, key=len, reverse=True):
+        if em in line:
+            line = line.replace(em, _svg_icon(em))
+    return line
+
+
+async def fetch(ctx, url, t="text", timeout=15):
+    try:
+        r = await ctx.net(url, method="GET", headers=HDRS, timeout=timeout)
+        if r.status_code == 200:
+            if t == "json":
+                try:
+                    return json.loads(r.text)
+                except Exception:
+                    return {}
+            return r.text
+    except Exception:
+        pass
+    return {} if t == "json" else ""
+
+
+async def fetch_full(ctx, target):
+    url = f"http://{target}" if not target.startswith("http") else target
+    try:
+        r = await ctx.net(url, method="GET", headers=HDRS, timeout=10)
+        text = r.text or ""
+        title = ""
+        m = re.search(r"<title>(.*?)</title>", text, re.IGNORECASE | re.DOTALL)
+        if m:
+            title = m.group(1).strip()[:100]
+        headers = dict(r.headers) if getattr(r, "headers", None) else {}
+        return {"status": r.status_code, "headers": headers, "title": title, "body": text}
+    except Exception:
+        return {}
+
+
+async def detect_waf(ctx, target):
+    url = f"http://{target}" if not target.startswith("http") else target
+    try:
+        r = await ctx.net(url, method="HEAD", headers=HDRS, timeout=8)
+        h = str(getattr(r, "headers", "")).lower()
+        for name, sigs in WAF_SIGS.items():
+            if any(sig in h for sig in sigs):
+                return name
+    except Exception:
+        pass
+    return None
+
+
+def check_sec_headers(headers):
+    found, missing = [], []
+    for h in SEC_HEADERS:
+        if h in headers:
+            found.append((h, str(headers[h])[:60]))
+        else:
+            missing.append(h)
+    return found, missing
+
+
+def extract_tech(headers, body):
+    tech = set()
+    srv = headers.get("Server", "")
+    if srv:
+        tech.add(f"Server: {srv}")
+    pw = headers.get("X-Powered-By", "")
+    if pw:
+        tech.add(f"Powered: {pw}")
+    patterns = {
+        "WordPress": [r"wp-content", r"wp-includes", r"wordpress"],
+        "Joomla": [r"Joomla", r"/components/com_"],
+        "Drupal": [r"Drupal", r"sites/default/files"],
+        "Laravel": [r"laravel_session"],
+        "Django": [r"csrfmiddlewaretoken", r"__admin"],
+        "React": [r"react\.production", r"_reactRoot"],
+        "Vue.js": [r"vue\.js", r"__vue__"],
+        "Angular": [r"ng-version", r"angular"],
+        "jQuery": [r"jquery[\.-][\d]"],
+        "Bootstrap": [r"bootstrap\.min"],
+        "Nginx": [r"nginx"],
+        "Apache": [r"apache"],
+        "PHP": [r"\.php", r"PHPSESSID"],
+        "ASP.NET": [r"asp\.net", r"__VIEWSTATE"],
+    }
+    for name, pats in patterns.items():
+        for p in pats:
+            if re.search(p, body, re.IGNORECASE) or re.search(p, str(headers), re.IGNORECASE):
+                tech.add(name)
+                break
+    return list(tech)
+
+
+def extract_js(body, base_url):
+    scripts = re.findall(r'src=["\']([^"\']*\.js[^"\']*)["\']', body, re.IGNORECASE)
+    return list(set(urljoin(base_url, s) for s in scripts))[:30]
+
+
+def extract_emails(text):
+    return list(set(re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text)))
+
+
+def extract_params_from_urls(urls):
+    params = set()
+    for u in urls:
+        try:
+            q = urlparse(u).query
+            if q:
+                for p in q.split("&"):
+                    if "=" in p:
+                        params.add(p.split("=")[0])
+        except Exception:
+            pass
+    return sorted(params)[:50]
+
+
+async def parse_robots(ctx, target):
+    text = await fetch(ctx, f"https://{target}/robots.txt")
+    if not text or "<!DOCTYPE" in text[:50].upper():
+        return None
+    return text[:2000]
+
+
+async def parse_sitemap(ctx, target):
+    text = await fetch(ctx, f"https://{target}/sitemap.xml")
+    if not text or "<!doctype html" in text[:100].lower():
+        return []
+    urls = re.findall(r"<loc>(.*?)</loc>", text)
+    return urls[:50]
+
+
+async def whois_full(ctx, target, target_ip):
+    result = {}
+    is_ip = bool(re.match(r"^[\d.]+$", target))
+    ipw = await fetch(ctx, f"https://ipwhois.app/json/{target_ip}", "json")
+    if isinstance(ipw, dict) and ipw.get("success", True) is not False:
+        result["ip"] = ipw.get("ip", target_ip)
+        result["country"] = ipw.get("country", "N/A")
+        result["region"] = ipw.get("region", "N/A")
+        result["city"] = ipw.get("city", "N/A")
+        result["isp"] = ipw.get("isp", "N/A")
+        result["org"] = ipw.get("org", "N/A")
+        result["asn"] = ipw.get("asn", "N/A")
+        result["type"] = ipw.get("type", "N/A")
+        result["timezone"] = ipw.get("timezone", "N/A")
+    if not is_ip:
+        rdap = await fetch(ctx, f"https://rdap.org/domain/{target}", "json")
+        if isinstance(rdap, dict) and rdap.get("ldhName"):
+            result["domain"] = rdap.get("ldhName", target)
+            result["status"] = ", ".join(rdap.get("status", [])[:3]) or "N/A"
+            for ev in rdap.get("events", []):
+                if ev.get("eventAction") == "registration":
+                    result["created"] = ev.get("eventDate", "")[:10]
+                if ev.get("eventAction") == "expiration":
+                    result["expires"] = ev.get("eventDate", "")[:10]
+                if ev.get("eventAction") == "last changed":
+                    result["updated"] = ev.get("eventDate", "")[:10]
+            ns = [n.get("ldhName", "") for n in rdap.get("nameservers", [])]
+            result["ns"] = ns
+            for ent in rdap.get("entities", []):
+                roles = ent.get("roles", [])
+                vc = ent.get("vcardArray", [None, []])
+                if isinstance(vc, list) and len(vc) > 1:
+                    for item in vc[1]:
+                        if isinstance(item, list) and len(item) > 3 and item[0] == "fn":
+                            if "registrar" in roles:
+                                result["registrar"] = item[3]
+                            if "registrant" in roles:
+                                result["registrant"] = item[3]
+                            if "abuse" in roles:
+                                result["abuse"] = item[3]
+                        if isinstance(item, list) and len(item) > 3 and item[0] == "email":
+                            result["contact_email"] = item[3]
+    return result
+
+
+async def send_report(ctx, text, title="report"):
+    if len(text) <= 4096:
+        await ctx.respond(text, parse_mode="HTML")
+        return
+    plain = re.sub(r"<[^>]+>", "", text)
+    html = (
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<style>"
+        "body{background:#0d1117;color:#c9d1d9;font-family:'Courier New',monospace;padding:20px 30px;font-size:13px;line-height:1.6}"
+        "h1{color:#58a6ff;border-bottom:1px solid #30363d;padding-bottom:10px;font-size:20px}"
+        "h2{color:#79c0ff;margin-top:20px;font-size:16px}"
+        ".section{background:#161b22;padding:14px;border-radius:6px;margin:10px 0;border:1px solid #30363d}"
+        ".ok{color:#7ee787}.bad{color:#ff7b72}.warn{color:#d29922}"
+        "code{color:#a5d6ff;background:#1c2128;padding:2px 5px;border-radius:3px}"
+        "a{color:#58a6ff}"
+        "</style>"
+        f"<title>{title}</title></head><body>"
+        f"<h1>{_svg_icon('🖼')} {title}</h1>"
+    )
+    heading_icons = tuple(SVG_ICON_MAP.keys())
+    for line in plain.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        is_heading = line.startswith(heading_icons)
+        line = _svgify_line(line)
+        if is_heading:
+            html += f"<h2>{line}</h2><div class='section'>"
+        else:
+            html += f"<div>{line}</div>"
+    html += "</div></body></html>"
+    try:
+        await ctx.reply_file(html.encode("utf-8"), filename=f"{title}.html", caption=_t(ctx, "full_report", title))
+        await ctx.delete()
+    except Exception:
+        await ctx.respond(text[:4096], parse_mode="HTML")
+
+
+async def crawl_site(ctx, target, depth=3, mx=150):
+    base = f"https://{target}" if not target.startswith("http") else target
+    visited, urls, forms, emails = set(), [], [], set()
+    q = deque([(base, 0)])
+    while q and len(visited) < mx:
+        url, lvl = q.popleft()
+        if lvl > depth or url in visited:
+            continue
+        visited.add(url)
+        try:
+            r = await ctx.net(url, method="GET", headers=HDRS, timeout=8)
+            ctype = ""
+            if getattr(r, "headers", None):
+                for k, v in dict(r.headers).items():
+                    if k.lower() == "content-type":
+                        ctype = str(v)
+            if r.status_code != 200 or "text/html" not in ctype:
+                continue
+            html = r.text or ""
+        except Exception:
+            continue
+        urls.append(url)
+        emails.update(re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', html))
+        for f in re.findall(r'<form[^>]*action=["\']?([^"\'>\s]*)', html, re.IGNORECASE):
+            a = urljoin(url, f) if f else url
+            if a not in forms:
+                forms.append(a)
+        if lvl < depth:
+            for link in re.findall(r'href=["\']?(https?://[^"\'>\s]*|/[^"\'>\s]*)', html, re.IGNORECASE):
+                full = urljoin(url, link)
+                if target in urlparse(full).netloc and full not in visited:
+                    q.append((full, lvl + 1))
+        await asyncio.sleep(0.2)
+    return {"urls": urls, "forms": forms, "emails": list(emails), "total": len(visited)}
+
+
+async def parse_dorks(ctx, target):
+    dorks = [
+        f"site:{target} filetype:php | filetype:env | filetype:log | filetype:bak",
+        f"site:{target} inurl:admin | inurl:login | inurl:dashboard",
+        f"site:{target} filetype:sql | filetype:conf | filetype:cfg | filetype:ini",
+        f"site:{target} inurl:api | inurl:token | inurl:key | inurl:secret",
+        f"site:{target} intitle:index of",
+        f"site:{target} filetype:xml | filetype:json | filetype:yaml",
+    ]
+    found = []
+    for dork in dorks:
+        for engine_url in [
+            f"https://html.duckduckgo.com/html/?q={quote_plus(dork)}",
+            f"https://www.bing.com/search?q={quote_plus(dork)}&count=20",
+        ]:
+            try:
+                r = await ctx.net(engine_url, method="GET", headers=HDRS, timeout=12)
+                if r.status_code == 200:
+                    text = r.text or ""
+                    for u in re.findall(r'href="(https?://[^"]+)"', text):
+                        if target in u and not any(x in u for x in ["duckduckgo", "bing.com", "microsoft.com", "google.com", "webcache"]):
+                            if u not in found:
+                                found.append(u)
+            except Exception:
+                pass
+            await asyncio.sleep(1)
+    return found
+
+
+async def _check_path(ctx, base, path):
+    try:
+        url = f"{base}{path}"
+        r = await ctx.net(url, method="GET", headers=HDRS, timeout=5)
+        if r.status_code in (200, 301, 302, 403):
+            size = 0
+            if getattr(r, "headers", None):
+                for k, v in dict(r.headers).items():
+                    if k.lower() == "content-length":
+                        try:
+                            size = int(v)
+                        except Exception:
+                            size = 0
+            return {"path": path, "status": r.status_code, "size": size}
+    except Exception:
+        pass
+    return None
+
+
+async def path_bruteforce(ctx, target):
+    base = f"https://{target}"
+    results = await asyncio.gather(*[_check_path(ctx, base, p) for p in SENSITIVE_PATHS])
+    return [r for r in results if r]
+
+
+async def check_cors(ctx, target):
+    issues = []
+    url = f"https://{target}"
+    origins = ["https://evil.com", "null", f"https://{target}.evil.com"]
+    for origin in origins:
+        try:
+            h = {**HDRS, "Origin": origin}
+            r = await ctx.net(url, method="GET", headers=h, timeout=5)
+            headers = dict(r.headers) if getattr(r, "headers", None) else {}
+            low = {str(k).lower(): str(v) for k, v in headers.items()}
+            acao = low.get("access-control-allow-origin", "")
+            acac = low.get("access-control-allow-credentials", "")
+            if acao == "*":
+                issues.append(f"Wildcard CORS: {acao}")
+            elif origin in acao:
+                msg = f"Reflects origin: {origin}"
+                if acac.lower() == "true":
+                    msg += " + credentials"
+                issues.append(msg)
+        except Exception:
+            pass
+    return issues
+
+
+async def check_http_methods(ctx, target):
+    url = f"https://{target}"
+    allowed = []
+    for method in ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "TRACE", "HEAD"]:
+        try:
+            r = await ctx.net(url, method=method, headers=HDRS, timeout=4)
+            if r.status_code < 500:
+                allowed.append(f"{method}:{r.status_code}")
+        except Exception:
+            pass
+    return allowed
+
+
+async def get_ssl_info(target):
+    try:
+        ctx = ssl.create_default_context()
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(target, 443, ssl=ctx), timeout=5
+        )
+        cert = writer.get_extra_info('peercert')
+        writer.close()
+        await writer.wait_closed()
+        if cert:
+            subj = dict(x[0] for x in cert.get("subject", []))
+            issuer = dict(x[0] for x in cert.get("issuer", []))
+            san = []
+            for t2, v in cert.get("subjectAltName", []):
+                if t2 == "DNS":
+                    san.append(v)
+            return {
+                "cn": subj.get("commonName", "N/A"),
+                "issuer": issuer.get("organizationName", issuer.get("commonName", "N/A")),
+                "not_before": cert.get("notBefore", "N/A"),
+                "not_after": cert.get("notAfter", "N/A"),
+                "san": san[:20],
+                "serial": cert.get("serialNumber", "N/A"),
+            }
+    except Exception:
+        pass
+    return None
+
+
+def extract_secrets(text):
+    found = []
+    for pattern, name in SECRET_PATTERNS:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for m in matches[:3]:
+            val = m if isinstance(m, str) else m[0]
+            found.append({"type": name, "value": val[:40] + "..." if len(val) > 40 else val})
+    return found[:20]
+
+
+async def check_takeover(ctx, subdomains):
+    vulnerable = []
+    for sub in list(subdomains)[:30]:
+        try:
+            r = await ctx.net(f"http://{sub}", method="GET", headers=HDRS, timeout=4)
+            body = r.text or ""
+            for service, sig in TAKEOVER_SIGS.items():
+                if sig.lower() in body.lower():
+                    vulnerable.append({"sub": sub, "service": service})
+                    break
+        except Exception:
+            pass
+    return vulnerable
+
+
+def analyze_spf_dmarc(dns_txt):
+    result = {"spf": None, "dmarc": None, "issues": []}
+    for t in dns_txt:
+        if "v=spf1" in t:
+            result["spf"] = t[:100]
+            if "+all" in t:
+                result["issues"].append("SPF: +all (allows any sender)")
+            if "~all" in t:
+                result["issues"].append("SPF: ~all (softfail, weak)")
+            if "?all" in t:
+                result["issues"].append("SPF: ?all (neutral, no protection)")
+            if "-all" not in t and "~all" not in t and "+all" not in t:
+                result["issues"].append("SPF: no -all (missing strict reject)")
+        if "v=DMARC" in t.upper():
+            result["dmarc"] = t[:100]
+            if "p=none" in t.lower():
+                result["issues"].append("DMARC: p=none (no enforcement)")
+    if not result["spf"]:
+        result["issues"].append("No SPF record found")
+    if not result["dmarc"]:
+        result["issues"].append("No DMARC record found")
+    return result
+
+
+def extract_social(body):
+    socials = {}
+    patterns = {
+        "Twitter/X": r'(?:twitter\.com|x\.com)/([a-zA-Z0-9_]{1,30})',
+        "Facebook": r'facebook\.com/([a-zA-Z0-9._-]+)',
+        "LinkedIn": r'linkedin\.com/(?:company|in)/([a-zA-Z0-9_-]+)',
+        "Instagram": r'instagram\.com/([a-zA-Z0-9._]+)',
+        "GitHub": r'github\.com/([a-zA-Z0-9_-]+)',
+        "YouTube": r'youtube\.com/(?:c/|channel/|@)([a-zA-Z0-9_-]+)',
+        "Telegram": r't\.me/([a-zA-Z0-9_]+)',
+    }
+    for name, pat in patterns.items():
+        m = re.findall(pat, body, re.IGNORECASE)
+        if m:
+            vals = list(set(m))[:3]
+            filtered = [v for v in vals if v not in ["share", "sharer", "intent", "dialog", "plugins"]]
+            if filtered:
+                socials[name] = filtered
+    return socials
+
+
+def clean_out(text):
+    lines = text.split('\n')
+    out = []
+    skip = ["___", "sqlmap.org", "[)]", "legal disclaimer", "starting @", "ending @",
+            "multiple targets mode", "output/results", "fetched random",
+            "using '/", "CSV results", "testing connection", "unable to connect",
+            "skipping to the next", "if the problem persists", "is going to retry", "redirecting"]
+    for l in lines:
+        if any(x in l for x in skip):
+            continue
+        l = re.sub(r'\[\d{2}:\d{2}:\d{2}\]\s+', '', l)
+        l = l.replace("[INFO]", "💬").replace("[CRITICAL]", "🔥").replace("[WARNING]", "❗️").replace("[ERROR]", "❗️")
+        l = l.replace("is vulnerable", "ДЫРЯВЫЙ!").replace("sql injection", "SQL ИНЪЕКЦИЯ")
+        if l.strip():
+            out.append(l.strip())
+    return "\n".join(out)
+
+
+async def rtc(ctx, cmd, title):
+    chat_id = ctx.chat_id
+    uid = ctx.sender_id
+    process = await asyncio.create_subprocess_shell(cmd, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+    ACTIVE_PROCESSES[chat_id] = {"p": process, "u": uid, "o": ""}
+
+    async def read():
+        while True:
+            c = await process.stdout.read(1)
+            if not c:
+                break
+            ACTIVE_PROCESSES[chat_id]["o"] += c.decode('utf-8', 'ignore')
+
+    task = asyncio.create_task(read())
+    while process.returncode is None:
+        await asyncio.sleep(2.5)
+        if chat_id not in ACTIVE_PROCESSES:
+            break
+        raw = ACTIVE_PROCESSES[chat_id]["o"]
+        clean = clean_out(raw[-5000:])[-3500:]
+        try:
+            await ctx.respond(f"<b>{title} (Live...):</b>\n<code>{clean}</code>\n\n{_t(ctx, 'rcin_hint')}", parse_mode="HTML")
+        except Exception:
+            pass
+    await task
+    if chat_id in ACTIVE_PROCESSES:
+        raw = ACTIVE_PROCESSES[chat_id]["o"]
+        clean = clean_out(raw[-5000:])[-3800:]
+        await ctx.respond(f"<b>{title} (Done):</b>\n<code>{clean}</code>", parse_mode="HTML")
+        ACTIVE_PROCESSES.pop(chat_id, None)
+
+
+async def command_rcstop(ctx, invocation=None):
+    cid = ctx.chat_id
+    if cid in ACTIVE_PROCESSES:
+        try:
+            ACTIVE_PROCESSES[cid]["p"].kill()
+        except Exception:
+            pass
+        ACTIVE_PROCESSES.pop(cid, None)
+    t = ACTIVE_TASKS.get(cid)
+    if t and not t.done():
+        t.cancel()
+    await ctx.respond(_t(ctx, "stopped"), parse_mode="HTML")
+
+
+async def command_rcin(ctx, invocation):
+    cid = ctx.chat_id
+    uid = ctx.sender_id
+    if cid not in ACTIVE_PROCESSES:
+        return await ctx.respond(_t(ctx, "no_active"), parse_mode="HTML")
+    if ACTIVE_PROCESSES[cid]["u"] != uid:
+        return await ctx.respond(_t(ctx, "not_owner"), parse_mode="HTML")
+    pr = ACTIVE_PROCESSES[cid]["p"]
+    pr.stdin.write((invocation.raw_args + "\n").encode())
+    await pr.stdin.drain()
+    await ctx.delete()
+
+
+async def command_shodan(ctx, invocation):
+    arg = invocation.raw_args.strip()
+    key = ctx.config.get("shodan_key", "")
+    if not arg or not key:
+        return await ctx.respond(_t(ctx, "shodan_need"), parse_mode="HTML")
+    await ctx.respond(_t(ctx, "shodan_run"), parse_mode="HTML")
+    url = "https://api.shodan.io/shodan/host/" + arg + "?" + "key=" + key
+    data = await fetch(ctx, url, "json")
+    if "error" in data:
+        return await ctx.respond(f"<b>❗️</b> <code>{data['error']}</code>", parse_mode="HTML")
+    if not data:
+        return await ctx.respond(_t(ctx, "empty"), parse_mode="HTML")
+    ports = ", ".join(map(str, data.get("ports", [])))
+    vulns = "\n".join([f" ├ <code>{v}</code>" for v in data.get("vulns", [])[:15]]) if "vulns" in data else " └ Чисто"
+    r = f"👤 <b>Shodan:</b> <code>{arg}</code>\n📦 {data.get('org','N/A')}\n📟 OS: {data.get('os','N/A')}\n⤵️ <code>{ports}</code>\n🔥 CVE:\n{vulns}"
+    await send_report(ctx, r, f"shodan_{arg}")
+
+
+async def command_wh(ctx, invocation):
+    args = invocation.raw_args.strip()
+    if not args:
+        return await ctx.respond(_t(ctx, "no_args"), parse_mode="HTML")
+    await ctx.respond(_t(ctx, "whois_run", args), parse_mode="HTML")
+    ip_data = await fetch(ctx, f"http://ip-api.com/json/{args}?fields=query", "json")
+    tip = ip_data.get("query", args) if isinstance(ip_data, dict) else args
+    data = await whois_full(ctx, args, tip)
+    if not data:
+        return await ctx.respond(_t(ctx, "whois_none", args), parse_mode="HTML")
+    r = f"<b>WHOIS {args}:</b>\n"
+    for k, v in data.items():
+        if isinstance(v, list):
+            v = ", ".join(v[:5])
+        if v and v != "N/A":
+            r += f"├ <b>{k}:</b> <code>{v}</code>\n"
+    await send_report(ctx, r, f"whois_{args}")
+
+
+async def command_dork(ctx, invocation):
+    args = invocation.raw_args.strip()
+    if not args:
+        return await ctx.respond(_t(ctx, "no_args"), parse_mode="HTML")
+    await ctx.respond(_t(ctx, "dork_run", args), parse_mode="HTML")
+    res = await parse_dorks(ctx, args)
+    if not res:
+        return await ctx.respond(_t(ctx, "dork_none", args), parse_mode="HTML")
+    r = f"<b>📟 Dorks: <code>{args}</code> ({len(res)}):</b>\n"
+    for u in res[:40]:
+        r += f"├ <code>{u[:80]}</code>\n"
+    if len(res) > 40:
+        r += f"└ <i>...ещё {len(res)-40}</i>\n"
+    await send_report(ctx, r, f"dorks_{args}")
+
+
+async def command_crawl(ctx, invocation):
+    raw = invocation.raw_args.strip().split()
+    if not raw:
+        return await ctx.respond(_t(ctx, "no_args"), parse_mode="HTML")
+    target, depth = raw[0], 3
+    if len(raw) > 1:
+        try:
+            depth = min(int(raw[1]), 5)
+        except Exception:
+            pass
+    await ctx.respond(_t(ctx, "crawl_run", target, depth), parse_mode="HTML")
+    d = await crawl_site(ctx, target, depth)
+    r = f"<b>🐢 Crawl: <code>{target}</code></b>\nDepth: {depth} | Visited: {d['total']}\n\n"
+    if d["urls"]:
+        r += f"<b>🖼 URLs ({len(d['urls'])}):</b>\n"
+        for u in d["urls"][:30]:
+            r += f"├ <code>{u[:80]}</code>\n"
+        if len(d["urls"]) > 30:
+            r += f"└ ...ещё {len(d['urls'])-30}\n"
+    if d["forms"]:
+        r += f"\n<b>📝 Forms ({len(d['forms'])}):</b>\n"
+        for f in d["forms"][:15]:
+            r += f"├ <code>{f[:80]}</code>\n"
+    if d["emails"]:
+        r += f"\n<b>📧 Emails ({len(d['emails'])}):</b>\n"
+        for e in d["emails"][:15]:
+            r += f"├ <code>{e}</code>\n"
+    await send_report(ctx, r, f"crawl_{target}")
+
+
+async def command_rc(ctx, invocation=None):
+    cid = ctx.chat_id
+    ACTIVE_TASKS[cid] = asyncio.current_task()
+    try:
+        args = invocation.raw_args if invocation else ""
+        if not args:
+            return await ctx.respond(_t(ctx, "no_args"), parse_mode="HTML")
+        target = args.strip().lower()
+        is_ip = bool(re.match(r"^(?:\d{1,3}\.){3}\d{1,3}$", target))
+        await ctx.respond(_t(ctx, "processing", target), parse_mode="HTML")
+
+        geo = await fetch(ctx, f"http://ip-api.com/json/{target}?fields=status,query,isp,as,country,city,org,regionName,lat,lon,timezone", "json")
+        tip = geo.get("query", target) if isinstance(geo, dict) and geo.get("status") == "success" else target
+        isp = geo.get("isp", "N/A") if isinstance(geo, dict) and geo.get("status") == "success" else "N/A"
+
+        waf = await detect_waf(ctx, target)
+        if any(w in str(isp).lower() for w in ["cloudflare", "fastly", "akamai", "sucuri"]):
+            if not waf:
+                waf = "CDN/WAF (ASN)"
+        http = await fetch_full(ctx, target)
+
+        api_tasks = [
+            fetch(ctx, f"https://api.hackertarget.com/dnslookup/?q={target}"),
+            fetch(ctx, f"https://ipwhois.app/json/{tip}", "json"),
+            fetch(ctx, f"https://otx.alienvault.com/api/v1/indicators/domain/{target}/general", "json"),
+            fetch(ctx, f"https://urlscan.io/api/v1/search/?q=domain:{target}&size=10", "json"),
+            fetch(ctx, f"https://api.hackertarget.com/reverseiplookup/?q={tip}"),
+        ]
+        key = ctx.config.get("shodan_key", "")
+        if ctx.config.get("use_shodan", False) and key:
+            api_tasks.append(fetch(ctx, "https://api.shodan.io/shodan/host/" + tip + "?" + "key=" + key, "json"))
+        else:
+            api_tasks.append(fetch(ctx, f"https://internetdb.shodan.io/{tip}", "json"))
+
+        if not is_ip:
+            api_tasks.extend([
+                fetch(ctx, f"https://crt.sh/?q=%25.{target}&output=json", "json"),
+                fetch(ctx, f"https://api.hackertarget.com/hostsearch/?q={target}"),
+                fetch(ctx, f"http://web.archive.org/cdx/search/cdx?url=*.{target}/*&output=json&limit=300", "json"),
+                fetch(ctx, f"https://rapiddns.io/subdomain/{target}?full=1"),
+                parse_robots(ctx, target),
+                parse_sitemap(ctx, target),
+            ])
+
+        whois_task = asyncio.create_task(whois_full(ctx, target, tip))
+        dork_task = asyncio.create_task(parse_dorks(ctx, target)) if not is_ip else None
+        ssl_task = asyncio.create_task(get_ssl_info(target)) if not is_ip else None
+        cors_task = asyncio.create_task(check_cors(ctx, target))
+        methods_task = asyncio.create_task(check_http_methods(ctx, target))
+        paths_task = asyncio.create_task(path_bruteforce(ctx, target))
+
+        res = await asyncio.gather(*api_tasks)
+        dns_res = res[0] if isinstance(res[0], str) and "error" not in res[0].lower()[:30] else ""
+        otx = res[2] if isinstance(res[2], dict) and "pulse_info" in res[2] else {}
+        urlscan = res[3] if isinstance(res[3], dict) and "results" in res[3] else {}
+        rev_ip = res[4] if isinstance(res[4], str) and "error" not in str(res[4]).lower()[:30] else ""
+        shodan_d = res[5] if isinstance(res[5], dict) and "error" not in str(res[5]) else {}
+
+        whois_data = await whois_task
+        ssl_info = await ssl_task if ssl_task else None
+        cors_issues = await cors_task
+        http_methods = await methods_task
+        exposed_paths = await paths_task
+
+        subdomains, wb_urls = set(), []
+        dns_txt, dns_mx, dns_a, dns_ns, dns_cname = [], [], [], [], []
+        real_ip = ""
+        if dns_res:
+            for line in dns_res.split("\n"):
+                if "TXT :" in line:
+                    dns_txt.append(line.split("TXT :")[1].strip())
+                elif "MX :" in line:
+                    dns_mx.append(line.split("MX :")[1].strip())
+                elif "A :" in line:
+                    dns_a.append(line.split("A :")[1].strip())
+                elif "NS :" in line:
+                    dns_ns.append(line.split("NS :")[1].strip())
+                elif "CNAME :" in line:
+                    dns_cname.append(line.split("CNAME :")[1].strip())
+                if not is_ip and any(k in line for k in ["mail.", "ftp.", "direct.", "cpanel.", "dev."]):
+                    parts = line.split(":")
+                    if len(parts) > 1 and "cloudflare" not in parts[1].lower():
+                        real_ip = parts[1].strip()
+
+        rev_hosts = [h.strip() for h in rev_ip.split("\n") if h.strip()][:20] if rev_ip else []
+
+        robots_txt, sitemap_urls = None, []
+        if not is_ip and len(res) > 6:
+            bi = 6
+            crt_r = res[bi] if len(res) > bi and isinstance(res[bi], list) else []
+            ht_h = res[bi+1] if len(res) > bi+1 and isinstance(res[bi+1], str) and "error" not in str(res[bi+1]).lower()[:30] else ""
+            wb_r = res[bi+2] if len(res) > bi+2 and isinstance(res[bi+2], list) else []
+            rd_html = res[bi+3] if len(res) > bi+3 and isinstance(res[bi+3], str) else ""
+            robots_txt = res[bi+4] if len(res) > bi+4 and res[bi+4] else None
+            sitemap_urls = res[bi+5] if len(res) > bi+5 and isinstance(res[bi+5], list) else []
+
+            if isinstance(crt_r, list):
+                for e in crt_r:
+                    n = e.get("name_value", "") if isinstance(e, dict) else ""
+                    if n:
+                        for x in n.split("\n"):
+                            subdomains.add(x.replace("*.", "").strip())
+            if ht_h:
+                for line in ht_h.split("\n"):
+                    p = line.split(",")
+                    if p and target in p[0]:
+                        subdomains.add(p[0].replace("*.", "").strip())
+            if rd_html:
+                for sd in re.findall(r'<td>([a-zA-Z0-9._-]+\.' + re.escape(target) + r')</td>', rd_html):
+                    subdomains.add(sd.strip())
+            if isinstance(wb_r, list) and len(wb_r) > 1:
+                for entry in wb_r[1:]:
+                    if isinstance(entry, list) and len(entry) > 2:
+                        u = entry[2]
+                        wb_urls.append(u)
+                        try:
+                            h = urlparse(u).netloc.split(":")[0]
+                            if target in h:
+                                subdomains.add(h.replace("*.", "").strip())
+                        except Exception:
+                            pass
+            if isinstance(otx, dict):
+                for e in otx.get("passive_dns", []):
+                    if isinstance(e, dict):
+                        h = e.get("hostname", "")
+                        if h and target in h:
+                            subdomains.add(h)
+
+        ports = shodan_d.get("ports", [])
+        vulns = shodan_d.get("vulns", [])
+        if isinstance(vulns, dict):
+            vulns = list(vulns.keys())
+        tags = shodan_d.get("tags", [])
+        cpes = shodan_d.get("cpes", [])
+
+        otx_pulses = otx.get("pulse_info", {}).get("count", 0) if otx else 0
+        otx_names = [p.get("name", "") for p in otx.get("pulse_info", {}).get("pulses", [])[:5]] if otx else []
+
+        us_results = []
+        if urlscan:
+            for r2 in urlscan.get("results", [])[:8]:
+                if isinstance(r2, dict):
+                    pg = r2.get("page", {})
+                    us_results.append({"url": pg.get("url", ""), "server": pg.get("server", ""), "ip": pg.get("ip", "")})
+
+        tech, sec_found, sec_missing, js_files, page_emails, secrets, socials = [], [], [], [], [], [], {}
+        if http:
+            body = http.get("body", "")
+            hdrs = http.get("headers", {})
+            tech = extract_tech(hdrs, body)
+            sec_found, sec_missing = check_sec_headers(hdrs)
+            js_files = extract_js(body, f"https://{target}")
+            page_emails = extract_emails(body)
+            secrets = extract_secrets(body)
+            socials = extract_social(body)
+
+        if js_files:
+            js_bodies = await asyncio.gather(*[fetch(ctx, j) for j in js_files[:10]])
+            for jb in js_bodies:
+                if isinstance(jb, str) and jb:
+                    secrets.extend(extract_secrets(jb))
+            seen = set()
+            secrets = [x for x in secrets if (k := f"{x['type']}:{x['value']}") not in seen and not seen.add(k)][:25]
+
+        wb_params = extract_params_from_urls(wb_urls) if wb_urls else []
+        spf_dmarc = analyze_spf_dmarc(dns_txt) if dns_txt else {"spf": None, "dmarc": None, "issues": ["No SPF record found", "No DMARC record found"]}
+
+        takeover = []
+        if not is_ip and subdomains:
+            takeover = await check_takeover(ctx, subdomains)
+
+        R = f"📟 <b>Recon:</b> <code>{target}</code>\n"
+        R += f"📟 <b>IP:</b> <code>{tip}</code>\n"
+        if waf:
+            R += f"❗️ <b>WAF:</b> <code>{waf}</code>\n"
+        if real_ip:
+            R += f"👌 <b>Real IP (bypass):</b> <code>{real_ip}</code>\n"
+        R += f"📦 <b>ISP:</b> {isp}\n"
+        if isinstance(geo, dict) and geo.get("status") == "success":
+            R += f"🏳️ <b>Geo:</b> {geo.get('country','')}, {geo.get('regionName','')}, {geo.get('city','')}\n"
+            R += f"📍 <b>Coords:</b> <code>{geo.get('lat','')}, {geo.get('lon','')}</code>\n"
+            R += f"🕔 <b>TZ:</b> {geo.get('timezone','')}\n"
+            R += f"📛 <b>ASN:</b> <code>{geo.get('as','')}</code>\n"
+        R += "\n"
+
+        if whois_data:
+            R += "📝 <b>WHOIS:</b>\n"
+            for k, v in whois_data.items():
+                if isinstance(v, list):
+                    v = ", ".join(v[:5])
+                if v and str(v) != "N/A":
+                    R += f" ├ <b>{k}:</b> <code>{v}</code>\n"
+            R += "\n"
+
+        if ssl_info:
+            R += "🛡 <b>SSL/TLS:</b>\n"
+            R += f" ├ CN: <code>{ssl_info['cn']}</code>\n"
+            R += f" ├ Issuer: <code>{ssl_info['issuer']}</code>\n"
+            R += f" ├ Valid: {ssl_info['not_before']} → {ssl_info['not_after']}\n"
+            R += f" ├ Serial: <code>{str(ssl_info['serial'])[:20]}</code>\n"
+            if ssl_info.get("san"):
+                R += f" └ SAN: <code>{', '.join(ssl_info['san'][:8])}</code>\n"
+            R += "\n"
+
+        if http:
+            srv = http.get("headers", {}).get("Server", "Hidden")
+            pw = http.get("headers", {}).get("X-Powered-By", "Hidden")
+            R += f"🏳️ <b>HTTP:</b>\n ├ Status: <code>{http.get('status')}</code>\n ├ Title: <code>{http.get('title','')}</code>\n ├ Server: <code>{srv}</code>\n └ Powered: <code>{pw}</code>\n\n"
+
+        if http_methods:
+            R += f"⚙️ <b>HTTP Methods:</b> <code>{', '.join(http_methods)}</code>\n\n"
+
+        if tech:
+            R += f"⚙️ <b>Tech Stack ({len(tech)}):</b>\n"
+            for t2 in tech:
+                R += f" ├ <code>{t2}</code>\n"
+            R += "\n"
+
+        R += f"⤵️ <b>Ports:</b> <code>{', '.join(map(str, ports)) if ports else 'N/A'}</code>\n"
+        if tags:
+            R += f"📛 <b>Tags:</b> <code>{', '.join(map(str, tags))}</code>\n"
+        if cpes:
+            R += "📦 <b>CPE:</b>\n" + "".join([f" ├ <code>{c}</code>\n" for c in cpes[:8]])
+        R += "\n"
+
+        if dns_a or dns_ns or dns_mx or dns_txt or dns_cname:
+            R += "📝 <b>DNS:</b>\n"
+            if dns_a:
+                R += f" ├ <b>A:</b> <code>{', '.join(dns_a[:5])}</code>\n"
+            if dns_cname:
+                R += f" ├ <b>CNAME:</b> <code>{', '.join(dns_cname[:3])}</code>\n"
+            if dns_ns:
+                R += f" ├ <b>NS:</b> <code>{', '.join(dns_ns[:5])}</code>\n"
+            if dns_mx:
+                R += f" ├ <b>MX:</b> <code>{', '.join(dns_mx[:3])}</code>\n"
+            for t2 in dns_txt[:3]:
+                R += f" ├ <b>TXT:</b> <code>{t2[:70]}</code>\n"
+            R += "\n"
+
+        if spf_dmarc["issues"]:
+            R += "📧 <b>SPF/DMARC:</b>\n"
+            if spf_dmarc["spf"]:
+                R += f" ├ SPF: <code>{spf_dmarc['spf'][:60]}</code>\n"
+            if spf_dmarc["dmarc"]:
+                R += f" ├ DMARC: <code>{spf_dmarc['dmarc'][:60]}</code>\n"
+            for issue in spf_dmarc["issues"]:
+                R += f" ├ ❗️ {issue}\n"
+            R += "\n"
+
+        if sec_found or sec_missing:
+            R += "🛡 <b>Security Headers:</b>\n"
+            for h2, v in sec_found:
+                R += f" ├ ✅ <code>{h2}</code>\n"
+            for h2 in sec_missing:
+                R += f" ├ ❗️ <code>{h2}</code>\n"
+            R += "\n"
+
+        if cors_issues:
+            R += "🔥 <b>CORS Issues:</b>\n"
+            for ci in cors_issues:
+                R += f" ├ ❗️ <code>{ci}</code>\n"
+            R += "\n"
+
+        if vulns:
+            R += f"🔥 <b>CVE ({len(vulns)}):</b>\n"
+            for cve in vulns[:20]:
+                R += f" ├ <code>{cve}</code>\n"
+            if len(vulns) > 20:
+                R += f" └ ...+{len(vulns)-20}\n"
+            R += "\n"
+
+        if exposed_paths:
+            R += f"🔓 <b>Exposed Paths ({len(exposed_paths)}):</b>\n"
+            for ep in exposed_paths[:25]:
+                icon = "✅" if ep["status"] in (200, 301, 302) else "❗️"
+                R += f" ├ {icon} <code>{ep['path']}</code> [{ep['status']}] {ep['size']}b\n"
+            if len(exposed_paths) > 25:
+                R += f" └ ...+{len(exposed_paths)-25}\n"
+            R += "\n"
+
+        if secrets:
+            R += f"🔗 <b>Leaked Secrets ({len(secrets)}):</b>\n"
+            for sec in secrets[:15]:
+                R += f" ├ {sec['type']}: <code>{sec['value']}</code>\n"
+            R += "\n"
+
+        if otx_pulses > 0:
+            R += f"🛡 <b>OTX Threats:</b> {otx_pulses}\n"
+            for n in otx_names[:3]:
+                R += f" ├ <code>{n[:60]}</code>\n"
+            R += "\n"
+
+        if us_results:
+            R += f"📟 <b>URLScan ({len(us_results)}):</b>\n"
+            for r2 in us_results[:5]:
+                R += f" ├ <code>{r2['url'][:55]}</code> | {r2['server']}\n"
+            R += "\n"
+
+        if rev_hosts:
+            R += f"🔃 <b>Reverse IP ({len(rev_hosts)}):</b>\n"
+            for h2 in rev_hosts[:10]:
+                R += f" ├ <code>{h2}</code>\n"
+            if len(rev_hosts) > 10:
+                R += f" └ ...+{len(rev_hosts)-10}\n"
+            R += "\n"
+
+        if not is_ip:
+            subs = sorted([x for x in subdomains if target in x and x])
+            R += f"📂 <b>Subdomains ({len(subs)}):</b>\n"
+            for x in subs[:50]:
+                R += f" ├ <code>{x}</code>\n"
+            if len(subs) > 50:
+                R += f" └ ...+{len(subs)-50}\n"
+            R += "\n"
+
+            if takeover:
+                R += f"🔥 <b>Subdomain Takeover ({len(takeover)}):</b>\n"
+                for tk in takeover:
+                    R += f" ├ 🔥 <code>{tk['sub']}</code> → {tk['service']}\n"
+                R += "\n"
+
+            if wb_urls:
+                R += f"🎞 <b>Wayback URLs ({len(wb_urls)}):</b>\n"
+                for u in wb_urls[:20]:
+                    R += f" ├ <code>{u[:65]}</code>\n"
+                if len(wb_urls) > 20:
+                    R += f" └ ...+{len(wb_urls)-20}\n"
+                R += "\n"
+
+            if wb_params:
+                R += f"📝 <b>URL Params ({len(wb_params)}):</b>\n └ <code>{', '.join(wb_params[:40])}</code>\n\n"
+
+        if js_files:
+            R += f"🖼 <b>JS Files ({len(js_files)}):</b>\n"
+            for j in js_files[:15]:
+                R += f" ├ <code>{j[:70]}</code>\n"
+            if len(js_files) > 15:
+                R += f" └ ...+{len(js_files)-15}\n"
+            R += "\n"
+
+        if page_emails:
+            R += f"📧 <b>Emails ({len(page_emails)}):</b>\n"
+            for e in page_emails[:15]:
+                R += f" ├ <code>{e}</code>\n"
+            R += "\n"
+
+        if socials:
+            R += "🏳️ <b>Socials:</b>\n"
+            for name, vals in socials.items():
+                R += f" ├ {name}: <code>{', '.join(vals)}</code>\n"
+            R += "\n"
+
+        if robots_txt:
+            R += f"🐢 <b>robots.txt:</b>\n<code>{robots_txt[:500]}</code>\n\n"
+
+        if sitemap_urls:
+            R += f"📌 <b>Sitemap ({len(sitemap_urls)}):</b>\n"
+            for u in sitemap_urls[:10]:
+                R += f" ├ <code>{u[:65]}</code>\n"
+            if len(sitemap_urls) > 10:
+                R += f" └ ...+{len(sitemap_urls)-10}\n"
+            R += "\n"
+
+        if not is_ip:
+            dork_res = await dork_task if dork_task else []
+            if dork_res:
+                R += f"📟 <b>Dorks ({len(dork_res)}):</b>\n"
+                for u in dork_res[:15]:
+                    R += f" ├ <code>{u[:65]}</code>\n"
+                if len(dork_res) > 15:
+                    R += f" └ ...+{len(dork_res)-15}\n"
+            else:
+                R += "📟 <b>Dorks (manual):</b>\n"
+                R += f" ├ <code>site:{target} ext:php | ext:env | ext:log</code>\n"
+                R += f" ├ <code>site:{target} inurl:admin | inurl:login</code>\n"
+                R += f" └ <code>site:{target} ext:sql | ext:bak | ext:conf</code>\n"
+
+        await send_report(ctx, R, f"recon_{target}")
+
+    except asyncio.CancelledError:
+        pass
+    except Exception as e:
+        await ctx.respond(f"<b>❗️</b> <code>{str(e)}</code>", parse_mode="HTML")
+    finally:
+        ACTIVE_TASKS.pop(cid, None)
+
+
+async def command_nmap(ctx, invocation):
+    args = invocation.raw_args
+    if not args:
+        return await ctx.respond((
+            "> ▶️ **.nmap guide**\n"
+            "> ` .nmap example.com ` - quick\n"
+            "> ` .nmap -p 80,443 example.com ` - ports\n"
+            "> ` .nmap -sV -O 8.8.8.8 ` - versions+OS\n\n"
+            "> `-sS` stealth | `-sV` versions | `-p-` all ports\n"
+            "> `-T4` fast | `-A` aggressive | `-Pn` no ping"
+        ))
+    if not shutil.which("nmap"):
+        return await ctx.respond(_t(ctx, "nmap_missing"), parse_mode="HTML")
+    await rtc(ctx, f"nmap {args}", "▶️ Nmap")
+
+
+async def command_sqlmap(ctx, invocation):
+    args = invocation.raw_args
+    if not args:
+        return await ctx.respond((
+            "> 🎙 **.sqlmap guide**\n"
+            "> ` .sqlmap -u \"site.com/page.php?id=1\" `\n"
+            "> ` .sqlmap -u \"...\" --dbs ` - databases\n"
+            "> ` .sqlmap -u \"...\" -D db --tables `\n\n"
+            "> `--level=5` max | `--risk=3` aggressive\n"
+            "> `--dump` extract | `--os-shell` shell\n"
+            "> `--tamper=space2comment` waf bypass"
+        ))
+    sp = "sqlmap-dev/sqlmap.py"
+    if not os.path.exists("sqlmap-dev"):
+        return await ctx.respond(_t(ctx, "sqlmap_missing"), parse_mode="HTML")
+    await rtc(ctx, f"python3 {sp} {args}", "🎙 SQLMap")

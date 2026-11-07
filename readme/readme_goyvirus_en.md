@@ -26,11 +26,11 @@ GoyVirus is a humorous prank module for playful chats with friends. It imitates 
 - The author **is not responsible** for misuse or resulting consequences.
 
 ## Module file
-- `goyv.py`
+- `heroku/goyv.py` (Heroku archive)
 
 ## Installation
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goyv.py
+.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/heroku/goyv.py
 ```
 
 ## Usage

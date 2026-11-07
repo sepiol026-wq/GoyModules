@@ -24,11 +24,12 @@ OmniLoad is a universal media downloader that fetches content by link and repost
 The module parses a source URL/media target, resolves download strategy, then sends the fetched media back into the current chat.
 
 ## Module file
-- `omni.py`
+- `omni.hmod`
 
 ## Installation
+Download the module file, send it to Hotaru, then load it with:
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/omni.py
+.ld
 ```
 
 ## Commands

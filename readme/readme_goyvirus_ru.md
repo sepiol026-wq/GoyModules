@@ -26,11 +26,11 @@ GoyVirus — шуточный тролль-модуль для розыгрыш�
 - Автор **не несёт ответственности** за последствия неправильного или токсичного использования.
 
 ## Файл модуля
-- `goyv.py`
+- `heroku/goyv.py` (архив Heroku)
 
 ## Установка
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goyv.py
+.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/heroku/goyv.py
 ```
 
 ## Как использовать

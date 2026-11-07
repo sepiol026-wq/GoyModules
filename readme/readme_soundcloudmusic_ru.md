@@ -27,11 +27,12 @@ SoundCloudMusic превращает ваш userbot в музыкальный и
 - Поддерживает импорт/экспорт и пакетное наполнение базы.
 
 ## Файл
-- `sc.py`
+- `sc.hmod`
 
 ## Установка
+Скачай файл модуля и отправь его Hotaru, затем загрузи командой:
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/sc.py
+.ld
 ```
 
 ## Команды

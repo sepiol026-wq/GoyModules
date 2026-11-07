@@ -12,7 +12,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/sepiol026-wq/GoyModules?style=for-the-badge&logo=git&label=last%20commit)](https://github.com/sepiol026-wq/GoyModules/commits/main)
 [![License](https://img.shields.io/github/license/sepiol026-wq/GoyModules?style=for-the-badge&label=license)](https://github.com/sepiol026-wq/GoyModules/blob/main/LICENSE)
 
-<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/goypulse.py) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goypulse.py)</p>
+<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/goypulse.hmod) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goypulse.hmod)</p>
 
 
 ![GoyPulse Banner](../assets/goypulse.png)
@@ -27,11 +27,12 @@ GoyPulse — продвинутый нейро-автоответчик на о�
 4. Работает как единый автоответчик без подсистем обновлений/бэкапов.
 
 ## Файл модуля
-- `goypulse.py`
+- `goypulse.hmod`
 
 ## Установка
+Скачай файл модуля и отправь его Hotaru, затем загрузи командой:
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goypulse.py
+.ld
 ```
 
 ## Основные команды

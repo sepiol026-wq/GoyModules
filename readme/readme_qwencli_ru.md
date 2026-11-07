@@ -12,7 +12,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/sepiol026-wq/GoyModules?style=for-the-badge&logo=git&label=last%20commit)](https://github.com/sepiol026-wq/GoyModules/commits/main)
 [![License](https://img.shields.io/github/license/sepiol026-wq/GoyModules?style=for-the-badge&label=license)](https://github.com/sepiol026-wq/GoyModules/blob/main/LICENSE)
 
-<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/QwenCLI.py) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/QwenCLI.py)</p>
+<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/heroku/QwenCLI.py) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/heroku/QwenCLI.py)</p>
 
 
 ![QwenCLI Banner](../assets/QwenCLI.png)
@@ -24,11 +24,11 @@ QwenCLI — это многофункциональный AI-модуль для
 Модуль разворачивает внутренний слой команд и использует локальные/сетевые зависимости, которые устанавливаются один раз. После установки вы получаете единый интерфейс управления через префикс вашего юзербота.
 
 ## Файл модуля
-- `QwenCLI.py`
+- `heroku/QwenCLI.py` (архив Heroku)
 
 ## Установка
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/QwenCLI.py
+.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/heroku/QwenCLI.py
 ```
 
 ## Первый запуск (важно)

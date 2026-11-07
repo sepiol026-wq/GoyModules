@@ -12,7 +12,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/sepiol026-wq/GoyModules?style=for-the-badge&logo=git&label=last%20commit)](https://github.com/sepiol026-wq/GoyModules/commits/main)
 [![License](https://img.shields.io/github/license/sepiol026-wq/GoyModules?style=for-the-badge&label=license)](https://github.com/sepiol026-wq/GoyModules/blob/main/LICENSE)
 
-<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/goysec.py) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goysec.py)</p>
+<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/goysec.hmod) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goysec.hmod)</p>
 
 
 ![GoySecurity Banner](../assets/goysec.png)
@@ -27,11 +27,12 @@ GoySecurity is a pre-install code scanner for third-party userbot modules. It he
 - Explains why a rule was triggered and supports whitelist management.
 
 ## Module file
-- `goysec.py`
+- `goysec.hmod`
 
 ## Installation
+Download the module file, send it to Hotaru, then load it with:
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goysec.py
+.ld
 ```
 
 ## Core commands

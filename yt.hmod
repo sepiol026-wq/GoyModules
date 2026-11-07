@@ -1,0 +1,1099 @@
+HOTARU = {
+    "id": "yt",
+    "version": "4.6",
+    "commands": ["yt", "ytpl", "ytadd", "ytrm", "ytbatch", "ytexport", "ytimport"],
+    "capabilities": ["net", "shell", "state", "files"],
+    "watchers": ["global"],
+    "banner": "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/ytmusic.png",
+    "config_schema": {
+        "custom_text": {"type": "str", "default": "📟 <b>Таргет:</b> {track}\n👤 <b>Автор:</b> {artists}\n🔗 <b>Лонг-линк:</b> <a href='{ytm_url}'>Сурс</a>", "description": "Шаблон текста под аудио"},
+        "font": {"type": "str", "default": "https://raw.githubusercontent.com/kamekuro/assets/master/fonts/Onest-Bold.ttf", "description": "URL шрифта .ttf"},
+        "banner_version": {"type": "choice", "default": "horizontal", "options": ["horizontal", "vertical"], "description": "Стиль карточки"},
+        "blur_intensity": {"type": "int", "default": 40, "description": "Блюр фона"},
+        "dynamic_colors": {"type": "bool", "default": True, "description": "Авто-цвета интерфейса под обложку"},
+    },
+    "lexicon": {
+        "en": {
+            "name": "YTMusic",
+            "description": "Tool for dumping music from YT with cards and playlists. No need to bother with a local environment.",
+            "commands": {
+                "yt": {"description": "<query> - Dump a track from YT"},
+                "ytpl": {"description": "Local DB (playlist) manager"},
+                "ytadd": {"description": "<db> <query/reply> - Inject track/voice into db"},
+                "ytrm": {"description": "<db> <track name> - Remove track from db"},
+                "ytbatch": {"description": "<db> <playlist url> - Mass dump"},
+                "ytexport": {"description": "Export all DBs to a file"},
+                "ytimport": {"description": "Import DB from file (reply)"},
+            },
+            "strings": {
+                "no_query": "📟 <b>Where are the arguments?</b> Specify a target or reply to an audio.",
+                "no_tracks": "🐢 <b>Nothing found.</b> The base is silent.",
+                "searching": "🕔 <b>Parsing target...</b>",
+                "search_results": "🔥 <b>Dump-list for:</b> <i>{query}</i>\nAvailable targets:",
+                "downloading": "🔥 <b>Dumping source & rendering...</b>",
+                "pl_empty": "🐢 <b>Base is empty.</b>",
+                "pl_list": "📂 <b>Local DBs (Playlists):</b>\nChoose what to work with:",
+                "pl_added": "🔥 <b>Injected into {pl}:</b> {track}",
+                "pl_removed": "🗑 <b>Removed from {pl}:</b> {track}",
+                "pl_view": "📂 <b>Base:</b> {pl}\nTracks: {count}",
+                "pl_exists": "❗️ DB <b>{name}</b> already exists.",
+                "pl_renamed": "✅ <b>DB «{old}» renamed to «{new}»!</b>\nReopen the menu: <code>.ytpl</code>",
+                "trim_gone": "📛 Target vanished from DB.",
+                "trim_nofile": "📛 File is not in cache. Download it again.",
+                "trim_cut": "🔃 <b>Cutting audio...</b>",
+                "trim_ffmpeg": "📛 <b>ffmpeg error.</b>",
+                "trim_ok": "✅ <b>Track trimmed successfully!</b>",
+                "trim_hint": "🔃 <b>Send timecodes for trimming in the next message.\nFormat:</b> <code>0:15 - 1:10</code>",
+                "rename_hint": "✏️ <b>Send a new name for DB «{pl}» in the next message.</b>",
+                "cache_missing": "📛 <b>File missing in cache.</b> Remove from DB and save again.",
+                "dump_error": "📛 <b>Dump error.</b>\n❗️ {err}",
+                "upload": "🕔 <b>Uploading to Telegram...</b>",
+                "cache_stale": "📛 <b>Cache is stale.</b> Repeat the search.",
+                "go": "➡️ Let's go...",
+                "local_db": "📂 <b>Local base:</b> {title}",
+                "export_empty": "🐢 <b>Base is empty.</b> Nothing to export.",
+                "export_cap": "📦 <b>Playlist DB backup.</b>\nTo restore use <code>.ytimport</code> in reply to this file.",
+                "import_need": "📟 <b>Reply to a .json backup file.</b>",
+                "import_ok": "✅ <b>DB imported and merged successfully!</b>",
+                "import_err": "📛 <b>Import error:</b> <code>{err}</code>",
+                "batch_fmt": "📟 <b>Format:</b> <code>.ytbatch [DB] https://www.youtube.com/watch?v=VQCeN3M696g</code>",
+                "batch_parsing": "🕔 <b>Parsing playlist in batch...</b>",
+                "batch_none": "📛 <b>Nothing found or the link is broken.</b>",
+                "batch_done": "🔥 <b>Mass-inject complete.</b>\nAdded {count} tracks to DB «{pl}».",
+                "add_fmt": "📟 <b>Format:</b> <code>.ytadd [DB] [Target/Reply to audio/voice]</code>",
+                "add_badfmt": "📛 <b>Invalid format!</b> Only .mp3 or voice notes allowed.",
+                "add_id3": "🕔 <b>Localizing source and embedding ID3...</b>",
+                "add_dup": "❗️ <b>Target already indexed in {pl}</b>",
+                "add_dup_title": "❗️ <b>Target already indexed in {pl}:</b> {title}",
+                "add_ffmpeg": "📛 <b>ffmpeg error while embedding ID3/converting.</b>",
+                "add_syserr": "📛 <b>System error:</b> <code>{err}</code>",
+                "rm_fmt": "📟 <b>Format:</b> <code>.ytrm [DB] [Track name]</code>",
+                "rm_none": "📛 <b>Target not found.</b>",
+                "pl_unavail": "📛 Target unavailable.",
+                "pl_del_err": "📛 Delete error.",
+                "pl_deleted": "🗑 DB {pl} erased.",
+                "track_removed": "🗑 Removed: {title}",
+                "btn_play": "▶️ {title}",
+                "btn_trim": "✂️",
+                "btn_del": "🗑",
+                "btn_rename": "✏️ Rename",
+                "btn_del_db": "🗑 Delete DB",
+                "btn_back": "🔙 Back",
+                "diag": "📝 System integrity verified: Core YTMusic module by @samsepi0l_ovf (AGPLv3). Repo: https://github.com/sepiol026-wq/",
+                "err_timeout": "Connection timeout. The server did not respond in time.",
+                "err_403": "Google returned 403 (Forbidden). IP is banned or cookies are invalid.",
+                "err_conn": "Connection dropped (possibly DPI/DNS block). Check the host.",
+                "err_auth": "Authorization required (captcha/login). Feed cookies.",
+                "err_unknown": "Unknown error, check the host logs.",
+                "err_ytdlp": "yt-dlp is not available in the sandbox.",
+            },
+        },
+        "ru": {
+            "name": "YTMusic",
+            "description": "Тулза для дампа музыки из YT с карточками и плейлистами. Парить себе мозг с локальным окружением не нужно.",
+            "commands": {
+                "yt": {"description": "<запрос> - Дамп трека из YT"},
+                "ytpl": {"description": "Менеджер локальных БД (плейлистов)"},
+                "ytadd": {"description": "<база> <запрос/реплай> - Инжект трека/войса в базу"},
+                "ytrm": {"description": "<база> <имя_трека> - Удалить трек из базы"},
+                "ytbatch": {"description": "<база> <ссылка на плейлист> - Масс дамп"},
+                "ytexport": {"description": "Экспорт всех БД в файл"},
+                "ytimport": {"description": "Импорт БД из файла (реплай)"},
+            },
+            "strings": {
+                "no_query": "📟 <b>Аргументы где?</b> Укажи таргет или сделай реплай на аудио.",
+                "no_tracks": "🐢 <b>Ничего не найдено.</b> База молчит.",
+                "searching": "🕔 <b>Паршу таргет...</b>",
+                "search_results": "🔥 <b>Дамп-лист для:</b> <i>{query}</i>\nДоступные таргеты:",
+                "downloading": "🔥 <b>Дамплю сурс & рендерю...</b>",
+                "pl_empty": "🐢 <b>База пуста.</b>",
+                "pl_list": "📂 <b>Локальные БД (Плейлисты):</b>\nВыбирай с чем работать:",
+                "pl_added": "🔥 <b>Инжект в {pl}:</b> {track}",
+                "pl_removed": "🗑 <b>Удалено из {pl}:</b> {track}",
+                "pl_view": "📂 <b>База:</b> {pl}\nТреков: {count}",
+                "pl_exists": "❗️ БД <b>{name}</b> уже существует.",
+                "pl_renamed": "✅ <b>БД «{old}» переименована в «{new}»!</b>\nОткрой меню заново: <code>.ytpl</code>",
+                "trim_gone": "📛 Таргет пропал из БД.",
+                "trim_nofile": "📛 Файла нет в кэше. Скачай его заново.",
+                "trim_cut": "🔃 <b>Режу аудио...</b>",
+                "trim_ffmpeg": "📛 <b>Ошибка ffmpeg.</b>",
+                "trim_ok": "✅ <b>Трек успешно обрезан!</b>",
+                "trim_hint": "🔃 <b>Отправь таймкоды для обрезки следующим сообщением.\nФормат:</b> <code>0:15 - 1:10</code>",
+                "rename_hint": "✏️ <b>Отправь новое имя для БД «{pl}» следующим сообщением.</b>",
+                "cache_missing": "📛 <b>Файл отсутствует в кэше.</b> Удали из БД и сохрани заново.",
+                "dump_error": "📛 <b>Ошибка дампа.</b>\n❗️ {err}",
+                "upload": "🕔 <b>Аплоад в Telegram...</b>",
+                "cache_stale": "📛 <b>Кэш устарел.</b> Повторите поиск.",
+                "go": "➡️ Погнали...",
+                "local_db": "📂 <b>Локал-база:</b> {title}",
+                "export_empty": "🐢 <b>База пуста.</b> Нечего экспортировать.",
+                "export_cap": "📦 <b>Бэкап БД плейлистов.</b>\nДля восстановления используй команду <code>.ytimport</code> в реплай на этот файл.",
+                "import_need": "📟 <b>Сделай реплай на .json файл бэкапа.</b>",
+                "import_ok": "✅ <b>БД успешно импортирована и смержена!</b>",
+                "import_err": "📛 <b>Ошибка импорта:</b> <code>{err}</code>",
+                "batch_fmt": "📟 <b>Формат:</b> <code>.ytbatch [БД] https://www.youtube.com/watch?v=VQCeN3M696g</code>",
+                "batch_parsing": "🕔 <b>Паршу плейлист пачкой...</b>",
+                "batch_none": "📛 <b>Ничего не найдено или ссылка битая.</b>",
+                "batch_done": "🔥 <b>Масс-инжект завершен.</b>\nДобавлено {count} треков в БД «{pl}».",
+                "add_fmt": "📟 <b>Формат:</b> <code>.ytadd [БД] [Таргет/Реплай на аудио/войс]</code>",
+                "add_badfmt": "📛 <b>Некорректный формат!</b> Разрешен только .mp3 или голосовухи.",
+                "add_id3": "🕔 <b>Локализую сурс и вшиваю ID3...</b>",
+                "add_dup": "❗️ <b>Таргет уже проиндексирован в {pl}</b>",
+                "add_dup_title": "❗️ <b>Таргет уже проиндексирован в {pl}:</b> {title}",
+                "add_ffmpeg": "📛 <b>Ошибка ffmpeg при прошивке ID3/Конвертации.</b>",
+                "add_syserr": "📛 <b>Системная ошибка:</b> <code>{err}</code>",
+                "rm_fmt": "📟 <b>Формат:</b> <code>.ytrm [БД] [Имя трека]</code>",
+                "rm_none": "📛 <b>Таргет не найден.</b>",
+                "pl_unavail": "📛 Таргет недоступен.",
+                "pl_del_err": "📛 Ошибка удаления.",
+                "pl_deleted": "🗑 БД {pl} стерта.",
+                "track_removed": "🗑 Удален: {title}",
+                "btn_play": "▶️ {title}",
+                "btn_trim": "✂️",
+                "btn_del": "🗑",
+                "btn_rename": "✏️ Переименовать",
+                "btn_del_db": "🗑 Удалить БД",
+                "btn_back": "🔙 Назад",
+                "diag": "📝 System integrity verified: Core YTMusic module by @samsepi0l_ovf (AGPLv3). Repo: https://github.com/sepiol026-wq/",
+                "err_timeout": "Таймаут соединения. Сервер не ответил вовремя.",
+                "err_403": "Гугл выдал 403 (Forbidden). IP в бане или куки невалидны.",
+                "err_conn": "Соединение разорвано (Возможно блок DPI/DNS). Проверьте хост.",
+                "err_auth": "Требуется авторизация (Капча/Логин). Скормите cookies.",
+                "err_unknown": "Неизвестная ошибка, чекайте логи хоста.",
+                "err_ytdlp": "yt-dlp недоступен в песочнице.",
+            },
+        },
+    },
+}
+
+import asyncio
+import contextlib
+import io
+import json
+import os
+import re
+import shutil
+import sys
+import tempfile
+import textwrap
+import time
+
+try:
+    from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+    HAS_PIL = True
+except Exception:
+    HAS_PIL = False
+
+STORAGE_DIR = "/tmp/sandbox/ytmusic_storage"
+SEARCH_CACHE = {}
+RENAME_STATE = {}
+TRIM_STATE = {}
+FONT_CACHE = {"url": None, "bytes": None}
+
+
+def _t(ctx, key, **fmt):
+    en = HOTARU["lexicon"]["en"]["strings"].get(key, key)
+    try:
+        value = ctx.t("yt." + key, en, **fmt)
+    except Exception:
+        value = None
+    if not isinstance(value, str) or not value:
+        try:
+            value = en.format(**fmt)
+        except (KeyError, IndexError, ValueError):
+            value = en
+    return value
+
+
+def _esc(text):
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _btn(ctx, text, cb):
+    maker = getattr(ctx.ui, "button", None) or getattr(ctx.ui, "primary", None) or ctx.screens.button
+    return maker(text, cb)
+
+
+async def _fetch_bytes(ctx, url):
+    r = await ctx.net(url, method="GET", headers={"User-Agent": "YTMusic-Module/4.0 (Core by @samsepi0l_ovf; AGPLv3)"}, timeout=15)
+    if r.status_code != 200:
+        raise RuntimeError(f"HTTP {r.status_code}")
+    return r.content if getattr(r, "content", None) is not None else (r.text or "").encode("utf-8")
+
+
+class Banners:
+    def __init__(self, title, artists, duration, progress, track_cover, font_bytes, blur, dynamic_color=True):
+        self.title = title
+        self.artists = ", ".join(artists) if isinstance(artists, list) else artists
+        self.duration = duration
+        self.progress = progress
+        self.track_cover = track_cover
+        self.font_bytes = font_bytes
+        self.blur_intensity = blur
+        self.accent = self._get_dominant() if dynamic_color else "white"
+
+    def _get_dominant(self):
+        try:
+            c = Image.open(io.BytesIO(self.track_cover)).convert("RGB").resize((1, 1)).getpixel((0, 0))
+            return f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}"
+        except Exception:
+            return "white"
+
+    def _get_font(self, size, font_bytes):
+        return ImageFont.truetype(io.BytesIO(font_bytes), size)
+
+    def _prepare_cover(self, size, radius):
+        cover = Image.open(io.BytesIO(self.track_cover)).convert("RGBA")
+        cover = cover.resize((size, size), Image.Resampling.LANCZOS)
+        mask = Image.new("L", (size, size), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rounded_rectangle((0, 0, size, size), radius=radius, fill=255)
+        output = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        output.paste(cover, (0, 0), mask=mask)
+        return output
+
+    def _prepare_background(self, w, h):
+        bg = Image.open(io.BytesIO(self.track_cover)).convert("RGBA")
+        bg = bg.resize((w, h), Image.Resampling.LANCZOS)
+        bg = bg.filter(ImageFilter.GaussianBlur(radius=self.blur_intensity))
+        bg = ImageEnhance.Brightness(bg).enhance(0.35)
+        return bg
+
+    def _draw_progress_bar(self, draw, x, y, w, h, progress_pct, color="white", bg_color="#6b6b6b"):
+        draw.rounded_rectangle((x, y, x + w, y + h), radius=h / 2, fill=bg_color)
+        fill_w = int(w * progress_pct)
+        if fill_w > 0:
+            draw.rounded_rectangle((x, y, x + fill_w, y + h), radius=h / 2, fill=color)
+
+    def horizontal(self):
+        W, H = 1500, 600
+        padding = 60
+        cover_size = 480
+        title_font = self._get_font(55, self.font_bytes)
+        artist_font = self._get_font(45, self.font_bytes)
+        time_font = self._get_font(25, self.font_bytes)
+        img = self._prepare_background(W, H)
+        draw = ImageDraw.Draw(img)
+        cover = self._prepare_cover(cover_size, 30)
+        img.paste(cover, (padding, (H - cover_size) // 2), cover)
+        text_x = padding + cover_size + 60
+        text_y_start = 100
+        text_width_limit = W - text_x - padding
+        wrapper = textwrap.TextWrapper(width=23)
+        title_lines = wrapper.wrap(self.title)
+        if len(title_lines) > 2:
+            title_lines = title_lines[:2]
+            title_lines[-1] += "..."
+        current_y = text_y_start
+        title_height = title_font.getbbox("Ah")[3] + 15
+        for line in title_lines:
+            draw.text((text_x, current_y), line, font=title_font, fill="white")
+            current_y += title_height
+        display_artist = self.artists
+        while artist_font.getlength(display_artist) > text_width_limit and len(display_artist) > 0:
+            display_artist = display_artist[:-1]
+        if len(display_artist) < len(self.artists):
+            display_artist += "…"
+        artist_y = current_y + 10
+        draw.text((text_x, artist_y), display_artist, font=artist_font, fill="#b3b3b3")
+        cur_time = f"{(self.progress//1000//60):02}:{(self.progress//1000%60):02}"
+        dur_time = f"{(self.duration//1000//60):02}:{(self.duration//1000%60):02}"
+        cur_w = time_font.getlength(cur_time)
+        dur_w = time_font.getlength(dur_time)
+        bar_y = 480
+        bar_h = 8
+        gap = 25
+        draw.text((text_x, bar_y - 12), cur_time, font=time_font, fill="white")
+        bar_start_x = text_x + cur_w + gap
+        bar_end_x = text_x + text_width_limit - dur_w - gap
+        bar_w = bar_end_x - bar_start_x
+        prog_pct = self.progress / self.duration if self.duration > 0 else 0
+        self._draw_progress_bar(draw, bar_start_x, bar_y, bar_w, bar_h, prog_pct, color=self.accent)
+        draw.text((bar_end_x + gap, bar_y - 12), dur_time, font=time_font, fill="white")
+        try:
+            draw.text((10, 10), "Core by @samsepi0l_ovf - AGPLv3", fill=(255, 255, 255, 2))
+        except Exception:
+            pass
+        by = io.BytesIO()
+        img.save(by, format="PNG")
+        by.seek(0)
+        by.name = "banner.png"
+        return by
+
+    def vertical(self):
+        W, H = 1000, 1500
+        padding = 80
+        cover_size = 800
+        title_font = self._get_font(60, self.font_bytes)
+        artist_font = self._get_font(45, self.font_bytes)
+        time_font = self._get_font(35, self.font_bytes)
+        img = self._prepare_background(W, H)
+        draw = ImageDraw.Draw(img)
+        cover = self._prepare_cover(cover_size, 40)
+        cover_x = (W - cover_size) // 2
+        cover_y = 120
+        img.paste(cover, (cover_x, cover_y), cover)
+        text_area_y = cover_y + cover_size + 120
+        text_width_limit = W - (padding * 2)
+        wrapper = textwrap.TextWrapper(width=23)
+        title_lines = wrapper.wrap(self.title)
+        if len(title_lines) > 2:
+            title_lines = title_lines[:2]
+            title_lines[-1] += "..."
+        current_y = text_area_y
+        title_height = title_font.getbbox("Ah")[3] + 15
+        for line in title_lines:
+            w = title_font.getlength(line)
+            draw.text(((W - w) / 2, current_y), line, font=title_font, fill="white")
+            current_y += title_height
+        display_artist = self.artists
+        while artist_font.getlength(display_artist) > text_width_limit and len(display_artist) > 0:
+            display_artist = display_artist[:-1]
+        if len(display_artist) < len(self.artists):
+            display_artist += "…"
+        artist_w = artist_font.getlength(display_artist)
+        draw.text(((W - artist_w) / 2, current_y + 15), display_artist, font=artist_font, fill="#b3b3b3")
+        bar_y = text_area_y + 260
+        if len(title_lines) > 1:
+            bar_y += 60
+        bar_h = 8
+        bar_w = W - (padding * 2)
+        prog_pct = self.progress / self.duration if self.duration > 0 else 0
+        self._draw_progress_bar(draw, padding, bar_y, bar_w, bar_h, prog_pct, color=self.accent, bg_color="#6b6b6b")
+        cur_time = f"{(self.progress//1000//60):02}:{(self.progress//1000%60):02}"
+        dur_time = f"{(self.duration//1000//60):02}:{(self.duration//1000%60):02}"
+        draw.text((padding, bar_y + 40), cur_time, font=time_font, fill="white")
+        dur_w = time_font.getlength(dur_time)
+        draw.text((W - padding - dur_w, bar_y + 40), dur_time, font=time_font, fill="white")
+        try:
+            draw.text((10, 10), "Core by @samsepi0l_ovf - AGPLv3", fill=(255, 255, 255, 2))
+        except Exception:
+            pass
+        by = io.BytesIO()
+        img.save(by, format="PNG")
+        by.seek(0)
+        by.name = "banner.png"
+        return by
+
+
+def _cleanup_cache():
+    if len(SEARCH_CACHE) > 30:
+        for k in list(SEARCH_CACHE.keys())[:-20]:
+            SEARCH_CACHE.pop(k, None)
+
+
+def _get_base_dlp_args():
+    return [
+        sys.executable, "-m", "yt_dlp",
+        "--socket-timeout", "15",
+        "--no-warnings", "--ignore-errors",
+        "--extractor-retries", "3",
+        "--retries", "3",
+        "--fragment-retries", "3",
+        "--concurrent-fragments", "4",
+        "--no-playlist",
+    ]
+
+
+def _get_playlists(ctx):
+    playlists = ctx.state.get("playlists", {"History": [], "Favs": []})
+    if not isinstance(playlists, dict):
+        playlists = {"History": [], "Favs": []}
+    playlists.setdefault("History", [])
+    playlists.setdefault("Favs", [])
+    return playlists
+
+
+def _set_playlists(ctx, playlists):
+    playlists.setdefault("History", [])
+    playlists.setdefault("Favs", [])
+    ctx.state.set("playlists", playlists)
+
+
+def _get_track_paths(track_id):
+    return {
+        "audio": os.path.join(STORAGE_DIR, f"{track_id}.mp3"),
+        "thumb": os.path.join(STORAGE_DIR, f"{track_id}.jpg"),
+        "banner": os.path.join(STORAGE_DIR, f"{track_id}_banner.png"),
+        "meta": os.path.join(STORAGE_DIR, f"{track_id}.json"),
+    }
+
+
+def _read_json_file(path):
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as file_obj:
+            return json.load(file_obj)
+    except Exception:
+        return None
+
+
+def _write_json_file(path, payload):
+    temp_path = f"{path}.tmp"
+    with open(temp_path, "w", encoding="utf-8") as file_obj:
+        json.dump(payload, file_obj, ensure_ascii=False, indent=2)
+    os.replace(temp_path, path)
+
+
+def _normalize_track(raw, source=None):
+    raw = dict(raw or {})
+    track_id = str(raw.get("id") or "").strip()
+    if not track_id:
+        return {}
+    uploader = (
+        raw.get("uploader")
+        or raw.get("channel")
+        or raw.get("artist")
+        or raw.get("creator")
+        or "Unknown"
+    )
+    normalized = {
+        "id": track_id,
+        "title": (raw.get("title") or "Unknown").strip() or "Unknown",
+        "uploader": str(uploader).strip() or "Unknown",
+        "duration": int(raw.get("duration") or 0),
+        "source": source or raw.get("source") or "yt",
+        "_ovf_sign": raw.get("_ovf_sign") or "https://github.com/sepiol026-wq/",
+    }
+    for key in ("channel", "artist", "thumbnail", "thumbnails", "webpage_url"):
+        if raw.get(key):
+            normalized[key] = raw.get(key)
+    return normalized
+
+
+def _extract_cover_url(track_info, meta=None):
+    candidates = []
+    for source in (track_info or {}, meta or {}):
+        thumb = source.get("thumbnail")
+        if thumb:
+            candidates.append(thumb)
+        thumbs = source.get("thumbnails") or []
+        if isinstance(thumbs, list):
+            for item in thumbs:
+                if isinstance(item, dict) and item.get("url"):
+                    candidates.append(item["url"])
+    for candidate in reversed(candidates):
+        if candidate:
+            return candidate
+    return "https://via.placeholder.com/800"
+
+
+async def _get_font_bytes(ctx):
+    font_url = ctx.config.get("font", "https://raw.githubusercontent.com/kamekuro/assets/master/fonts/Onest-Bold.ttf")
+    if FONT_CACHE["url"] == font_url and FONT_CACHE["bytes"]:
+        return FONT_CACHE["bytes"]
+    font_bytes = await _fetch_bytes(ctx, font_url)
+    FONT_CACHE["url"] = font_url
+    FONT_CACHE["bytes"] = font_bytes
+    return font_bytes
+
+
+async def _ensure_visual_assets(ctx, track_info, duration_sec, paths, meta=None):
+    if not HAS_PIL:
+        return
+    if os.path.exists(paths["thumb"]) and os.path.exists(paths["banner"]):
+        return
+    if os.path.exists(paths["thumb"]):
+        with open(paths["thumb"], "rb") as file_obj:
+            cover_bytes = file_obj.read()
+    else:
+        cover_url = _extract_cover_url(track_info, meta)
+        try:
+            cover_bytes = await _fetch_bytes(ctx, cover_url)
+        except Exception:
+            return
+        with open(paths["thumb"], "wb") as file_obj:
+            file_obj.write(cover_bytes)
+    font_bytes = await _get_font_bytes(ctx)
+    banners = Banners(
+        title=track_info.get("title", "Unknown"),
+        artists=track_info.get("uploader") or track_info.get("channel") or "Unknown",
+        duration=duration_sec * 1000,
+        progress=0,
+        track_cover=cover_bytes,
+        font_bytes=font_bytes,
+        blur=int(ctx.config.get("blur_intensity", 40)),
+        dynamic_color=bool(ctx.config.get("dynamic_colors", True)),
+    )
+    banner_file = (
+        banners.vertical()
+        if ctx.config.get("banner_version", "horizontal") == "vertical"
+        else banners.horizontal()
+    )
+    with open(paths["banner"], "wb") as file_obj:
+        file_obj.write(banner_file.read())
+
+
+async def _run_proc(cmd, timeout=60):
+    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        return proc.returncode, stdout, stderr
+    except asyncio.TimeoutError:
+        try:
+            proc.kill()
+        except ProcessLookupError:
+            pass
+        return -1, b"", b"TimeoutError: Process took too long and was killed."
+
+
+def _parse_yt_error(ctx, stderr_bytes):
+    text = stderr_bytes.decode('utf-8', errors='ignore').lower()
+    if "timeout" in text or "timeouterror" in text:
+        return _t(ctx, "err_timeout")
+    if "403" in text:
+        return _t(ctx, "err_403")
+    if any(e in text for e in ["name or service not known", "unreachable", "connection reset"]):
+        return _t(ctx, "err_conn")
+    if "sign in" in text:
+        return _t(ctx, "err_auth")
+    return _t(ctx, "err_unknown")
+
+
+def _time_to_sec(t_str):
+    parts = t_str.split(":")
+    if len(parts) == 2:
+        return int(parts[0]) * 60 + int(parts[1])
+    elif len(parts) == 3:
+        return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+    return 0
+
+
+def _ffmpeg_path():
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return shutil.which("ffmpeg") or "ffmpeg"
+
+
+async def _ensure_youtube_track_cached(ctx, track_info):
+    os.makedirs(STORAGE_DIR, exist_ok=True)
+    track_info = _normalize_track(track_info, source="yt")
+    track_id = track_info["id"]
+    paths = _get_track_paths(track_id)
+    meta = _read_json_file(paths["meta"]) or {}
+    duration_sec = int(track_info.get("duration") or meta.get("duration") or 0)
+    if os.path.exists(paths["audio"]):
+        await _ensure_visual_assets(ctx, track_info, duration_sec, paths, meta=meta)
+        return paths, meta
+
+    dl_dir = tempfile.mkdtemp(prefix="ytmusic_cache_")
+    try:
+        yt_url = (
+            track_info.get("webpage_url")
+            or f"https://music.youtube.com/watch?v={track_id}"
+        )
+        cmd = _get_base_dlp_args() + [
+            "--format", "bestaudio/best",
+            "-x", "--audio-format", "mp3",
+            "--audio-quality", "0",
+            "--ffmpeg-location", _ffmpeg_path(),
+            "--embed-thumbnail", "--embed-metadata",
+            "--write-info-json",
+            "--parse-metadata", "title:%(title)s",
+            "--parse-metadata", "artist:%(artist,creator,uploader)s",
+            "-o", f"{dl_dir}/%(id)s.%(ext)s",
+            yt_url,
+        ]
+        returncode, stdout, stderr = await _run_proc(cmd, timeout=180)
+        mp3_path = os.path.join(dl_dir, f"{track_id}.mp3")
+        if returncode != 0 or not os.path.exists(mp3_path):
+            raise RuntimeError(_parse_yt_error(ctx, stderr))
+        info_path = os.path.join(dl_dir, f"{track_id}.info.json")
+        info = _read_json_file(info_path) or {}
+        duration_sec = int(
+            track_info.get("duration") or info.get("duration") or duration_sec or 0
+        )
+        meta = {
+            "id": track_id,
+            "title": track_info.get("title") or info.get("title") or "Unknown",
+            "uploader": track_info.get("uploader")
+            or info.get("uploader")
+            or info.get("channel")
+            or "Unknown",
+            "duration": duration_sec,
+            "thumbnail": _extract_cover_url(track_info, info),
+            "fetched_at": int(time.time()),
+            "source": "yt",
+            "stdout_size": len(stdout or b""),
+        }
+        shutil.copy(mp3_path, paths["audio"])
+        _write_json_file(paths["meta"], meta)
+        await _ensure_visual_assets(ctx, {**track_info, **meta}, duration_sec, paths, meta=meta)
+        return paths, meta
+    finally:
+        shutil.rmtree(dl_dir, ignore_errors=True)
+
+
+async def _search_tracks(ctx, query, limit=5):
+    cmd = _get_base_dlp_args() + ["--dump-json", f"ytsearch{limit}:{query}"]
+    returncode, stdout, stderr = await _run_proc(cmd, timeout=45)
+    results = []
+    if stdout:
+        for line in stdout.decode('utf-8', errors='ignore').split('\n'):
+            if not line.strip():
+                continue
+            try:
+                track = _normalize_track(json.loads(line), source="yt")
+                if track:
+                    results.append(track)
+            except json.JSONDecodeError:
+                pass
+    return results
+
+
+async def _dl_and_send(ctx, call_or_msg, track_info, target_chat_id):
+    track_info = _normalize_track(track_info, source=track_info.get("source", "yt"))
+    track_id = str(track_info.get("id"))
+    source = track_info.get("source", "yt")
+    track_title = track_info.get("title", "Unknown")
+    track_artist = track_info.get("uploader") or track_info.get("channel") or "Unknown Artist"
+    duration_sec = track_info.get("duration", 0)
+    paths = _get_track_paths(track_id)
+    audio_path = paths["audio"]
+
+    if source == "tg":
+        if not os.path.exists(audio_path):
+            await ctx.respond(_t(ctx, "cache_missing"), parse_mode="HTML")
+            return
+        with open(audio_path, "rb") as f:
+            await ctx.reply_audio(f.read(), title=track_title, performer=track_artist, caption=_t(ctx, "local_db", title=_esc(track_title)))
+        with contextlib.suppress(Exception):
+            await ctx.delete()
+        return
+
+    yt_url = f"https://music.youtube.com/watch?v={track_id}"
+    try:
+        paths, meta = await _ensure_youtube_track_cached(ctx, track_info)
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        err_text = _t(ctx, "dump_error", err=_esc(str(e)[:160]))
+        await ctx.respond(err_text, parse_mode="HTML")
+        return
+
+    audio_path = paths["audio"]
+    thumb_path = paths["thumb"]
+    banner_path = paths["banner"]
+    track_title = meta.get("title") or track_title
+    track_artist = meta.get("uploader") or track_artist
+    duration_sec = int(meta.get("duration") or duration_sec or 0)
+
+    sdata = {
+        "track": _esc(track_title),
+        "artists": _esc(track_artist),
+        "duration": f"{duration_sec//60}:{duration_sec%60:02}",
+        "yt_url": yt_url,
+        "ytm_url": yt_url,
+    }
+    try:
+        caption = ctx.config.get("custom_text", HOTARU["config_schema"]["custom_text"]["default"]).format(**sdata)
+    except Exception:
+        caption = HOTARU["config_schema"]["custom_text"]["default"].format(**sdata)
+
+    with contextlib.suppress(Exception):
+        await ctx.respond(_t(ctx, "upload"), parse_mode="HTML")
+
+    if os.path.exists(banner_path):
+        with open(banner_path, "rb") as f:
+            with contextlib.suppress(Exception):
+                await ctx.reply_photo(f.read(), caption="")
+    with open(audio_path, "rb") as f:
+        await ctx.reply_audio(f.read(), title=track_title, performer=track_artist, caption=caption)
+
+    with contextlib.suppress(Exception):
+        await ctx.delete()
+
+
+async def _inline_search_dl(ctx, call, call_id, track_idx, target_chat_id):
+    with contextlib.suppress(Exception):
+        await ctx.respond(_t(ctx, "downloading"), parse_mode="HTML")
+    results = SEARCH_CACHE.get(call_id)
+    if not results or track_idx >= len(results):
+        with contextlib.suppress(Exception):
+            await ctx.respond(_t(ctx, "cache_stale"), parse_mode="HTML")
+        return
+    track_info = results[track_idx]
+    await _dl_and_send(ctx, call, track_info, target_chat_id)
+    SEARCH_CACHE.pop(call_id, None)
+
+
+def _search_buttons(ctx, results, call_id, target_chat_id):
+    keyboard = []
+    for idx, track in enumerate(results):
+        title = track.get("title", "Unknown")[:30]
+        artist = (track.get("uploader") or track.get("channel") or "Unknown")[:15]
+
+        async def cb(call, payload=None, _cid=call_id, _i=idx, _chat=target_chat_id):
+            await _inline_search_dl(ctx, call, _cid, _i, _chat)
+
+        keyboard.append([_btn(ctx, f"{title} — {artist}", cb)])
+    return keyboard
+
+
+async def _inline_pl_view(ctx, call, pl_name, target_chat_id):
+    playlists = _get_playlists(ctx)
+    tracks = playlists.get(pl_name, [])
+    text = _t(ctx, "pl_view", pl=_esc(pl_name), count=len(tracks))
+    keyboard = []
+
+    for idx, t in enumerate(tracks[:15]):
+        title = t.get("title", "Unknown")[:25]
+
+        async def play(call, payload=None, _pl=pl_name, _i=idx, _chat=target_chat_id):
+            await _inline_pl_play(ctx, call, _pl, _i, _chat)
+
+        row = [_btn(ctx, _t(ctx, "btn_play", title=title), play)]
+        if pl_name != "History":
+            async def trim(call, payload=None, _pl=pl_name, _i=idx, _chat=target_chat_id):
+                await _inline_trim_req(ctx, call, _pl, _i, _chat)
+
+            async def rm(call, payload=None, _pl=pl_name, _i=idx, _chat=target_chat_id):
+                await _inline_rm_track(ctx, call, _pl, _i, _chat)
+
+            row.append(_btn(ctx, _t(ctx, "btn_trim"), trim))
+            row.append(_btn(ctx, _t(ctx, "btn_del"), rm))
+        keyboard.append(row)
+
+    admin_row = []
+    if pl_name != "History":
+        async def ren(call, payload=None, _pl=pl_name, _chat=target_chat_id):
+            await _inline_pl_rename_req(ctx, call, _pl, _chat)
+
+        async def dele(call, payload=None, _pl=pl_name, _chat=target_chat_id):
+            await _inline_pl_delete(ctx, call, _pl, _chat)
+
+        admin_row.append(_btn(ctx, _t(ctx, "btn_rename"), ren))
+        admin_row.append(_btn(ctx, _t(ctx, "btn_del_db"), dele))
+    if admin_row:
+        keyboard.append(admin_row)
+
+    async def back(call, payload=None, _chat=target_chat_id):
+        await _inline_pl_back(ctx, call, _chat)
+
+    keyboard.append([_btn(ctx, _t(ctx, "btn_back"), back)])
+    with contextlib.suppress(Exception):
+        await ctx.respond(text, buttons=keyboard, parse_mode="HTML")
+
+
+async def _inline_trim_req(ctx, call, pl_name, track_idx, target_chat_id):
+    TRIM_STATE[target_chat_id] = {"pl_name": pl_name, "track_idx": track_idx}
+    with contextlib.suppress(Exception):
+        await ctx.respond(_t(ctx, "trim_hint"), parse_mode="HTML")
+
+
+async def _inline_pl_rename_req(ctx, call, pl_name, target_chat_id):
+    RENAME_STATE[target_chat_id] = {"pl_name": pl_name}
+    with contextlib.suppress(Exception):
+        await ctx.respond(_t(ctx, "rename_hint", pl=_esc(pl_name)), parse_mode="HTML")
+
+
+async def _inline_pl_delete(ctx, call, pl_name, target_chat_id):
+    playlists = _get_playlists(ctx)
+    if pl_name in playlists and pl_name != "History":
+        del playlists[pl_name]
+        _set_playlists(ctx, playlists)
+        await ctx.respond(_t(ctx, "pl_deleted", pl=_esc(pl_name)), parse_mode="HTML")
+        await _inline_pl_back(ctx, call, target_chat_id)
+    else:
+        await ctx.respond(_t(ctx, "pl_del_err"), parse_mode="HTML")
+
+
+async def _inline_rm_track(ctx, call, pl_name, track_idx, target_chat_id):
+    playlists = _get_playlists(ctx)
+    if pl_name in playlists and track_idx < len(playlists[pl_name]):
+        track = playlists[pl_name].pop(track_idx)
+        _set_playlists(ctx, playlists)
+        await ctx.respond(_t(ctx, "track_removed", title=_esc(track.get('title', 'Unknown'))), parse_mode="HTML")
+        await _inline_pl_view(ctx, call, pl_name, target_chat_id)
+    else:
+        await ctx.respond(_t(ctx, "pl_del_err"), parse_mode="HTML")
+
+
+async def _inline_pl_back(ctx, call, target_chat_id):
+    playlists = _get_playlists(ctx)
+    keyboard = []
+    for pl_name, tracks in playlists.items():
+        async def view(call, payload=None, _pl=pl_name, _chat=target_chat_id):
+            await _inline_pl_view(ctx, call, _pl, _chat)
+
+        keyboard.append([_btn(ctx, f"📁 {pl_name} [{len(tracks)}]", view)])
+    with contextlib.suppress(Exception):
+        await ctx.respond(_t(ctx, "pl_list"), buttons=keyboard, parse_mode="HTML")
+
+
+async def _inline_pl_play(ctx, call, pl_name, track_idx, target_chat_id):
+    playlists = _get_playlists(ctx)
+    if pl_name not in playlists or track_idx >= len(playlists[pl_name]):
+        with contextlib.suppress(Exception):
+            await ctx.respond(_t(ctx, "pl_unavail"), parse_mode="HTML")
+        return
+    track_info = playlists[pl_name][track_idx]
+    if pl_name != "History":
+        history = playlists.get("History", [])
+        history.insert(0, track_info)
+        seen = set()
+        new_history = []
+        for t in history:
+            if t.get("id") not in seen:
+                new_history.append(t)
+                seen.add(t.get("id"))
+        playlists["History"] = new_history[:20]
+        _set_playlists(ctx, playlists)
+    with contextlib.suppress(Exception):
+        await ctx.respond(_t(ctx, "downloading"), parse_mode="HTML")
+    await _dl_and_send(ctx, call, track_info, target_chat_id)
+
+
+async def watcher_global(ctx):
+    message = ctx.message
+    text = getattr(message, "text", None) or getattr(message, "message", None)
+    if not text or not isinstance(text, str):
+        return
+    chat_id = ctx.chat_id
+
+    if chat_id in RENAME_STATE:
+        old_name = RENAME_STATE[chat_id]["pl_name"]
+        new_name = text.strip()
+        del RENAME_STATE[chat_id]
+        playlists = _get_playlists(ctx)
+        if old_name in playlists:
+            if new_name in playlists:
+                await ctx.respond(_t(ctx, "pl_exists", name=_esc(new_name)), parse_mode="HTML")
+                return
+            playlists[new_name] = playlists.pop(old_name)
+            _set_playlists(ctx, playlists)
+            await ctx.delete()
+            await ctx.respond(_t(ctx, "pl_renamed", old=_esc(old_name), new=_esc(new_name)), parse_mode="HTML")
+        return
+
+    if chat_id in TRIM_STATE:
+        match = re.match(r"^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$", text.strip())
+        if not match:
+            return
+        state = TRIM_STATE.pop(chat_id)
+        pl_name = state["pl_name"]
+        track_idx = state["track_idx"]
+        start_t, end_t = match.groups()
+        playlists = _get_playlists(ctx)
+        if pl_name not in playlists or track_idx >= len(playlists[pl_name]):
+            return await ctx.respond(_t(ctx, "trim_gone"), parse_mode="HTML")
+        track = playlists[pl_name][track_idx]
+        track_id = track.get("id")
+        in_path = os.path.join(STORAGE_DIR, f"{track_id}.mp3")
+        out_path = os.path.join(STORAGE_DIR, f"{track_id}_cut.mp3")
+        if not os.path.exists(in_path):
+            return await ctx.respond(_t(ctx, "trim_nofile"), parse_mode="HTML")
+        await ctx.respond(_t(ctx, "trim_cut"), parse_mode="HTML")
+        cmd = [
+            _ffmpeg_path(), "-y", "-i", in_path,
+            "-ss", start_t, "-to", end_t,
+            "-map", "0:a", "-map", "0:v?", "-c:v", "copy",
+            "-c:a", "libmp3lame", "-q:a", "2", out_path
+        ]
+        ret, _, _ = await _run_proc(cmd, timeout=60)
+        if ret != 0 or not os.path.exists(out_path):
+            return await ctx.respond(_t(ctx, "trim_ffmpeg"), parse_mode="HTML")
+        shutil.move(out_path, in_path)
+        new_dur = _time_to_sec(end_t) - _time_to_sec(start_t)
+        track["duration"] = new_dur if new_dur > 0 else track["duration"]
+        playlists[pl_name][track_idx] = track
+        _set_playlists(ctx, playlists)
+        await ctx.respond(_t(ctx, "trim_ok"), parse_mode="HTML")
+
+
+async def command_ytexport(ctx, invocation=None):
+    playlists = _get_playlists(ctx)
+    if not playlists:
+        return await ctx.respond(_t(ctx, "export_empty"), parse_mode="HTML")
+    data = json.dumps(playlists, ensure_ascii=False, indent=4)
+    await ctx.reply_file(data.encode("utf-8"), filename="ytmusic_export.json", caption=_t(ctx, "export_cap"))
+    await ctx.delete()
+
+
+async def command_ytimport(ctx, invocation=None):
+    reply = ctx.reply_to
+    attachment = getattr(ctx, "reply_attachment", None) or getattr(reply, "document", None) if reply else None
+    if not attachment:
+        return await ctx.respond(_t(ctx, "import_need"), parse_mode="HTML")
+    try:
+        content = await ctx.download(attachment)
+        new_pl = json.loads(content.decode("utf-8"))
+        playlists = _get_playlists(ctx)
+        for name, tracks in new_pl.items():
+            if name not in playlists:
+                playlists[name] = []
+            for t in tracks:
+                normalized = _normalize_track(t, source=t.get("source"))
+                if normalized and not any(ext.get("id") == normalized.get("id") for ext in playlists[name]):
+                    playlists[name].append(normalized)
+        _set_playlists(ctx, playlists)
+        await ctx.respond(_t(ctx, "import_ok"), parse_mode="HTML")
+    except Exception as e:
+        await ctx.respond(_t(ctx, "import_err", err=_esc(str(e))), parse_mode="HTML")
+
+
+async def command_ytbatch(ctx, invocation):
+    args = invocation.raw_args
+    if not args or " " not in args:
+        return await ctx.respond(_t(ctx, "batch_fmt"), parse_mode="HTML")
+    pl_name, url = args.split(" ", 1)
+    await ctx.respond(_t(ctx, "batch_parsing"), parse_mode="HTML")
+    cmd = _get_base_dlp_args() + ["--flat-playlist", "--dump-json", url]
+    ret, stdout, _ = await _run_proc(cmd, timeout=120)
+    if not stdout:
+        return await ctx.respond(_t(ctx, "batch_none"), parse_mode="HTML")
+    playlists = _get_playlists(ctx)
+    if pl_name not in playlists:
+        playlists[pl_name] = []
+    count = 0
+    for line in stdout.decode('utf-8', errors='ignore').split('\n'):
+        if not line.strip():
+            continue
+        try:
+            data = json.loads(line)
+            track = _normalize_track(data, source="yt")
+            if not track:
+                continue
+            if not any(t.get("id") == str(track["id"]) for t in playlists[pl_name]):
+                playlists[pl_name].append(track)
+                count += 1
+        except Exception:
+            pass
+    _set_playlists(ctx, playlists)
+    await ctx.respond(_t(ctx, "batch_done", count=count, pl=_esc(pl_name)), parse_mode="HTML")
+
+
+async def command_yt(ctx, invocation):
+    args = invocation.raw_args
+    if not args:
+        return await ctx.respond(_t(ctx, "no_query"), parse_mode="HTML")
+    if args.strip() == "/_ytm_diag":
+        return await ctx.respond(_t(ctx, "diag"), parse_mode="HTML")
+    await ctx.respond(_t(ctx, "searching"), parse_mode="HTML")
+    results = await _search_tracks(ctx, args)
+    if not results:
+        return await ctx.respond(_t(ctx, "no_tracks"), parse_mode="HTML")
+    call_id = str(ctx.message.id)
+    target_chat_id = ctx.chat_id
+    SEARCH_CACHE[call_id] = results
+    _cleanup_cache()
+    keyboard = _search_buttons(ctx, results, call_id, target_chat_id)
+    await ctx.respond(
+        _t(ctx, "search_results", query=_esc(args)),
+        buttons=keyboard,
+        parse_mode="HTML",
+    )
+
+
+async def command_ytpl(ctx, invocation=None):
+    target_chat_id = ctx.chat_id
+    playlists = _get_playlists(ctx)
+    _set_playlists(ctx, playlists)
+    keyboard = []
+    for pl_name, tracks in playlists.items():
+        async def view(call, payload=None, _pl=pl_name, _chat=target_chat_id):
+            await _inline_pl_view(ctx, call, _pl, _chat)
+
+        keyboard.append([_btn(ctx, f"📁 {pl_name} [{len(tracks)}]", view)])
+    await ctx.respond(_t(ctx, "pl_list"), buttons=keyboard, parse_mode="HTML")
+
+
+async def command_ytadd(ctx, invocation):
+    args = invocation.raw_args
+    reply = ctx.reply_to
+    attachment = getattr(ctx, "reply_attachment", None) if not reply else (getattr(ctx, "reply_attachment", None) or getattr(reply, "document", None) or getattr(reply, "media", None))
+    if not args:
+        return await ctx.respond(_t(ctx, "add_fmt"), parse_mode="HTML")
+    parts = args.split(" ", 1)
+    pl_name = parts[0].strip()
+    query = parts[1].strip() if len(parts) > 1 else ""
+    playlists = _get_playlists(ctx)
+    if pl_name not in playlists:
+        playlists[pl_name] = []
+
+    if reply and attachment:
+        is_voice = bool(getattr(reply, "voice", None))
+        mime = getattr(attachment, "mime_type", "") or ""
+        if not is_voice and mime and mime not in ["audio/mpeg", "audio/ogg"]:
+            return await ctx.respond(_t(ctx, "add_badfmt"), parse_mode="HTML")
+        await ctx.respond(_t(ctx, "add_id3"), parse_mode="HTML")
+        audio = attachment
+        title = f"Voice {getattr(audio, 'id', 0)}" if is_voice else "Unknown"
+        artist = "Telegram User" if is_voice else "Unknown"
+        duration = 0
+        for attr in getattr(audio, "attributes", []) or []:
+            if type(attr).__name__ == "DocumentAttributeAudio":
+                title = getattr(attr, "title", None) or title
+                artist = getattr(attr, "performer", None) or artist
+                duration = getattr(attr, "duration", None) or duration
+        track_id = f"tg_{getattr(audio, 'id', 0)}"
+        if any(t.get("id") == track_id for t in playlists[pl_name]):
+            return await ctx.respond(_t(ctx, "add_dup", pl=_esc(pl_name)), parse_mode="HTML")
+        os.makedirs(STORAGE_DIR, exist_ok=True)
+        storage_path = os.path.join(STORAGE_DIR, f"{track_id}.mp3")
+        if not os.path.exists(storage_path):
+            temp_raw_path = os.path.join(STORAGE_DIR, f"raw_{track_id}.bin")
+            try:
+                raw = await ctx.download(attachment)
+                with open(temp_raw_path, "wb") as f:
+                    f.write(raw)
+                cmd = [
+                    _ffmpeg_path(), "-y", "-i", temp_raw_path,
+                    "-metadata", f"title={title}",
+                    "-metadata", f"artist={artist}"
+                ]
+                if is_voice or mime == "audio/ogg":
+                    cmd += ["-c:a", "libmp3lame", "-q:a", "2"]
+                else:
+                    cmd += ["-c", "copy"]
+                cmd.append(storage_path)
+                ret, _, _ = await _run_proc(cmd, timeout=60)
+                if os.path.exists(temp_raw_path):
+                    os.remove(temp_raw_path)
+                if ret != 0:
+                    return await ctx.respond(_t(ctx, "add_ffmpeg"), parse_mode="HTML")
+            except Exception as e:
+                return await ctx.respond(_t(ctx, "add_syserr", err=_esc(str(e)[:50])), parse_mode="HTML")
+        track = {
+            "id": track_id,
+            "title": title,
+            "uploader": artist,
+            "duration": duration,
+            "source": "tg",
+            "_ovf_sign": "https://github.com/sepiol026-wq/",
+        }
+        playlists[pl_name].append(track)
+        _set_playlists(ctx, playlists)
+        return await ctx.respond(_t(ctx, "pl_added", pl=_esc(pl_name), track=_esc(title)), parse_mode="HTML")
+
+    if not query:
+        return await ctx.respond(_t(ctx, "no_query"), parse_mode="HTML")
+    await ctx.respond(_t(ctx, "searching"), parse_mode="HTML")
+    results = await _search_tracks(ctx, query, limit=1)
+    if not results:
+        return await ctx.respond(_t(ctx, "no_tracks"), parse_mode="HTML")
+    track = _normalize_track(results[0], source="yt")
+    if any(t.get("id") == str(track.get("id")) for t in playlists[pl_name]):
+        return await ctx.respond(_t(ctx, "add_dup_title", pl=_esc(pl_name), title=_esc(track.get('title', ''))), parse_mode="HTML")
+    playlists[pl_name].append(track)
+    _set_playlists(ctx, playlists)
+    await ctx.respond(_t(ctx, "pl_added", pl=_esc(pl_name), track=_esc(track.get('title', 'Unknown'))), parse_mode="HTML")
+
+
+async def command_ytrm(ctx, invocation):
+    args = invocation.raw_args
+    if not args or " " not in args:
+        return await ctx.respond(_t(ctx, "rm_fmt"), parse_mode="HTML")
+    pl_name, query = args.split(" ", 1)
+    playlists = _get_playlists(ctx)
+    if pl_name not in playlists or not playlists[pl_name]:
+        return await ctx.respond(_t(ctx, "pl_empty"), parse_mode="HTML")
+    original_len = len(playlists[pl_name])
+    playlists[pl_name] = [t for t in playlists[pl_name] if query.lower() not in t.get("title", "").lower()]
+    if len(playlists[pl_name]) == original_len:
+        return await ctx.respond(_t(ctx, "rm_none"), parse_mode="HTML")
+    _set_playlists(ctx, playlists)
+    await ctx.respond(_t(ctx, "pl_removed", pl=_esc(pl_name), track=_esc(query)), parse_mode="HTML")

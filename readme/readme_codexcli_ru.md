@@ -12,7 +12,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/sepiol026-wq/GoyModules?style=for-the-badge&logo=git&label=last%20commit)](https://github.com/sepiol026-wq/GoyModules/commits/main)
 [![License](https://img.shields.io/github/license/sepiol026-wq/GoyModules?style=for-the-badge&label=license)](https://github.com/sepiol026-wq/GoyModules/blob/main/LICENSE)
 
-<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/CodexCLI.py) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/CodexCLI.py)</p>
+<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/heroku/CodexCLI.py) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/heroku/CodexCLI.py)</p>
 
 
 ![CodexCLI Banner](../assets/CodexCLI.png)
@@ -28,11 +28,11 @@ CodexCLI — AI-модуль для Hikka и Heroku с упором на CLI-а�
 Модуль разворачивает внутренний набор команд, поддерживает авторизацию Codex CLI и позволяет выполнять AI-задачи, патчи и вспомогательные workflow через команды юзербота.
 
 ## Файл модуля
-- `CodexCLI.py`
+- `heroku/CodexCLI.py` (архив Heroku)
 
 ## Установка
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/CodexCLI.py
+.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/heroku/CodexCLI.py
 ```
 
 ## Первый запуск (важно)

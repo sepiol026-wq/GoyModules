@@ -27,11 +27,12 @@ SoundCloudMusic turns your userbot into a music workflow tool: search tracks, du
 - Supports import/export and batch playlist ingest.
 
 ## Module file
-- `sc.py`
+- `sc.hmod`
 
 ## Installation
+Download the module file, send it to Hotaru, then load it with:
 ```text
-.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/sc.py
+.ld
 ```
 
 ## Commands

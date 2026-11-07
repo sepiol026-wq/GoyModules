@@ -1,0 +1,345 @@
+HOTARU = {
+    "id": "omni",
+    "version": "1.7.2",
+    "commands": ["omni"],
+    "aliases": {"dl": "omni"},
+    "capabilities": ["files", "shell", "net", "state"],
+    "config_schema": {
+        "ytdl_timeout": {
+            "type": "int",
+            "default": 300,
+            "min": 30,
+            "max": 3600,
+            "description": "Timeout for downloading",
+        },
+    },
+    "banner": "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/omniload.png",
+    "lexicon": {
+        "en": {
+            "name": "OmniLoad",
+            "description": "Universal media downloader — async chunked upload, instant.",
+            "commands": {
+                "omni": {
+                    "description": "<url> - Download media (Video/Audio) from any service",
+                },
+            },
+            "strings": {
+                "no_args": "<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> <b>No URL provided.</b> Please specify a link.",
+                "fetching": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Parsing target...</b>",
+                "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Target:</b> <i>{title}</i>\nChoose format & quality:",
+                "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Downloading & rendering...</b>",
+                "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Uploading to Telegram...</b>",
+                "error": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Error:</b> <code>{error}</code>",
+                "expired": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Cache expired.</b> Please search again.",
+                "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Source</a>",
+            },
+        },
+        "ru": {
+            "name": "OmniLoad",
+            "description": "Универсальный загрузчик медиа — асинхронный аплоад, мгновенно.",
+            "commands": {
+                "omni": {
+                    "description": "<ссылка> - Скачать медиа (Видео/Аудио) из любого сервиса",
+                },
+            },
+            "strings": {
+                "no_args": "<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> <b>Аргументы где?</b> Укажи ссылку.",
+                "fetching": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Паршу таргет...</b>",
+                "menu": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Таргет:</b> <i>{title}</i>\nВыбирай качество:",
+                "downloading": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Дамплю сурс & рендерю...</b>",
+                "uploading": "<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Аплоад в Telegram...</b>",
+                "error": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Ошибка:</b> <code>{error}</code>",
+                "expired": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Кэш устарел.</b> Сделай запрос заново.",
+                "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Сурс</a>",
+            },
+        },
+    },
+}
+
+# ====================================================================================================================
+#   OFFICIAL USERNAMES: @goymodules | @samsepi0l_ovf
+#   MODULE: omni
+#
+#   THIS MODULE IS LICENSED UNDER GNU AGPLv3, PROTECTED AGAINST UNAUTHORIZED COPYING/RESALE,
+#   AND ITS ORIGINAL AUTHORSHIP BELONGS TO @samsepi0l_ovf.
+#   ALL OFFICIAL UPDATES, RELEASE NOTES, AND PATCHES ARE PUBLISHED IN THE TELEGRAM CHANNEL @goymodules.
+# ====================================================================================================================
+
+import asyncio
+import contextlib
+import json
+import os
+import shutil
+import sys
+import tempfile
+import uuid
+
+
+def _t(ctx, key, default="", **params):
+    try:
+        value = ctx.t("omni." + key, default, **params)
+    except Exception:
+        value = None
+    if not isinstance(value, str) or not value:
+        try:
+            value = default.format(**params)
+        except (KeyError, IndexError, ValueError):
+            value = default
+    return value
+
+
+def _ffmpeg_location():
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return shutil.which("ffmpeg")
+
+
+def _base_cmd():
+    cmd = [sys.executable, "-m", "yt_dlp"]
+    ffmpeg_path = _ffmpeg_location()
+    if ffmpeg_path:
+        cmd += ["--ffmpeg-location", ffmpeg_path]
+    return cmd
+
+
+async def _run_proc(cmd, timeout=60):
+    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        return proc.returncode, stdout, stderr
+    except asyncio.TimeoutError:
+        with contextlib.suppress(ProcessLookupError):
+            proc.kill()
+        return -1, b"", b"TimeoutError"
+
+
+def _cache_get(ctx):
+    cache = ctx.state.get("cache", {})
+    return cache if isinstance(cache, dict) else {}
+
+
+def _cache_put(ctx, cache_id, info, url):
+    cache = _cache_get(ctx)
+    if len(cache) >= 50:
+        cache.pop(next(iter(cache)))
+    cache[cache_id] = {"info": info, "url": url}
+    ctx.state.set("cache", cache)
+
+
+def _cache_pop(ctx, cache_id):
+    cache = _cache_get(ctx)
+    data = cache.pop(cache_id, None)
+    ctx.state.set("cache", cache)
+    return data
+
+
+def _label_for(h):
+    if h >= 4320:
+        return "8K"
+    if h >= 2160:
+        return "4K"
+    if h >= 1440:
+        return "2K"
+    if h >= 1080:
+        return "1080p"
+    if h >= 720:
+        return "720p"
+    if h >= 480:
+        return "480p"
+    if h >= 360:
+        return "360p"
+    return f"{h}p"
+
+
+def _height_map(info):
+    heights = {}
+    for f in info.get("formats", []):
+        vcodec = f.get("vcodec", "none")
+        h = f.get("height")
+        if vcodec and vcodec != "none" and h and h > 0:
+            if h not in heights or (f.get("filesize") or 0) > (heights[h].get("filesize") or 0):
+                heights[h] = f
+    label_map = []
+    seen_labels = set()
+    for h in sorted(heights.keys(), reverse=True):
+        lbl = _label_for(h)
+        if lbl not in seen_labels:
+            seen_labels.add(lbl)
+            label_map.append((lbl, h))
+    return heights, label_map
+
+
+async def _fetch_info(ctx, url, timeout=45):
+    cmd = _base_cmd() + [
+        "--no-warnings", "--dump-json",
+        "--extractor-args", "youtube:player_client=android",
+        url,
+    ]
+    ret, stdout, stderr = await _run_proc(cmd, timeout=timeout)
+    if ret != 0 or not stdout:
+        err_text = stderr.decode("utf-8", errors="ignore")[-100:]
+        return None, err_text or "Extraction failed"
+    try:
+        return json.loads(stdout.decode("utf-8").split("\n")[0]), None
+    except json.JSONDecodeError:
+        return None, "JSON Parse failed"
+
+
+async def _do_download(ctx, format_spec, media_type, info, url, force=False):
+    ytdl_timeout = ctx.config.get("ytdl_timeout", 300)
+    dl_dir = tempfile.mkdtemp(prefix="omniload_")
+
+    cmd = _base_cmd() + [
+        "--format", format_spec,
+        "--extractor-args", "youtube:player_client=android",
+        "-o", os.path.join(dl_dir, "%(id)s.%(ext)s"),
+        "--no-playlist",
+        "--concurrent-fragments", "16",
+        "--buffer-size", "16K",
+        "--no-check-certificates",
+    ]
+
+    if not force:
+        cmd.append("--embed-metadata")
+
+    if media_type == "video":
+        cmd += ["--merge-output-format", "mp4"]
+    elif media_type in ("audio", "flac"):
+        ext = "flac" if media_type == "flac" else "mp3"
+        cmd += ["-x", "--audio-format", ext]
+
+    cmd.append(url)
+
+    ret, _, stderr = await _run_proc(cmd, timeout=ytdl_timeout)
+
+    try:
+        out_files = [
+            f for f in os.listdir(dl_dir)
+            if os.path.isfile(os.path.join(dl_dir, f))
+            and not f.endswith(".part")
+            and not f.endswith(".ytdl")
+        ]
+        target_file = out_files[0] if out_files else None
+
+        if ret != 0 or not target_file:
+            err_text = stderr.decode("utf-8", errors="ignore")[-100:]
+            with contextlib.suppress(Exception):
+                await ctx.edit(_t(ctx, "error", "<b>Error:</b> <code>{error}</code>", error=err_text or "Download failed"), parse_mode="HTML")
+            return
+
+        final_path = os.path.join(dl_dir, target_file)
+
+        title = info.get("title", "Unknown")
+        author = info.get("uploader", info.get("channel", "Unknown User"))
+
+        caption = _t(
+            ctx, "caption",
+            "<b>{title}</b>\n{author}\n<a href='{url}'>Source</a>",
+            title=ctx.html.escape(title),
+            author=ctx.html.escape(author),
+            url=url,
+        )
+
+        if info.get("tags"):
+            tags_str = " ".join([f"#{t.replace(' ', '_')}" for t in info["tags"][:5]])
+            caption += f"\n\n{tags_str}"
+
+        with contextlib.suppress(Exception):
+            await ctx.edit(_t(ctx, "uploading", "<b>Uploading to Telegram...</b>"), parse_mode="HTML")
+
+        if media_type == "video":
+            await ctx.reply_video(final_path, caption=caption, supports_streaming=True)
+        else:
+            await ctx.reply_audio(final_path, title=title, performer=author, caption=caption)
+
+        with contextlib.suppress(Exception):
+            await ctx.delete()
+
+    except Exception as upload_err:
+        with contextlib.suppress(Exception):
+            await ctx.edit(_t(ctx, "error", "<b>Error:</b> <code>{error}</code>", error=f"Send Error: {upload_err}"), parse_mode="HTML")
+
+    finally:
+        shutil.rmtree(dl_dir, ignore_errors=True)
+
+
+async def command_omni(ctx):
+    args = (ctx.raw_args or "").strip()
+    if not args:
+        await ctx.respond(_t(ctx, "no_args", "<b>No URL provided.</b> Please specify a link."), parse_mode="HTML")
+        return
+
+    force = False
+    if args.endswith(" --force"):
+        args = args[:-len(" --force")].strip()
+        force = True
+    elif args.endswith(" -f"):
+        args = args[:-len(" -f")].strip()
+        force = True
+
+    await ctx.respond(_t(ctx, "fetching", "<b>Parsing target...</b>"), parse_mode="HTML")
+
+    info, err = await _fetch_info(ctx, args)
+    if info is None:
+        await ctx.edit(_t(ctx, "error", "<b>Error:</b> <code>{error}</code>", error=err), parse_mode="HTML")
+        return
+
+    if force:
+        formats = info.get("formats", [])
+        is_video = any(
+            (f.get("vcodec") and f.get("vcodec") != "none" and (f.get("height") or 0) > 0)
+            for f in formats
+        ) if formats else False
+        format_spec = "bestvideo+bestaudio[ext=m4a]/best[ext=mp4]/best" if is_video else "bestaudio[ext=m4a]/best"
+        media_type = "video" if is_video else "audio"
+        await ctx.edit(_t(ctx, "downloading", "<b>Downloading & rendering...</b>"), parse_mode="HTML")
+        await _do_download(ctx, format_spec, media_type, info, args, force=True)
+        return
+
+    cache_id = str(uuid.uuid4())[:8]
+    _cache_put(ctx, cache_id, info, args)
+
+    title = info.get("title", "Unknown")[:40]
+    heights, label_map = _height_map(info)
+
+    def make_cb(format_spec, media_type):
+        async def cb(handle):
+            data = _cache_pop(ctx, cache_id)
+            if not data:
+                with contextlib.suppress(Exception):
+                    await ctx.edit(_t(ctx, "expired", "<b>Cache expired.</b> Please search again."), parse_mode="HTML")
+                return
+            with contextlib.suppress(Exception):
+                await ctx.edit(_t(ctx, "downloading", "<b>Downloading & rendering...</b>"), parse_mode="HTML")
+            await _do_download(ctx, format_spec, media_type, data["info"], data["url"])
+        return cb
+
+    buttons = []
+    row = []
+    for lbl, h in label_map[:6]:
+        fid = heights[h]["format_id"]
+        spec = f"{fid}+bestaudio[ext=m4a]/best[ext=mp4]/best"
+        row.append(ctx.screens.primary(f"🎬 {lbl}", make_cb(spec, "video")))
+        if len(row) == 2:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+
+    buttons.append([
+        ctx.screens.button("🎧 MP3", make_cb("bestaudio/best", "audio")),
+        ctx.screens.button("🎧 FLAC", make_cb("bestaudio/best", "flac")),
+    ])
+
+    async def cancel(handle):
+        _cache_pop(ctx, cache_id)
+        with contextlib.suppress(Exception):
+            await ctx.delete()
+
+    buttons.append([ctx.screens.danger("❌ Cancel", cancel)])
+
+    body = _t(ctx, "menu", "<b>Target:</b> <i>{title}</i>\nChoose format & quality:", title=ctx.html.escape(title))
+    await ctx.screens.show("OmniLoad", body, buttons=buttons)
+
