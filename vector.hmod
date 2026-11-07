@@ -1691,6 +1691,8 @@ class Vector(_NativeModule):
             log.debug('on_unload: HTTP session closed')
 
     async def _net_req(self, method, path, token='', params=None, json_data=None, as_bytes=False, timeout=None):
+        if path == '/api/search':
+            params = {**(params or {}), 'platform': 'hotaru'}
         if timeout is None:
             timeout = 90 if path == '/api/search' else 15
         log.debug('_net_req: %s %s params=%s json=%s bytes=%s timeout=%s', method, path, bool(params), bool(json_data), as_bytes, timeout)
