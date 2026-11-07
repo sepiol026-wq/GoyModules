@@ -215,14 +215,15 @@ def _btn(ctx, text, cb, payload=None):
 
 
 async def _fetch_bytes(ctx, url):
-    r = await ctx.net(url, method="GET", headers=SC_HDRS, timeout=15)
-    if r.status_code != 200:
-        raise RuntimeError(f"HTTP {r.status_code}")
-    return r.content if getattr(r, "content", None) is not None else (r.text or "").encode("utf-8")
+    r = await ctx.net(url, method="GET", binary=True, headers=SC_HDRS, timeout=15)
+    if r["status"] != 200:
+        raise RuntimeError("HTTP " + str(r["status"]))
+    import base64
+    return base64.b64decode(r["body"], validate=True)
 
 
-async def _net_get(ctx, url, timeout=15):
-    r = await ctx.net(url, method="GET", headers=SC_HDRS, timeout=timeout)
+async def _net_get(ctx, url, timeout=15, binary=False):
+    r = await ctx.net(url, method="GET", binary=binary, headers=SC_HDRS, timeout=timeout)
     return r
 
 
@@ -415,6 +416,8 @@ def _set_playlists(ctx, playlists):
 
 
 def _get_track_paths(track_id):
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", str(track_id)):
+        raise ValueError("Invalid track ID")
     return {
         "audio": os.path.join(STORAGE_DIR, f"{track_id}.mp3"),
         "thumb": os.path.join(STORAGE_DIR, f"{track_id}.jpg"),
@@ -443,7 +446,7 @@ def _write_json_file(path, payload):
 def _normalize_track(raw, source=None):
     raw = dict(raw or {})
     track_id = str(raw.get("id") or "").strip()
-    if not track_id:
+    if not track_id or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", track_id):
         return {}
     uploader = (
         raw.get("uploader")
@@ -537,7 +540,7 @@ async def _get_client_id(ctx, html):
     for script_url in reversed(m):
         try:
             r = await _net_get(ctx, script_url, timeout=12)
-            body = r.text or ""
+            body = r["body"] or ""
             cm = re.search(r'client_id\s*[:=]\s*"([a-zA-Z0-9]{32})"', body)
             if cm:
                 return cm.group(1)
@@ -548,9 +551,9 @@ async def _get_client_id(ctx, html):
 
 async def _download_soundcloud_track(ctx, track_url, out_path):
     r = await _net_get(ctx, track_url)
-    if r.status_code != 200:
+    if r["status"] != 200:
         raise ValueError("SoundCloud page not reachable")
-    html = r.text or ""
+    html = r["body"] or ""
     c_id = await _get_client_id(ctx, html)
     h_m = re.search(r'window\.__sc_hydration\s*=\s*(\[.*?\]);</script>', html)
     if not h_m:
@@ -569,25 +572,26 @@ async def _download_soundcloud_track(ctx, track_url, out_path):
     auth = f"&track_authorization={t_d.get('track_authorization')}" if t_d.get("track_authorization") else ""
     s_url = s_info.get("url") + f"?client_id={c_id}" + auth
     s_resp = await _net_get(ctx, s_url)
-    if s_resp.status_code != 200:
+    if s_resp["status"] != 200:
         raise ValueError("Stream metadata failed")
-    s_json = json.loads(s_resp.text)
+    s_json = json.loads(s_resp["body"])
     media_url = s_json.get("url")
     if not media_url:
         raise ValueError("No stream url")
     protocol = (s_info.get("format") or {}).get("protocol")
     if protocol == "progressive":
-        m_resp = await _net_get(ctx, media_url, timeout=60)
-        if m_resp.status_code != 200:
+        m_resp = await _net_get(ctx, media_url, timeout=60, binary=True)
+        if m_resp["status"] != 200:
             raise ValueError("Audio download failed")
-        data = m_resp.content if getattr(m_resp, "content", None) is not None else (m_resp.text or "").encode("utf-8")
+        import base64
+        data = base64.b64decode(m_resp["body"], validate=True)
         with open(out_path, "wb") as file_obj:
             file_obj.write(data)
     else:
         m3_resp = await _net_get(ctx, media_url)
-        if m3_resp.status_code != 200:
+        if m3_resp["status"] != 200:
             raise ValueError("Playlist download failed")
-        chunks = [l.strip() for l in (m3_resp.text or "").splitlines() if l and not l.startswith("#")]
+        chunks = [l.strip() for l in (m3_resp["body"] or "").splitlines() if l and not l.startswith("#")]
         if not chunks:
             raise ValueError("Empty HLS playlist")
         base_url = media_url.rsplit("/", 1)[0] + "/"
@@ -597,10 +601,11 @@ async def _download_soundcloud_track(ctx, track_url, out_path):
             if not url.startswith("http"):
                 url = base_url + url
             async with sem:
-                resp = await _net_get(ctx, url, timeout=30)
-                if resp.status_code != 200:
+                resp = await _net_get(ctx, url, timeout=30, binary=True)
+                if resp["status"] != 200:
                     raise ValueError(f"Segment {index} failed")
-                data = resp.content if getattr(resp, "content", None) is not None else (resp.text or "").encode("utf-8")
+                import base64
+                data = base64.b64decode(resp["body"], validate=True)
                 return index, data
 
         segments = await asyncio.gather(*[_fetch_segment(u, i) for i, u in enumerate(chunks)])

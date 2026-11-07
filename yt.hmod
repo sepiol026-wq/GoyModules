@@ -216,10 +216,11 @@ def _btn(ctx, text, cb, payload=None):
 
 
 async def _fetch_bytes(ctx, url):
-    r = await ctx.net(url, method="GET", headers={"User-Agent": "YTMusic-Module/4.0 (Core by @samsepi0l_ovf; AGPLv3)"}, timeout=15)
-    if r.status_code != 200:
-        raise RuntimeError(f"HTTP {r.status_code}")
-    return r.content if getattr(r, "content", None) is not None else (r.text or "").encode("utf-8")
+    r = await ctx.net(url, method="GET", binary=True, headers={"User-Agent": "YTMusic-Module/4.0 (Core by @samsepi0l_ovf; AGPLv3)"}, timeout=15)
+    if r["status"] != 200:
+        raise RuntimeError("HTTP " + str(r["status"]))
+    import base64
+    return base64.b64decode(r["body"], validate=True)
 
 
 class Banners:
@@ -412,6 +413,8 @@ def _set_playlists(ctx, playlists):
 
 
 def _get_track_paths(track_id):
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", str(track_id)):
+        raise ValueError("Invalid track ID")
     return {
         "audio": os.path.join(STORAGE_DIR, f"{track_id}.mp3"),
         "thumb": os.path.join(STORAGE_DIR, f"{track_id}.jpg"),
@@ -440,7 +443,7 @@ def _write_json_file(path, payload):
 def _normalize_track(raw, source=None):
     raw = dict(raw or {})
     track_id = str(raw.get("id") or "").strip()
-    if not track_id:
+    if not track_id or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", track_id):
         return {}
     uploader = (
         raw.get("uploader")
