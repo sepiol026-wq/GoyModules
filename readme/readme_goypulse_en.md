@@ -1,8 +1,7 @@
+![GoyPulse Banner](../assets/goypulse.png)
+
 # GoyPulse — README EN
 
-[![Root](https://img.shields.io/badge/Root-111111?style=for-the-badge&logo=github&logoColor=white)](../README.md)
-[![DOCS RU](https://img.shields.io/badge/DOCS-RU-2CA5E0?style=for-the-badge&logo=readthedocs&logoColor=white)](./readme_ru.md)
-[![DOCS EN](https://img.shields.io/badge/DOCS-EN-6f42c1?style=for-the-badge&logo=readthedocs&logoColor=white)](./readme_en.md)
 [![Telegram](https://img.shields.io/badge/Telegram-@goymodules-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/goymodules)
 [![Stars](https://img.shields.io/github/stars/sepiol026-wq/GoyModules?style=for-the-badge&logo=github&label=stars)](https://github.com/sepiol026-wq/GoyModules/stargazers)
 [![Forks](https://img.shields.io/github/forks/sepiol026-wq/GoyModules?style=for-the-badge&logo=github&label=forks)](https://github.com/sepiol026-wq/GoyModules/forks)
@@ -12,10 +11,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/sepiol026-wq/GoyModules?style=for-the-badge&logo=git&label=last%20commit)](https://github.com/sepiol026-wq/GoyModules/commits/main)
 [![License](https://img.shields.io/github/license/sepiol026-wq/GoyModules?style=for-the-badge&label=license)](https://github.com/sepiol026-wq/GoyModules/blob/main/LICENSE)
 
-<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/goypulse.hmod) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goypulse.hmod)</p>
-
-
-![GoyPulse Banner](../assets/goypulse.png)
+[Home](../README.md) · [Catalog](./readme_en.md) · [Русский](./readme_goypulse_ru.md)
 
 ## What this module is
 GoyPulse is an advanced Markov-based autoreply engine. It learns from chat messages, adapts response behavior to context, supports stealth workflows and flexible reply tuning.
@@ -27,12 +23,12 @@ GoyPulse is an advanced Markov-based autoreply engine. It learns from chat messa
 4. Runs as a single autoreply engine without update/backup subsystems.
 
 ## Module file
-- `goypulse.hmod`
+- `heroku/goypulse.py`
 
 ## Installation
-Download the module file, send it to Hotaru, then load it with:
+Heroku archive only. This module is not ported to Hotaru.
 ```text
-.ld
+.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/heroku/goypulse.py
 ```
 
 ## Core commands

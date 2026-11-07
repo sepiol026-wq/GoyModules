@@ -1,8 +1,7 @@
+![GoyPulse Banner](../assets/goypulse.png)
+
 # GoyPulse — README RU
 
-[![Root](https://img.shields.io/badge/Root-111111?style=for-the-badge&logo=github&logoColor=white)](../README.md)
-[![DOCS RU](https://img.shields.io/badge/DOCS-RU-2CA5E0?style=for-the-badge&logo=readthedocs&logoColor=white)](./readme_ru.md)
-[![DOCS EN](https://img.shields.io/badge/DOCS-EN-6f42c1?style=for-the-badge&logo=readthedocs&logoColor=white)](./readme_en.md)
 [![Telegram](https://img.shields.io/badge/Telegram-@goymodules-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/goymodules)
 [![Stars](https://img.shields.io/github/stars/sepiol026-wq/GoyModules?style=for-the-badge&logo=github&label=stars)](https://github.com/sepiol026-wq/GoyModules/stargazers)
 [![Forks](https://img.shields.io/github/forks/sepiol026-wq/GoyModules?style=for-the-badge&logo=github&label=forks)](https://github.com/sepiol026-wq/GoyModules/forks)
@@ -12,10 +11,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/sepiol026-wq/GoyModules?style=for-the-badge&logo=git&label=last%20commit)](https://github.com/sepiol026-wq/GoyModules/commits/main)
 [![License](https://img.shields.io/github/license/sepiol026-wq/GoyModules?style=for-the-badge&label=license)](https://github.com/sepiol026-wq/GoyModules/blob/main/LICENSE)
 
-<p align='center'>[![Docs RU](https://img.shields.io/badge/RU-blue?logo=book)](./readme_ru.md) [![Docs EN](https://img.shields.io/badge/EN-blue?logo=book)](./readme_en.md) [![Src](https://img.shields.io/badge/SRC-blue?logo=book)](https://github.com/sepiol026-wq/GoyModules/blob/main/goypulse.hmod) [![Raw](https://img.shields.io/badge/RAW-blue?logo=book)](https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/goypulse.hmod)</p>
-
-
-![GoyPulse Banner](../assets/goypulse.png)
+[Главная](../README.md) · [Каталог](./readme_ru.md) · [English](./readme_goypulse_en.md)
 
 ## Что это за модуль
 GoyPulse — продвинутый нейро-автоответчик на основе цепей Маркова. Модуль учится на сообщениях, учитывает контекст чата, поддерживает скрытый режим и гибкую настройку ответов.
@@ -27,12 +23,12 @@ GoyPulse — продвинутый нейро-автоответчик на о�
 4. Работает как единый автоответчик без подсистем обновлений/бэкапов.
 
 ## Файл модуля
-- `goypulse.hmod`
+- `heroku/goypulse.py`
 
 ## Установка
-Скачай файл модуля и отправь его Hotaru, затем загрузи командой:
+Только архив Heroku. Модуль не портируется в Hotaru.
 ```text
-.ld
+.dlm https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/heroku/goypulse.py
 ```
 
 ## Основные команды
