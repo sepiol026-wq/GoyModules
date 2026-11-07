@@ -1,9 +1,10 @@
 HOTARU = {
     "id": "omni",
+    "requires": ["yt-dlp", "imageio-ffmpeg"],
     "version": "1.7.2",
     "commands": ["omni"],
     "aliases": {"dl": "omni"},
-    "capabilities": ["files", "shell", "net", "state"],
+    "capabilities": ["files", "shell", "net", "state", "assets"],
     "config_schema": {
         "ytdl_timeout": {
             "type": "int",
@@ -13,7 +14,7 @@ HOTARU = {
             "description": "Timeout for downloading",
         },
     },
-    "banner": "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/omniload.png",
+    "banner": "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/assets/omniload.png",
     "lexicon": {
         "en": {
             "name": "OmniLoad",
@@ -104,15 +105,19 @@ def _base_cmd():
     return cmd
 
 
-async def _run_proc(cmd, timeout=60):
-    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+async def _run_proc(ctx, cmd, timeout=60):
+    import shlex
+    job = await ctx.cap("shell", {"op": "start", "command": "PYTHONPATH=" + shlex.quote(os.pathsep.join(sys.path)) + " " + " ".join(shlex.quote(str(arg)) for arg in cmd), "timeout": timeout})
     try:
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        return proc.returncode, stdout, stderr
-    except asyncio.TimeoutError:
-        with contextlib.suppress(ProcessLookupError):
-            proc.kill()
-        return -1, b"", b"TimeoutError"
+        while True:
+            state = await ctx.cap("shell", {"op": "poll", "id": job["id"], "wait": 1})
+            if state.get("done"):
+                result = state.get("result") or {}
+                if state.get("error"):
+                    return -1, b"", str(state["error"]).encode()
+                return result.get("returncode", -1), (result.get("stdout") or "").encode(), (result.get("stderr") or "").encode()
+    finally:
+        await ctx.cap("shell", {"op": "forget", "id": job["id"]})
 
 
 def _cache_get(ctx):
@@ -177,7 +182,7 @@ async def _fetch_info(ctx, url, timeout=45):
         "--extractor-args", "youtube:player_client=android",
         url,
     ]
-    ret, stdout, stderr = await _run_proc(cmd, timeout=timeout)
+    ret, stdout, stderr = await _run_proc(ctx, cmd, timeout=timeout)
     if ret != 0 or not stdout:
         err_text = stderr.decode("utf-8", errors="ignore")[-100:]
         return None, err_text or "Extraction failed"
@@ -189,7 +194,7 @@ async def _fetch_info(ctx, url, timeout=45):
 
 async def _do_download(ctx, format_spec, media_type, info, url, force=False):
     ytdl_timeout = ctx.config.get("ytdl_timeout", 300)
-    dl_dir = tempfile.mkdtemp(prefix="omniload_")
+    dl_dir = tempfile.mkdtemp(prefix="omniload_", dir=".")
 
     cmd = _base_cmd() + [
         "--format", format_spec,
@@ -212,7 +217,7 @@ async def _do_download(ctx, format_spec, media_type, info, url, force=False):
 
     cmd.append(url)
 
-    ret, _, stderr = await _run_proc(cmd, timeout=ytdl_timeout)
+    ret, _, stderr = await _run_proc(ctx, cmd, timeout=ytdl_timeout)
 
     try:
         out_files = [
@@ -265,8 +270,8 @@ async def _do_download(ctx, format_spec, media_type, info, url, force=False):
         shutil.rmtree(dl_dir, ignore_errors=True)
 
 
-async def command_omni(ctx):
-    args = (ctx.raw_args or "").strip()
+async def command_omni(ctx, invocation):
+    args = (invocation.raw_args or "").strip()
     if not args:
         await ctx.respond(_t(ctx, "no_args", "<b>No URL provided.</b> Please specify a link."), parse_mode="HTML")
         return
@@ -304,24 +309,23 @@ async def command_omni(ctx):
     title = info.get("title", "Unknown")[:40]
     heights, label_map = _height_map(info)
 
-    def make_cb(format_spec, media_type):
-        async def cb(handle):
-            data = _cache_pop(ctx, cache_id)
-            if not data:
-                with contextlib.suppress(Exception):
-                    await ctx.edit(_t(ctx, "expired", "<b>Cache expired.</b> Please search again."), parse_mode="HTML")
-                return
-            with contextlib.suppress(Exception):
-                await ctx.edit(_t(ctx, "downloading", "<b>Downloading & rendering...</b>"), parse_mode="HTML")
-            await _do_download(ctx, format_spec, media_type, data["info"], data["url"])
-        return cb
+    async def choose(handle, payload):
+        data = _cache_pop(ctx, payload["cache_id"])
+        if not data:
+            await handle.edit(_t(ctx, "expired", "<b>Cache expired.</b> Please search again."), buttons=[])
+            return
+        await handle.edit(_t(ctx, "downloading", "<b>Downloading & rendering...</b>"), buttons=[])
+        await _do_download(ctx, payload["format_spec"], payload["media_type"], data["info"], data["url"])
+
+    def format_button(text, format_spec, media_type):
+        return ctx.ui.primary(text, choose, {"cache_id": cache_id, "format_spec": format_spec, "media_type": media_type})
 
     buttons = []
     row = []
     for lbl, h in label_map[:6]:
         fid = heights[h]["format_id"]
         spec = f"{fid}+bestaudio[ext=m4a]/best[ext=mp4]/best"
-        row.append(ctx.screens.primary(f"🎬 {lbl}", make_cb(spec, "video")))
+        row.append(format_button(f"🎬 {lbl}", spec, "video"))
         if len(row) == 2:
             buttons.append(row)
             row = []
@@ -329,17 +333,17 @@ async def command_omni(ctx):
         buttons.append(row)
 
     buttons.append([
-        ctx.screens.button("🎧 MP3", make_cb("bestaudio/best", "audio")),
-        ctx.screens.button("🎧 FLAC", make_cb("bestaudio/best", "flac")),
+        format_button("🎧 MP3", "bestaudio/best", "audio"),
+        format_button("🎧 FLAC", "bestaudio/best", "flac"),
     ])
 
-    async def cancel(handle):
-        _cache_pop(ctx, cache_id)
+    async def cancel(handle, payload):
+        _cache_pop(ctx, payload["cache_id"])
         with contextlib.suppress(Exception):
             await ctx.delete()
 
-    buttons.append([ctx.screens.danger("❌ Cancel", cancel)])
+    buttons.append([ctx.ui.danger("❌ Cancel", cancel, {"cache_id": cache_id})])
 
     body = _t(ctx, "menu", "<b>Target:</b> <i>{title}</i>\nChoose format & quality:", title=ctx.html.escape(title))
-    await ctx.screens.show("OmniLoad", body, buttons=buttons)
+    await ctx.screens.show(ctx.screens.screen(body, rows=buttons))
 

@@ -3,7 +3,8 @@ HOTARU = {
     "version": "1.4.0",
     "commands": ["doom", "hdoom"],
     "capabilities": ["state"],
-    "banner": "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/doom.png",
+    "tasks": {"game": {"interval": 0.12}},
+    "banner": "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/assets/doom.png",
     "lexicon": {
         "en": {
             "name": "Doom",
@@ -299,6 +300,7 @@ BASE_MAP = [
 MAP_H = len(BASE_MAP)
 MAP_W = len(BASE_MAP[0])
 SESSIONS = {}
+GAME_TARGET = {}
 
 
 def _today_key():
@@ -349,20 +351,20 @@ def _new_map():
     return [list(row.replace(".", " ")) for row in BASE_MAP]
 
 
-def _btn(ctx, text, cb):
+def _btn(ctx, text, cb, payload=None):
     maker = getattr(ctx.ui, "button", None) or getattr(ctx.ui, "primary", None) or ctx.screens.button
-    return maker(text, cb)
+    return maker(text, cb, payload)
 
 
 def _mkbtn(ctx, text, fn):
-    async def cb(call, payload=None):
-        await fn(ctx, call)
-    return _btn(ctx, text, cb)
+    async def cb(call, payload):
+        await globals()[payload["action"]](ctx, call)
+    return _btn(ctx, text, cb, {"action": fn.__name__})
 
 
 async def safe_edit(call, text, reply_markup):
     try:
-        await call.edit(text, reply_markup=reply_markup)
+        await call.edit(text, buttons=reply_markup)
         return True
     except Exception as e:
         wait_s = getattr(e, "seconds", 0) or getattr(e, "value", 0)
@@ -373,7 +375,7 @@ async def safe_edit(call, text, reply_markup):
         if wait_s:
             await asyncio.sleep(wait_s + 0.1)
             try:
-                await call.edit(text, reply_markup=reply_markup)
+                await call.edit(text, buttons=reply_markup)
                 return True
             except Exception:
                 return False
@@ -569,76 +571,77 @@ def _snapshot(st):
     return sv
 
 
-async def game_loop(ctx, call):
+async def task_game(ctx):
     user_id = "doom_user"
-    while user_id in SESSIONS and SESSIONS[user_id].get("running"):
-        st = SESSIONS[user_id]
-        now = time.time()
-        dmg_base = _difficulty_table()[st["difficulty"]]["enemy_dmg"]
-        ai_tick = _difficulty_table()[st["difficulty"]]["ai"]
-        enemies_count = 0
-        for row in st["map"]:
-            for c in row:
-                if c in ["E", "D"]:
-                    enemies_count += 1
-        if enemies_count == 0:
-            _spawn_wave(ctx, st, st["wave"] + 1)
-            if st["wave"] >= 3:
-                _unlock(ctx, st, "Slayer III")
-            if st["wave"] >= 7:
-                _unlock(ctx, st, "Slayer VII")
-        if now - st.get("last_ai", 0) > ai_tick:
-            moved = False
-            enemies = []
-            for y in range(MAP_H):
-                for x in range(MAP_W):
-                    if st["map"][y][x] in ["E", "D"]:
-                        enemies.append((x, y, st["map"][y][x]))
-            for ex, ey, et in enemies:
-                if st["map"][ey][ex] != et:
-                    continue
-                dist = math.hypot(st["x"] - ex, st["y"] - ey)
-                if dist < 1.5:
-                    dmg = dmg_base + (4 if et == "D" else 0)
-                    if st["armor"] > 0:
-                        blocked = min(st["armor"], int(dmg * 0.45))
-                        st["armor"] -= blocked
-                        dmg -= blocked
-                    st["hp"] -= max(1, dmg)
-                    st["log"] = _t(ctx, "enemy_attack", st, n=max(1, dmg))
+    if user_id not in SESSIONS or not SESSIONS[user_id].get("running"):
+        return
+    ctx, call = GAME_TARGET["target"]
+    st = SESSIONS[user_id]
+    now = time.time()
+    dmg_base = _difficulty_table()[st["difficulty"]]["enemy_dmg"]
+    ai_tick = _difficulty_table()[st["difficulty"]]["ai"]
+    enemies_count = 0
+    for row in st["map"]:
+        for c in row:
+            if c in ["E", "D"]:
+                enemies_count += 1
+    if enemies_count == 0:
+        _spawn_wave(ctx, st, st["wave"] + 1)
+        if st["wave"] >= 3:
+            _unlock(ctx, st, "Slayer III")
+        if st["wave"] >= 7:
+            _unlock(ctx, st, "Slayer VII")
+    if now - st.get("last_ai", 0) > ai_tick:
+        moved = False
+        enemies = []
+        for y in range(MAP_H):
+            for x in range(MAP_W):
+                if st["map"][y][x] in ["E", "D"]:
+                    enemies.append((x, y, st["map"][y][x]))
+        for ex, ey, et in enemies:
+            if st["map"][ey][ex] != et:
+                continue
+            dist = math.hypot(st["x"] - ex, st["y"] - ey)
+            if dist < 1.5:
+                dmg = dmg_base + (4 if et == "D" else 0)
+                if st["armor"] > 0:
+                    blocked = min(st["armor"], int(dmg * 0.45))
+                    st["armor"] -= blocked
+                    dmg -= blocked
+                st["hp"] -= max(1, dmg)
+                st["log"] = _t(ctx, "enemy_attack", st, n=max(1, dmg))
+                moved = True
+            else:
+                dx = 1 if st["x"] > ex else (-1 if st["x"] < ex else 0)
+                dy = 1 if st["y"] > ey else (-1 if st["y"] < ey else 0)
+                options = [(ex + dx, ey), (ex, ey + dy), (ex + dx, ey + dy)]
+                random.shuffle(options)
+                for nx, ny in options:
+                    if nx < 1 or nx >= MAP_W - 1 or ny < 1 or ny >= MAP_H - 1:
+                        continue
+                    if st["map"][ny][nx] != " ":
+                        continue
+                    st["map"][ey][ex] = " "
+                    st["map"][ny][nx] = et
                     moved = True
-                else:
-                    dx = 1 if st["x"] > ex else (-1 if st["x"] < ex else 0)
-                    dy = 1 if st["y"] > ey else (-1 if st["y"] < ey else 0)
-                    options = [(ex + dx, ey), (ex, ey + dy), (ex + dx, ey + dy)]
-                    random.shuffle(options)
-                    for nx, ny in options:
-                        if nx < 1 or nx >= MAP_W - 1 or ny < 1 or ny >= MAP_H - 1:
-                            continue
-                        if st["map"][ny][nx] != " ":
-                            continue
-                        st["map"][ey][ex] = " "
-                        st["map"][ny][nx] = et
-                        moved = True
-                        break
-            if moved:
-                st["dirty"] = True
-            st["last_ai"] = now
-        if now - st.get("last_save", 0) >= st["settings"]["autosave"]:
-            sv = _snapshot(st)
-            sv["running"] = False
-            ctx.state.set("save", sv)
-            st["last_save"] = now
-            st["log"] = _t(ctx, "autosaved", st)
+                    break
+        if moved:
             st["dirty"] = True
-        if st.get("dirty") and now - st.get("last_render", 0) >= 0.58:
-            try:
-                await do_render(ctx, call, st)
-                st["last_render"] = time.time()
-                st["dirty"] = False
-            except Exception:
-                pass
-        await asyncio.sleep(0.12)
+        st["last_ai"] = now
+    if now - st.get("last_save", 0) >= st["settings"]["autosave"]:
+        sv = _snapshot(st)
+        sv["running"] = False
+        ctx.state.set("save", sv)
+        st["last_save"] = now
+        st["log"] = _t(ctx, "autosaved", st)
+        st["dirty"] = True
+    if st.get("dirty") and now - st.get("last_render", 0) >= 0.58:
+        try:
+            await do_render(ctx, call, st)
+            st["last_render"] = time.time()
+            st["dirty"] = False
+        except Exception:
+            pass
 
 
 def update_player(ctx, dx, dy, dr):
@@ -850,7 +853,8 @@ async def _start(ctx, call, difficulty, daily=False):
         }
         _spawn_wave(ctx, st, 1)
         SESSIONS["doom_user"] = st
-        asyncio.create_task(game_loop(ctx, call))
+        GAME_TARGET["target"] = (ctx, call)
+        await task_game(ctx)
     except Exception:
         err = traceback.format_exc()
         await safe_edit(call, f"<b>CRITICAL ERROR:</b>\n<pre>{err}</pre>", [])
@@ -896,7 +900,8 @@ async def action_cont(ctx, call):
             sv["last_hud"] = ""
             sv["last_save"] = time.time()
             SESSIONS["doom_user"] = sv
-            asyncio.create_task(game_loop(ctx, call))
+            GAME_TARGET["target"] = (ctx, call)
+            await task_game(ctx)
         else:
             await safe_edit(call, _t(ctx, "nosave"), [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]])
     except Exception:

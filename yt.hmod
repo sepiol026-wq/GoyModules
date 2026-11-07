@@ -1,10 +1,11 @@
 HOTARU = {
     "id": "yt",
+    "requires": ["yt-dlp", "imageio-ffmpeg"],
     "version": "4.6",
     "commands": ["yt", "ytpl", "ytadd", "ytrm", "ytbatch", "ytexport", "ytimport"],
-    "capabilities": ["net", "shell", "state", "files"],
+    "capabilities": ["net", "shell", "state", "files", "assets"],
     "watchers": ["global"],
-    "banner": "https://raw.githubusercontent.com/sepiol026-wq/goypulse/main/assets/ytmusic.png",
+    "banner": "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/assets/ytmusic.png",
     "config_schema": {
         "custom_text": {"type": "str", "default": "📟 <b>Таргет:</b> {track}\n👤 <b>Автор:</b> {artists}\n🔗 <b>Лонг-линк:</b> <a href='{ytm_url}'>Сурс</a>", "description": "Шаблон текста под аудио"},
         "font": {"type": "str", "default": "https://raw.githubusercontent.com/kamekuro/assets/master/fonts/Onest-Bold.ttf", "description": "URL шрифта .ttf"},
@@ -184,7 +185,7 @@ try:
 except Exception:
     HAS_PIL = False
 
-STORAGE_DIR = "/tmp/sandbox/ytmusic_storage"
+STORAGE_DIR = "ytmusic_storage"
 SEARCH_CACHE = {}
 RENAME_STATE = {}
 TRIM_STATE = {}
@@ -209,9 +210,9 @@ def _esc(text):
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def _btn(ctx, text, cb):
+def _btn(ctx, text, cb, payload=None):
     maker = getattr(ctx.ui, "button", None) or getattr(ctx.ui, "primary", None) or ctx.screens.button
-    return maker(text, cb)
+    return maker(text, cb, payload)
 
 
 async def _fetch_bytes(ctx, url):
@@ -525,17 +526,19 @@ async def _ensure_visual_assets(ctx, track_info, duration_sec, paths, meta=None)
         file_obj.write(banner_file.read())
 
 
-async def _run_proc(cmd, timeout=60):
-    proc = await asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+async def _run_proc(ctx, cmd, timeout=60):
+    import shlex
+    job = await ctx.cap("shell", {"op": "start", "command": "PYTHONPATH=" + shlex.quote(os.pathsep.join(sys.path)) + " " + " ".join(shlex.quote(str(arg)) for arg in cmd), "timeout": timeout})
     try:
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        return proc.returncode, stdout, stderr
-    except asyncio.TimeoutError:
-        try:
-            proc.kill()
-        except ProcessLookupError:
-            pass
-        return -1, b"", b"TimeoutError: Process took too long and was killed."
+        while True:
+            state = await ctx.cap("shell", {"op": "poll", "id": job["id"], "wait": 1})
+            if state.get("done"):
+                result = state.get("result") or {}
+                if state.get("error"):
+                    return -1, b"", str(state["error"]).encode()
+                return result.get("returncode", -1), (result.get("stdout") or "").encode(), (result.get("stderr") or "").encode()
+    finally:
+        await ctx.cap("shell", {"op": "forget", "id": job["id"]})
 
 
 def _parse_yt_error(ctx, stderr_bytes):
@@ -579,7 +582,7 @@ async def _ensure_youtube_track_cached(ctx, track_info):
         await _ensure_visual_assets(ctx, track_info, duration_sec, paths, meta=meta)
         return paths, meta
 
-    dl_dir = tempfile.mkdtemp(prefix="ytmusic_cache_")
+    dl_dir = tempfile.mkdtemp(prefix="ytmusic_cache_", dir=".")
     try:
         yt_url = (
             track_info.get("webpage_url")
@@ -597,7 +600,7 @@ async def _ensure_youtube_track_cached(ctx, track_info):
             "-o", f"{dl_dir}/%(id)s.%(ext)s",
             yt_url,
         ]
-        returncode, stdout, stderr = await _run_proc(cmd, timeout=180)
+        returncode, stdout, stderr = await _run_proc(ctx, cmd, timeout=180)
         mp3_path = os.path.join(dl_dir, f"{track_id}.mp3")
         if returncode != 0 or not os.path.exists(mp3_path):
             raise RuntimeError(_parse_yt_error(ctx, stderr))
@@ -629,7 +632,7 @@ async def _ensure_youtube_track_cached(ctx, track_info):
 
 async def _search_tracks(ctx, query, limit=5):
     cmd = _get_base_dlp_args() + ["--dump-json", f"ytsearch{limit}:{query}"]
-    returncode, stdout, stderr = await _run_proc(cmd, timeout=45)
+    returncode, stdout, stderr = await _run_proc(ctx, cmd, timeout=45)
     results = []
     if stdout:
         for line in stdout.decode('utf-8', errors='ignore').split('\n'):
@@ -726,10 +729,10 @@ def _search_buttons(ctx, results, call_id, target_chat_id):
         title = track.get("title", "Unknown")[:30]
         artist = (track.get("uploader") or track.get("channel") or "Unknown")[:15]
 
-        async def cb(call, payload=None, _cid=call_id, _i=idx, _chat=target_chat_id):
-            await _inline_search_dl(ctx, call, _cid, _i, _chat)
+        async def cb(call, payload):
+            await _inline_search_dl(ctx, call, payload['_cid'], payload['_i'], payload['_chat'])
 
-        keyboard.append([_btn(ctx, f"{title} — {artist}", cb)])
+        keyboard.append([_btn(ctx, f"{title} — {artist}", cb, {'_cid': call_id, '_i': idx, '_chat': target_chat_id})])
     return keyboard
 
 
@@ -742,38 +745,38 @@ async def _inline_pl_view(ctx, call, pl_name, target_chat_id):
     for idx, t in enumerate(tracks[:15]):
         title = t.get("title", "Unknown")[:25]
 
-        async def play(call, payload=None, _pl=pl_name, _i=idx, _chat=target_chat_id):
-            await _inline_pl_play(ctx, call, _pl, _i, _chat)
+        async def play(call, payload):
+            await _inline_pl_play(ctx, call, payload['_pl'], payload['_i'], payload['_chat'])
 
-        row = [_btn(ctx, _t(ctx, "btn_play", title=title), play)]
+        row = [_btn(ctx, _t(ctx, "btn_play", title=title), play, {'_pl': pl_name, '_i': idx, '_chat': target_chat_id})]
         if pl_name != "History":
-            async def trim(call, payload=None, _pl=pl_name, _i=idx, _chat=target_chat_id):
-                await _inline_trim_req(ctx, call, _pl, _i, _chat)
+            async def trim(call, payload):
+                await _inline_trim_req(ctx, call, payload['_pl'], payload['_i'], payload['_chat'])
 
-            async def rm(call, payload=None, _pl=pl_name, _i=idx, _chat=target_chat_id):
-                await _inline_rm_track(ctx, call, _pl, _i, _chat)
+            async def rm(call, payload):
+                await _inline_rm_track(ctx, call, payload['_pl'], payload['_i'], payload['_chat'])
 
-            row.append(_btn(ctx, _t(ctx, "btn_trim"), trim))
-            row.append(_btn(ctx, _t(ctx, "btn_del"), rm))
+            row.append(_btn(ctx, _t(ctx, "btn_trim"), trim, {'_pl': pl_name, '_i': idx, '_chat': target_chat_id}))
+            row.append(_btn(ctx, _t(ctx, "btn_del"), rm, {'_pl': pl_name, '_i': idx, '_chat': target_chat_id}))
         keyboard.append(row)
 
     admin_row = []
     if pl_name != "History":
-        async def ren(call, payload=None, _pl=pl_name, _chat=target_chat_id):
-            await _inline_pl_rename_req(ctx, call, _pl, _chat)
+        async def ren(call, payload):
+            await _inline_pl_rename_req(ctx, call, payload['_pl'], payload['_chat'])
 
-        async def dele(call, payload=None, _pl=pl_name, _chat=target_chat_id):
-            await _inline_pl_delete(ctx, call, _pl, _chat)
+        async def dele(call, payload):
+            await _inline_pl_delete(ctx, call, payload['_pl'], payload['_chat'])
 
-        admin_row.append(_btn(ctx, _t(ctx, "btn_rename"), ren))
-        admin_row.append(_btn(ctx, _t(ctx, "btn_del_db"), dele))
+        admin_row.append(_btn(ctx, _t(ctx, "btn_rename"), ren, {'_pl': pl_name, '_chat': target_chat_id}))
+        admin_row.append(_btn(ctx, _t(ctx, "btn_del_db"), dele, {'_pl': pl_name, '_chat': target_chat_id}))
     if admin_row:
         keyboard.append(admin_row)
 
-    async def back(call, payload=None, _chat=target_chat_id):
-        await _inline_pl_back(ctx, call, _chat)
+    async def back(call, payload):
+        await _inline_pl_back(ctx, call, payload['_chat'])
 
-    keyboard.append([_btn(ctx, _t(ctx, "btn_back"), back)])
+    keyboard.append([_btn(ctx, _t(ctx, "btn_back"), back, {'_chat': target_chat_id})])
     with contextlib.suppress(Exception):
         await ctx.respond(text, buttons=keyboard, parse_mode="HTML")
 
@@ -816,10 +819,10 @@ async def _inline_pl_back(ctx, call, target_chat_id):
     playlists = _get_playlists(ctx)
     keyboard = []
     for pl_name, tracks in playlists.items():
-        async def view(call, payload=None, _pl=pl_name, _chat=target_chat_id):
-            await _inline_pl_view(ctx, call, _pl, _chat)
+        async def view(call, payload):
+            await _inline_pl_view(ctx, call, payload['_pl'], payload['_chat'])
 
-        keyboard.append([_btn(ctx, f"📁 {pl_name} [{len(tracks)}]", view)])
+        keyboard.append([_btn(ctx, f"📁 {pl_name} [{len(tracks)}]", view, {'_pl': pl_name, '_chat': target_chat_id})])
     with contextlib.suppress(Exception):
         await ctx.respond(_t(ctx, "pl_list"), buttons=keyboard, parse_mode="HTML")
 
@@ -847,10 +850,10 @@ async def _inline_pl_play(ctx, call, pl_name, track_idx, target_chat_id):
     await _dl_and_send(ctx, call, track_info, target_chat_id)
 
 
-async def watcher_global(ctx):
+async def watcher_global(ctx, invocation):
     message = ctx.message
-    text = getattr(message, "text", None) or getattr(message, "message", None)
-    if not text or not isinstance(text, str):
+    text = ctx._msg.get("text") or ctx._msg.get("message")
+    if not text or not isinstance(text, str) or not message.out:
         return
     chat_id = ctx.chat_id
 
@@ -893,7 +896,7 @@ async def watcher_global(ctx):
             "-map", "0:a", "-map", "0:v?", "-c:v", "copy",
             "-c:a", "libmp3lame", "-q:a", "2", out_path
         ]
-        ret, _, _ = await _run_proc(cmd, timeout=60)
+        ret, _, _ = await _run_proc(ctx, cmd, timeout=60)
         if ret != 0 or not os.path.exists(out_path):
             return await ctx.respond(_t(ctx, "trim_ffmpeg"), parse_mode="HTML")
         shutil.move(out_path, in_path)
@@ -909,18 +912,21 @@ async def command_ytexport(ctx, invocation=None):
     if not playlists:
         return await ctx.respond(_t(ctx, "export_empty"), parse_mode="HTML")
     data = json.dumps(playlists, ensure_ascii=False, indent=4)
-    await ctx.reply_file(data.encode("utf-8"), filename="ytmusic_export.json", caption=_t(ctx, "export_cap"))
+    await ctx.reply_file(data.encode("utf-8"), file_name="ytmusic_export.json", caption=_t(ctx, "export_cap"))
     await ctx.delete()
 
 
 async def command_ytimport(ctx, invocation=None):
-    reply = ctx.reply_to
-    attachment = getattr(ctx, "reply_attachment", None) or getattr(reply, "document", None) if reply else None
+    reply = await ctx.reply()
+    attachment = ctx.reply_attachment
     if not attachment:
         return await ctx.respond(_t(ctx, "import_need"), parse_mode="HTML")
     try:
-        content = await ctx.download(attachment)
-        new_pl = json.loads(content.decode("utf-8"))
+        downloaded = await ctx.download({"chat_id": ctx.chat_id, "id": reply["id"]})
+        with open(downloaded, "rb") as handle:
+            new_pl = json.load(handle)
+        if not isinstance(new_pl, dict) or any(not isinstance(k, str) or not isinstance(v, list) or any(not isinstance(t, dict) for t in v) for k, v in new_pl.items()):
+            raise ValueError("Invalid playlist document")
         playlists = _get_playlists(ctx)
         for name, tracks in new_pl.items():
             if name not in playlists:
@@ -942,7 +948,7 @@ async def command_ytbatch(ctx, invocation):
     pl_name, url = args.split(" ", 1)
     await ctx.respond(_t(ctx, "batch_parsing"), parse_mode="HTML")
     cmd = _get_base_dlp_args() + ["--flat-playlist", "--dump-json", url]
-    ret, stdout, _ = await _run_proc(cmd, timeout=120)
+    ret, stdout, _ = await _run_proc(ctx, cmd, timeout=120)
     if not stdout:
         return await ctx.respond(_t(ctx, "batch_none"), parse_mode="HTML")
     playlists = _get_playlists(ctx)
@@ -994,17 +1000,17 @@ async def command_ytpl(ctx, invocation=None):
     _set_playlists(ctx, playlists)
     keyboard = []
     for pl_name, tracks in playlists.items():
-        async def view(call, payload=None, _pl=pl_name, _chat=target_chat_id):
-            await _inline_pl_view(ctx, call, _pl, _chat)
+        async def view(call, payload):
+            await _inline_pl_view(ctx, call, payload['_pl'], payload['_chat'])
 
-        keyboard.append([_btn(ctx, f"📁 {pl_name} [{len(tracks)}]", view)])
+        keyboard.append([_btn(ctx, f"📁 {pl_name} [{len(tracks)}]", view, {'_pl': pl_name, '_chat': target_chat_id})])
     await ctx.respond(_t(ctx, "pl_list"), buttons=keyboard, parse_mode="HTML")
 
 
 async def command_ytadd(ctx, invocation):
     args = invocation.raw_args
-    reply = ctx.reply_to
-    attachment = getattr(ctx, "reply_attachment", None) if not reply else (getattr(ctx, "reply_attachment", None) or getattr(reply, "document", None) or getattr(reply, "media", None))
+    reply = await ctx.reply()
+    attachment = ctx.reply_attachment
     if not args:
         return await ctx.respond(_t(ctx, "add_fmt"), parse_mode="HTML")
     parts = args.split(" ", 1)
@@ -1015,21 +1021,23 @@ async def command_ytadd(ctx, invocation):
         playlists[pl_name] = []
 
     if reply and attachment:
-        is_voice = bool(getattr(reply, "voice", None))
+        document = ((reply.get("media") or {}).get("document") or {})
+        attributes = document.get("attributes") or []
+        is_voice = any(isinstance(attr, dict) and attr.get("voice") for attr in attributes)
         mime = getattr(attachment, "mime_type", "") or ""
         if not is_voice and mime and mime not in ["audio/mpeg", "audio/ogg"]:
             return await ctx.respond(_t(ctx, "add_badfmt"), parse_mode="HTML")
         await ctx.respond(_t(ctx, "add_id3"), parse_mode="HTML")
-        audio = attachment
-        title = f"Voice {getattr(audio, 'id', 0)}" if is_voice else "Unknown"
+        audio = document
+        title = f"Voice {audio.get('id', reply['id'])}" if is_voice else "Unknown"
         artist = "Telegram User" if is_voice else "Unknown"
         duration = 0
-        for attr in getattr(audio, "attributes", []) or []:
-            if type(attr).__name__ == "DocumentAttributeAudio":
-                title = getattr(attr, "title", None) or title
-                artist = getattr(attr, "performer", None) or artist
-                duration = getattr(attr, "duration", None) or duration
-        track_id = f"tg_{getattr(audio, 'id', 0)}"
+        for attr in attributes:
+            if isinstance(attr, dict) and str(attr.get("_", "")).lower() == "documentattributeaudio":
+                title = attr.get("title") or title
+                artist = attr.get("performer") or artist
+                duration = attr.get("duration") or duration
+        track_id = f"tg_{audio.get('id', reply['id'])}"
         if any(t.get("id") == track_id for t in playlists[pl_name]):
             return await ctx.respond(_t(ctx, "add_dup", pl=_esc(pl_name)), parse_mode="HTML")
         os.makedirs(STORAGE_DIR, exist_ok=True)
@@ -1037,9 +1045,7 @@ async def command_ytadd(ctx, invocation):
         if not os.path.exists(storage_path):
             temp_raw_path = os.path.join(STORAGE_DIR, f"raw_{track_id}.bin")
             try:
-                raw = await ctx.download(attachment)
-                with open(temp_raw_path, "wb") as f:
-                    f.write(raw)
+                await ctx.download({"chat_id": ctx.chat_id, "id": reply["id"]}, destination=temp_raw_path)
                 cmd = [
                     _ffmpeg_path(), "-y", "-i", temp_raw_path,
                     "-metadata", f"title={title}",
@@ -1050,7 +1056,7 @@ async def command_ytadd(ctx, invocation):
                 else:
                     cmd += ["-c", "copy"]
                 cmd.append(storage_path)
-                ret, _, _ = await _run_proc(cmd, timeout=60)
+                ret, _, _ = await _run_proc(ctx, cmd, timeout=60)
                 if os.path.exists(temp_raw_path):
                     os.remove(temp_raw_path)
                 if ret != 0:

@@ -155,7 +155,7 @@ HOTARU = {
                 "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Autofarm is already stopped.</b>",
                 "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Autofarm stopped.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Dialogue cleanup completed.",
                 "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris — status</b>",
-                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Farm: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Uptime: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Session: <b>{session} i¢</b> | Total: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Farms in session: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Time zone: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Last: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris cooldown: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Planned run: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Target bot: <b>{active_bot}</b>\n\n<b>Bot load</b>\n{{loads}}",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Farm: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Uptime: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Session: <b>{session} i¢</b> | Total: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Farms in session: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Time zone: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Last: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris cooldown: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> Planned run: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Target bot: <b>{active_bot}</b>\n\n<b>Bot load</b>\n{loads}",
                 "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
                 "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
                 "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>Logs are empty.</b>",
@@ -659,10 +659,17 @@ async def _send(ctx, bot, text):
         })
     except Exception:
         return None
+    if isinstance(res, dict) and res.get("id"):
+        return {"id": res["id"], "date": res.get("date", int(time.time()))}
     for upd in (res or {}).get("updates") or []:
-        if isinstance(upd, dict) and upd.get("id"):
-            return {"id": upd["id"], "date": upd.get("date", 0)}
-    return {"id": 0, "date": int(time.time())}
+        if not isinstance(upd, dict):
+            continue
+        message = upd.get("message")
+        if isinstance(message, dict) and message.get("id"):
+            return {"id": message["id"], "date": message.get("date", int(time.time()))}
+        if upd.get("id"):
+            return {"id": upd["id"], "date": upd.get("date", int(time.time()))}
+    raise RuntimeError("Telegram did not return a sent message ID")
 
 
 async def _hist(ctx, bot, limit=8):
@@ -776,7 +783,7 @@ async def _fetch_loads(ctx):
                 ctx.state.set("active_bot", best)
                 return loads
         except Exception as e:
-            ctx.logs.warning("iris: load fetch via %s failed: %s" % (probe_bot, e))
+            logs.warn("iris: load fetch via %s failed: %s" % (probe_bot, e))
         finally:
             await _mute_bot(ctx, probe_bot, False)
     ctx.state.set("bot_loads_updated", _now_ts())
@@ -1174,21 +1181,21 @@ async def task_loads(ctx):
         _add_log(ctx, f"🔄 Load refresh: {line}")
 
 
-async def watcher_sync(ctx):
+async def watcher_sync(ctx, invocation):
     st = _st(ctx)
     if not st.get("running"):
         return
     msg = getattr(ctx, "message", None)
     if msg is None or getattr(msg, "out", False):
         return
-    sender_id = getattr(ctx, "sender_id", None) or 0
+    sender_id = ctx.message.from_id or 0
     username = _RT["bot_ids"].get(sender_id, "")
     if not username:
-        peer_id = getattr(ctx, "peer_id", None)
+        peer_id = ctx.chat_id
         username = _RT["bot_ids"].get(peer_id, "")
     if username not in IRIS_BOTS:
         return
-    text = getattr(msg, "raw_text", None) or getattr(msg, "message", None) or ""
+    text = ctx._msg.get("text") or ctx._msg.get("message") or ""
     if isinstance(text, str):
         pass
     else:
@@ -1256,7 +1263,7 @@ async def command_irf(ctx, invocation):
                          tz=str(ctx.config.get("timezone_offset", "UTC+3"))), parse_mode="HTML")
 
 
-async def command_iris(ctx):
+async def command_iris(ctx, invocation):
     st = _st(ctx)
     cooldown_left, cooldown_at = _schedule_text(ctx, float(st.get("cooldown_until", 0.0)))
     planned_left, planned_at = _schedule_text(ctx, float(st.get("next_run_at", 0.0)))
@@ -1304,7 +1311,7 @@ async def command_irlogs(ctx, invocation):
     await ctx.respond(_t(ctx, "logs_title", "Logs ({count})", count=len(logs)) + "\n\n" + "\n".join(logs), parse_mode="HTML")
 
 
-async def command_irbag(ctx):
+async def command_irbag(ctx, invocation):
     await ctx.respond(_t(ctx, "loading_bag", "Loading bag..."), parse_mode="HTML")
     bot, _ = await _pick_request_bot(ctx)
     try:
@@ -1320,7 +1327,7 @@ async def command_irbag(ctx):
         await _mute_bot(ctx, bot, False)
 
 
-async def command_irprofile(ctx):
+async def command_irprofile(ctx, invocation):
     await ctx.respond(_t(ctx, "loading_profile", "Loading profile..."), parse_mode="HTML")
     bot, _ = await _pick_request_bot(ctx)
     try:
@@ -1336,7 +1343,7 @@ async def command_irprofile(ctx):
         await _mute_bot(ctx, bot, False)
 
 
-async def command_irsupertop(ctx):
+async def command_irsupertop(ctx, invocation):
     await ctx.respond(_t(ctx, "loading_super_top", "Loading super chat top..."), parse_mode="HTML")
     bot, _ = await _pick_request_bot(ctx)
     try:
@@ -1353,7 +1360,7 @@ async def command_irsupertop(ctx):
         await _mute_bot(ctx, bot, False)
 
 
-async def command_irdaytop(ctx):
+async def command_irdaytop(ctx, invocation):
     await ctx.respond(_t(ctx, "loading_day_top", "Loading day chat top..."), parse_mode="HTML")
     bot, _ = await _pick_request_bot(ctx)
     try:
@@ -1370,7 +1377,7 @@ async def command_irdaytop(ctx):
         await _mute_bot(ctx, bot, False)
 
 
-async def command_irreset(ctx):
+async def command_irreset(ctx, invocation):
     await ctx.respond(_t(ctx, "loading_reset", "Resetting module data..."), parse_mode="HTML")
     st = _st(ctx)
     st.update({
