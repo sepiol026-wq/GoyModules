@@ -107,7 +107,26 @@ def _base_cmd():
 
 async def _run_proc(ctx, cmd, timeout=60):
     import shlex
-    job = await ctx.cap("shell", {"op": "start", "command": "PYTHONPATH=" + shlex.quote(os.pathsep.join(sys.path)) + " " + " ".join(shlex.quote(str(arg)) for arg in cmd), "timeout": timeout})
+    cmd = list(cmd)
+    dependency_path = os.path.abspath(".media-deps")
+    if cmd[:3] == [sys.executable, "-m", "yt_dlp"]:
+        import yt_dlp
+        source = os.path.dirname(yt_dlp.__file__)
+        destination = os.path.join(dependency_path, "yt_dlp")
+        if not os.path.exists(destination):
+            os.makedirs(dependency_path, exist_ok=True)
+            shutil.copytree(source, destination)
+        cmd[0] = "/usr/bin/python3" if os.path.exists("/usr/bin/python3") else sys.executable
+    for index, argument in enumerate(cmd):
+        if (index and cmd[index - 1] == "--ffmpeg-location") or (index == 0 and "ffmpeg" in os.path.basename(str(argument))):
+            if os.path.exists("/usr/bin/ffmpeg"):
+                cmd[index] = "/usr/bin/ffmpeg"
+            elif os.path.isfile(argument):
+                target = os.path.abspath(".media-ffmpeg")
+                if not os.path.exists(target):
+                    shutil.copy2(argument, target)
+                cmd[index] = target
+    job = await ctx.cap("shell", {"op": "start", "command": "PYTHONPATH=" + shlex.quote(dependency_path) + " " + " ".join(shlex.quote(str(arg)) for arg in cmd), "timeout": timeout})
     try:
         while True:
             state = await ctx.cap("shell", {"op": "poll", "id": job["id"], "wait": 1})
@@ -231,7 +250,7 @@ async def _do_download(ctx, format_spec, media_type, info, url, force=False):
         if ret != 0 or not target_file:
             err_text = stderr.decode("utf-8", errors="ignore")[-100:]
             with contextlib.suppress(Exception):
-                await ctx.edit(_t(ctx, "error", "<b>Error:</b> <code>{error}</code>", error=err_text or "Download failed"), parse_mode="HTML")
+                await ctx.edit(_t(ctx, "error", "<b>Error:</b> <code>{error}</code>", error=ctx.escape(err_text or "Download failed")), parse_mode="HTML")
             return
 
         final_path = os.path.join(dl_dir, target_file)
@@ -244,7 +263,7 @@ async def _do_download(ctx, format_spec, media_type, info, url, force=False):
             "<b>{title}</b>\n{author}\n<a href='{url}'>Source</a>",
             title=ctx.html.escape(title),
             author=ctx.html.escape(author),
-            url=url,
+            url=ctx.escape(url),
         )
 
         if info.get("tags"):
@@ -288,7 +307,7 @@ async def command_omni(ctx, invocation):
 
     info, err = await _fetch_info(ctx, args)
     if info is None:
-        await ctx.edit(_t(ctx, "error", "<b>Error:</b> <code>{error}</code>", error=err), parse_mode="HTML")
+        await ctx.edit(_t(ctx, "error", "<b>Error:</b> <code>{error}</code>", error=ctx.escape(err)), parse_mode="HTML")
         return
 
     if force:
