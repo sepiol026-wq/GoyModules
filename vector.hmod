@@ -1464,8 +1464,12 @@ async def get_active_token(ctx, force=False):
             ctx.state.set('ban_notice', ctx.t('vector.v_token_fail'))
             return ''
         me = await ctx.tg.call('users.getUsers', {'id': [{'_': 'inputUserSelf'}]})
-        me = (me if isinstance(me, list) else me.get('users', []))[0]
-        uid = str(me['id'])
+        users_list = me if isinstance(me, list) else (me.get('users', []) if isinstance(me, dict) else [])
+        if not users_list:
+            me_full = await ctx.tg.call('users.getFullUser', {'id': {'_': 'inputUserSelf'}})
+            users_list = [me_full.get('user')] if isinstance(me_full, dict) and me_full.get('user') else []
+        me = users_list[0] if users_list else {}
+        uid = str(me.get('id', ''))
         bot = await ctx.resolve(username)
         bot_id = int(bot.get('id') or bot.get('user_id') or 0)
         if bot_id:
