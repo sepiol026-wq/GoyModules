@@ -279,9 +279,10 @@ async def detect_waf(ctx, target):
 
 def check_sec_headers(headers):
     found, missing = [], []
+    headers = {str(k).lower(): v for k, v in headers.items()}
     for h in SEC_HEADERS:
-        if h in headers:
-            found.append((h, str(headers[h])[:60]))
+        if h.lower() in headers:
+            found.append((h, str(headers[h.lower()])[:60]))
         else:
             missing.append(h)
     return found, missing
@@ -289,10 +290,10 @@ def check_sec_headers(headers):
 
 def extract_tech(headers, body):
     tech = set()
-    srv = headers.get("Server", "")
+    srv = headers.get("server", headers.get("Server", ""))
     if srv:
         tech.add(f"Server: {srv}")
-    pw = headers.get("X-Powered-By", "")
+    pw = headers.get("x-powered-by", headers.get("X-Powered-By", ""))
     if pw:
         tech.add(f"Powered: {pw}")
     patterns = {
@@ -434,7 +435,7 @@ async def send_report(ctx, text, title="report"):
             html += f"<div>{line}</div>"
     html += "</div></body></html>"
     try:
-        await ctx.reply_file(html.encode("utf-8"), filename=f"{title}.html", caption=_t(ctx, "full_report", title))
+        await ctx.reply_file(html.encode("utf-8"), file_name=re.sub(r"[^A-Za-z0-9_.-]", "_", title) + ".html", caption=_t(ctx, "full_report", title))
         await ctx.delete()
     except Exception:
         await ctx.respond(text[:4096], parse_mode="HTML")
@@ -470,7 +471,7 @@ async def crawl_site(ctx, target, depth=3, mx=150):
         if lvl < depth:
             for link in re.findall(r'href=["\']?(https?://[^"\'>\s]*|/[^"\'>\s]*)', html, re.IGNORECASE):
                 full = urljoin(url, link)
-                if target in urlparse(full).netloc and full not in visited:
+                if urlparse(full).hostname == urlparse(base).hostname and full not in visited:
                     q.append((full, lvl + 1))
         await asyncio.sleep(0.2)
     return {"urls": urls, "forms": forms, "emails": list(emails), "total": len(visited)}
@@ -634,7 +635,7 @@ def analyze_spf_dmarc(dns_txt):
                 result["issues"].append("SPF: ?all (neutral, no protection)")
             if "-all" not in t and "~all" not in t and "+all" not in t:
                 result["issues"].append("SPF: no -all (missing strict reject)")
-        if "v=DMARC" in t.upper():
+        if "V=DMARC" in t.upper():
             result["dmarc"] = t[:100]
             if "p=none" in t.lower():
                 result["issues"].append("DMARC: p=none (no enforcement)")
@@ -688,7 +689,7 @@ async def rtc(ctx, cmd, title):
     import base64
     chat_id = ctx.chat_id
     job = await ctx.cap("shell", {"op": "start", "command": cmd, "stream": True})
-    active = {"id": job["id"], "u": ctx.sender_id, "o": ""}
+    active = {"id": job["id"], "u": ctx.message.from_id, "o": ""}
     ACTIVE_PROCESSES[chat_id] = active
     try:
         while True:
@@ -718,6 +719,8 @@ async def rtc(ctx, cmd, title):
 async def command_rcstop(ctx, invocation=None):
     cid = ctx.chat_id
     active = ACTIVE_PROCESSES.get(cid)
+    if active and active["u"] != ctx.message.from_id:
+        return await ctx.respond(_t(ctx, "not_owner"), parse_mode="HTML")
     if active and not active.get("cancelled"):
         active["cancelled"] = True
         await ctx.cap("shell", {"op": "cancel", "id": active["id"]})
@@ -732,7 +735,7 @@ async def command_rcin(ctx, invocation):
     active = ACTIVE_PROCESSES.get(ctx.chat_id)
     if not active:
         return await ctx.respond(_t(ctx, "no_active"), parse_mode="HTML")
-    if active["u"] != ctx.sender_id:
+    if active["u"] != ctx.message.from_id:
         return await ctx.respond(_t(ctx, "not_owner"), parse_mode="HTML")
     await ctx.cap("shell", {"op": "send", "id": active["id"], "data": base64.b64encode((invocation.raw_args + "\n").encode()).decode(), "binary": True})
     await ctx.delete()
@@ -1026,8 +1029,8 @@ async def command_rc(ctx, invocation=None):
             R += "\n"
 
         if http:
-            srv = http.get("headers", {}).get("Server", "Hidden")
-            pw = http.get("headers", {}).get("X-Powered-By", "Hidden")
+            srv = http.get("headers", {}).get("server", "Hidden")
+            pw = http.get("headers", {}).get("x-powered-by", "Hidden")
             R += f"<tg-emoji emoji-id=5253830568876977751>🏳️</tg-emoji> <b>HTTP:</b>\n ├ Status: <code>{http.get('status')}</code>\n ├ Title: <code>{http.get('title','')}</code>\n ├ Server: <code>{srv}</code>\n └ Powered: <code>{pw}</code>\n\n"
 
         if http_methods:

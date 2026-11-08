@@ -3,7 +3,7 @@ HOTARU = {
     "version": "1.4.0",
     "commands": ["doom", "hdoom"],
     "capabilities": ["state"],
-    "tasks": {"game": {"interval": 0.12}},
+    "tasks": {"game": {"interval": 0.12, "autostart": True}},
     "banner": "https://raw.githubusercontent.com/sepiol026-wq/GoyModules/main/assets/doom.png",
     "lexicon": {
         "en": {
@@ -362,9 +362,9 @@ def _mkbtn(ctx, text, fn):
     return _btn(ctx, text, cb, {"action": fn.__name__})
 
 
-async def safe_edit(call, text, reply_markup):
+async def safe_edit(ctx, call, text, reply_markup):
     try:
-        await call.edit(text, buttons=reply_markup)
+        await ctx.edit_form(GAME_TARGET["form"], text, buttons=reply_markup)
         return True
     except Exception as e:
         wait_s = getattr(e, "seconds", 0) or getattr(e, "value", 0)
@@ -375,7 +375,7 @@ async def safe_edit(call, text, reply_markup):
         if wait_s:
             await asyncio.sleep(wait_s + 0.1)
             try:
-                await call.edit(text, buttons=reply_markup)
+                await ctx.edit_form(GAME_TARGET["form"], text, buttons=reply_markup)
                 return True
             except Exception:
                 return False
@@ -550,7 +550,7 @@ async def do_render(ctx, call, st):
             [_mkbtn(ctx, _t(ctx, "new", st), action_new_menu)],
             [_mkbtn(ctx, _t(ctx, "back", st), action_main_menu)],
         ]
-        await safe_edit(call, dead_text, btn)
+        await safe_edit(ctx, call, dead_text, btn)
         return
     hud = _hud(ctx, st)
     btn = [
@@ -561,7 +561,7 @@ async def do_render(ctx, call, st):
     ]
     if st.get("last_hud") == hud:
         return
-    if await safe_edit(call, hud, btn):
+    if await safe_edit(ctx, call, hud, btn):
         st["last_hud"] = hud
 
 
@@ -808,7 +808,7 @@ async def action_new_menu(ctx, call):
         [_mkbtn(ctx, "🟠 HARD", action_new_hard), _mkbtn(ctx, "🔴 NIGHTMARE", action_new_nightmare)],
         [_mkbtn(ctx, _t(ctx, "back"), action_main_menu)],
     ]
-    await safe_edit(call, _t(ctx, "start_pick"), btn)
+    await safe_edit(ctx, call, _t(ctx, "start_pick"), btn)
 
 
 async def _start(ctx, call, difficulty, daily=False):
@@ -857,7 +857,7 @@ async def _start(ctx, call, difficulty, daily=False):
         await task_game(ctx)
     except Exception:
         err = traceback.format_exc()
-        await safe_edit(call, f"<b>CRITICAL ERROR:</b>\n<pre>{err}</pre>", [])
+        await safe_edit(ctx, call, f"<b>CRITICAL ERROR:</b>\n<pre>{err}</pre>", [])
 
 
 async def action_new_easy(ctx, call):
@@ -879,7 +879,7 @@ async def action_new_nightmare(ctx, call):
 async def action_daily(ctx, call):
     p = _profile(ctx)
     if p.get("daily_last") == _today_key():
-        await safe_edit(call, _t(ctx, "daily_done"), [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]])
+        await safe_edit(ctx, call, _t(ctx, "daily_done"), [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]])
         return
     await _start(ctx, call, "hard", daily=True)
 
@@ -903,10 +903,10 @@ async def action_cont(ctx, call):
             GAME_TARGET["target"] = (ctx, call)
             await task_game(ctx)
         else:
-            await safe_edit(call, _t(ctx, "nosave"), [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]])
+            await safe_edit(ctx, call, _t(ctx, "nosave"), [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]])
     except Exception:
         err = traceback.format_exc()
-        await safe_edit(call, f"<b>CRITICAL ERROR:</b>\n<pre>{err}</pre>", [])
+        await safe_edit(ctx, call, f"<b>CRITICAL ERROR:</b>\n<pre>{err}</pre>", [])
 
 
 async def action_shop(ctx, call):
@@ -920,7 +920,7 @@ async def action_shop(ctx, call):
         [_mkbtn(ctx, _t(ctx, "buy_ammo", st), action_buy_ammo)],
         [_mkbtn(ctx, _t(ctx, "back", st), action_refresh)],
     ]
-    await safe_edit(call, txt, btn)
+    await safe_edit(ctx, call, txt, btn)
 
 
 async def _buy(ctx, call, key, cost, cap):
@@ -981,7 +981,7 @@ async def action_profile(ctx, call):
     btn = [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]]
     if "doom_user" in SESSIONS and SESSIONS["doom_user"].get("running"):
         btn.insert(0, [_mkbtn(ctx, _t(ctx, "in_game", SESSIONS["doom_user"]), action_refresh)])
-    await safe_edit(call, txt, btn)
+    await safe_edit(ctx, call, txt, btn)
 
 
 async def action_settings(ctx, call):
@@ -993,7 +993,7 @@ async def action_settings(ctx, call):
         [_mkbtn(ctx, f"lang: {s['lang']}", action_cycle_lang)],
         [_mkbtn(ctx, _t(ctx, "back"), action_main_menu)],
     ]
-    await safe_edit(call, txt, btn)
+    await safe_edit(ctx, call, txt, btn)
 
 
 async def action_cycle_diff(ctx, call):
@@ -1038,7 +1038,7 @@ async def action_cycle_lang(ctx, call):
 
 async def action_help(ctx, call):
     txt = _t(ctx, "help_text", None, pref=".")
-    await safe_edit(call, txt, [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]])
+    await safe_edit(ctx, call, txt, [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]])
 
 
 async def action_save(ctx, call):
@@ -1062,11 +1062,11 @@ async def action_exit(ctx, call):
         _save_profile(ctx, p)
         st["running"] = False
         del SESSIONS["doom_user"]
-    await safe_edit(call, _t(ctx, "exit"), [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]])
+    await safe_edit(ctx, call, _t(ctx, "exit"), [[_mkbtn(ctx, _t(ctx, "back"), action_main_menu)]])
 
 
 async def action_main_menu(ctx, call):
-    await safe_edit(call, _t(ctx, "menu"), _main_buttons(ctx))
+    await safe_edit(ctx, call, _t(ctx, "menu"), _main_buttons(ctx))
 
 
 async def action_refresh(ctx, call):
@@ -1112,6 +1112,6 @@ async def command_hdoom(ctx, invocation=None):
 
 async def command_doom(ctx, invocation=None):
     try:
-        await ctx.respond(_t(ctx, "menu"), buttons=_main_buttons(ctx), parse_mode="HTML")
+        GAME_TARGET["form"] = await ctx.inline_form(_t(ctx, "menu"), buttons=_main_buttons(ctx), form_handle=True)
     except Exception:
         await ctx.respond(_t(ctx, "inline_fail"), parse_mode="HTML")

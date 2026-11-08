@@ -1,8 +1,8 @@
 HOTARU = {'id': 'vector',
  'version': '2.4.11',
  'commands': ['vector', 'vecupdate', 'vecdl', 'vecme'],
- 'capabilities': ['state', 'net', 'mt', 'modules', 'files', 'fetch'],
- 'watchers': ['watch_inputs', 'watch_install'],
+ 'capabilities': ['state', 'net', 'mt', 'modules', 'assets', 'fetch'],
+ 'watchers': ['install'],
  'lexicon': {'en': {'name': 'Vector',
                     'description': 'Search modules for Hotaru.\nhttps://www.0xvector.lol',
                     'strings': {'name': 'Vector',
@@ -23,8 +23,8 @@ HOTARU = {'id': 'vector',
                                 'v_err_404': 'No records for: {q}',
                                 'v_err_len': 'Query length is limited to 120 chars.',
                                 'v_err_api': 'Access denied by Vector Server.',
-                                'v_token_fail': '❌ Failed to obtain a Vector access token. Please '
-                                                'try again later.',
+                                'v_token_fail': '❌ Failed to obtain a Vector access token. Please try again '
+                                                'later.',
                                 'v_ban_notice': '⛔ <b>Vector access blocked.</b>\n'
                                                 '<b>Reason:</b> <code>{reason}</code>\n'
                                                 '<b>Term:</b> <code>{term}</code>',
@@ -39,8 +39,7 @@ HOTARU = {'id': 'vector',
                                 'v_lim_cfg': 'Search output limits.',
                                 'v_max_batch_cfg': 'Max modules per batch install.',
                                 'v_auto_upd_cfg': 'Notify me about module updates (hashing-based).',
-                                'v_install_cfg': 'Enable or disable Vector Install channel '
-                                                 'buttons.',
+                                'v_install_cfg': 'Enable or disable Vector Install channel buttons.',
                                 'v_btn_sec': '🛡 Security Scan',
                                 'v_aud_hdr': 'Code Audit: {name}',
                                 'v_aud_req': 'Connecting to Security API...',
@@ -85,50 +84,40 @@ HOTARU = {'id': 'vector',
                                 'v_upd_err': 'Update failed!',
                                 'v_upd_check': 'Checking hashes…',
                                 'v_install_log_hdr': 'Install log: {name}',
-                                'v_install_fail_forbidden': 'Forbidden method: '
-                                                            '<code>{detail}</code>',
-                                'v_install_fail_requirements': 'Pip deps failed: '
-                                                               '<code>{detail}</code>',
-                                'v_install_fail_dependency': 'Missing dependency: '
-                                                             '<code>{detail}</code>',
-                                'v_install_fail_packages': 'System pkgs failed: '
-                                                           '<code>{detail}</code>',
-                                'v_install_fail_core_overwrite': 'Tried to overwrite core '
-                                                                 '<code>{detail}</code>',
+                                'v_install_fail_forbidden': 'Forbidden method: <code>{detail}</code>',
+                                'v_install_fail_requirements': 'Pip deps failed: <code>{detail}</code>',
+                                'v_install_fail_dependency': 'Missing dependency: <code>{detail}</code>',
+                                'v_install_fail_packages': 'System pkgs failed: <code>{detail}</code>',
+                                'v_install_fail_core_overwrite': 'Tried to overwrite core <code>{detail}</code>',
                                 'v_install_fail_ffmpeg': 'Requires ffmpeg (not installed)',
                                 'v_install_fail_inline': 'Requires inline mode (unavailable)',
                                 'v_install_fail_heroku_min': 'Needs Heroku ≥ <code>{detail}</code>',
                                 'v_install_fail_not_found': 'Not found in configured repos',
                                 'v_install_fail_download': 'Failed to download module',
                                 'v_install_fail_unknown': 'Unknown error: <code>{detail}</code>',
-                                'v_upd_same': '🌟 <b>You are on the latest version. Update '
-                                              'anyway?</b>',
+                                'v_upd_same': '🌟 <b>You are on the latest version. Update anyway?</b>',
                                 'v_upd_force_btn': '🧭 Update',
                                 'v_dlcoll_hdr': '<b>Collection {name}</b>',
                                 'v_dlcoll_count': '{count} modules',
-                                'v_dlcoll_start': '<b>Installing all modules from '
-                                                  'collection...</b>',
+                                'v_dlcoll_start': '<b>Installing all modules from collection...</b>',
                                 'v_dlcoll_done': '<b>All modules from collection installed</b>',
                                 'v_dlcoll_done_partial': '<b>Some modules failed to install</b>',
                                 'v_dlcoll_done_none': '<b>No modules were installed</b>',
                                 'v_dlcoll_fail_item': '❌ {name}: {reason}',
                                 'v_dlcoll_empty': '<b>Collection is empty</b>',
                                 'v_dlcoll_not_found': '<b>Collection not found</b>',
-                                'v_vecdl_usage': '<b>Specify collection: </b><code>{p}vecdl <slug '
-                                                 'or URL></code>',
-                                'v_dlcoll_max_batch': 'Collection has {total} modules, max {max} '
-                                                      'per batch. Installing first {max}…',
+                                'v_vecdl_usage': '<b>Specify collection: </b><code>{p}vecdl <slug or URL></code>',
+                                'v_dlcoll_max_batch': 'Collection has {total} modules, max {max} per batch. '
+                                                      'Installing first {max}…',
                                 'v_upd_cancel': '🚫 Cancel',
                                 'v_miniapp_title': 'Open in Mini App',
-                                'v_miniapp_body': 'Open Vector as a Telegram Mini App — instant '
-                                                  'auto-login, no passwords, fully encrypted '
-                                                  "session. One tap and you're in.",
+                                'v_miniapp_body': 'Open Vector as a Telegram Mini App — instant auto-login, no '
+                                                  "passwords, fully encrypted session. One tap and you're in.",
                                 'v_miniapp_btn': '🚀 Open Vector'},
                     'commands': {'vector': {'description': '<query> — search modules in Vector.'},
-                                 'vecupdate': {'description': '[-f|--force] — update Vector '
-                                                              'module.'},
-                                 'vecdl': {'description': '<slug or URL> — download and install '
-                                                          'entire module collection from Vector.'},
+                                 'vecupdate': {'description': '[-f|--force] — update Vector module.'},
+                                 'vecdl': {'description': '<slug or URL> — download and install entire module '
+                                                          'collection from Vector.'},
                                  'vecme': {'description': '— open Vector as Telegram Mini App.'}}},
              'ru': {'name': 'Vector',
                     'description': 'Поиск модулей для Hotaru.\nhttps://www.0xvector.lol',
@@ -150,8 +139,7 @@ HOTARU = {'id': 'vector',
                                 'v_err_404': 'Нет записей по запросу: {q}',
                                 'v_err_len': 'Длина запроса ограничена 120 символами.',
                                 'v_err_api': 'Отказ в доступе от сервера Vector.',
-                                'v_token_fail': '❌ Не удалось получить токен доступа Vector. '
-                                                'Попробуйте позже.',
+                                'v_token_fail': '❌ Не удалось получить токен доступа Vector. Попробуйте позже.',
                                 'v_ban_notice': '⛔ <b>Доступ к Vector заблокирован.</b>\n'
                                                 '<b>Причина:</b> <code>{reason}</code>\n'
                                                 '<b>Срок:</b> <code>{term}</code>',
@@ -166,8 +154,7 @@ HOTARU = {'id': 'vector',
                                 'v_lim_cfg': 'Лимиты вывода поиска.',
                                 'v_max_batch_cfg': 'Макс модулей за одну установку.',
                                 'v_auto_upd_cfg': 'Уведомлять об обновлениях модулей (по хэшам).',
-                                'v_install_cfg': 'Включает или выключает кнопки Vector Install в '
-                                                 'каналах.',
+                                'v_install_cfg': 'Включает или выключает кнопки Vector Install в каналах.',
                                 'v_btn_sec': '🛡 Проверка кода',
                                 'v_aud_hdr': 'Аудит кода: {name}',
                                 'v_aud_req': 'Соединение с Security API...',
@@ -212,14 +199,10 @@ HOTARU = {'id': 'vector',
                                 'v_upd_err': 'Ошибка обновления!',
                                 'v_upd_check': 'Проверка хэшей…',
                                 'v_install_log_hdr': 'Журнал установки: {name}',
-                                'v_install_fail_forbidden': 'Запрещённый метод: '
-                                                            '<code>{detail}</code>',
-                                'v_install_fail_requirements': 'Pip-зависимости не встали: '
-                                                               '<code>{detail}</code>',
-                                'v_install_fail_dependency': 'Не хватает зависимости: '
-                                                             '<code>{detail}</code>',
-                                'v_install_fail_packages': 'Системные пакеты не встали: '
-                                                           '<code>{detail}</code>',
+                                'v_install_fail_forbidden': 'Запрещённый метод: <code>{detail}</code>',
+                                'v_install_fail_requirements': 'Pip-зависимости не встали: <code>{detail}</code>',
+                                'v_install_fail_dependency': 'Не хватает зависимости: <code>{detail}</code>',
+                                'v_install_fail_packages': 'Системные пакеты не встали: <code>{detail}</code>',
                                 'v_install_fail_core_overwrite': 'Пытается перезаписать ядро '
                                                                  '<code>{detail}</code>',
                                 'v_install_fail_ffmpeg': 'Требуется ffmpeg (не установлен)',
@@ -227,10 +210,8 @@ HOTARU = {'id': 'vector',
                                 'v_install_fail_heroku_min': 'Нужен Heroku ≥ <code>{detail}</code>',
                                 'v_install_fail_not_found': 'Не найден в подключённых репозиториях',
                                 'v_install_fail_download': 'Не удалось скачать модуль',
-                                'v_install_fail_unknown': 'Неизвестная ошибка: '
-                                                          '<code>{detail}</code>',
-                                'v_upd_same': '🌟 <b>У тебя последняя версия. Обновиться '
-                                              'принудительно?</b>',
+                                'v_install_fail_unknown': 'Неизвестная ошибка: <code>{detail}</code>',
+                                'v_upd_same': '🌟 <b>У тебя последняя версия. Обновиться принудительно?</b>',
                                 'v_upd_force_btn': '🧭 Обновиться',
                                 'v_dlcoll_hdr': '<b>Коллекция {name}</b>',
                                 'v_dlcoll_count': 'Модулей: {count}',
@@ -241,24 +222,19 @@ HOTARU = {'id': 'vector',
                                 'v_dlcoll_fail_item': '❌ {name}: {reason}',
                                 'v_dlcoll_empty': '<b>Коллекция пуста</b>',
                                 'v_dlcoll_not_found': '<b>Коллекция не найдена</b>',
-                                'v_vecdl_usage': '<b>Укажи коллекцию: </b><code>{p}vecdl <slug или '
-                                                 'ссылка></code>',
-                                'v_dlcoll_max_batch': 'В коллекции {total} модулей, макс {max} за '
-                                                      'раз. Ставлю первые {max}…',
+                                'v_vecdl_usage': '<b>Укажи коллекцию: </b><code>{p}vecdl <slug или ссылка></code>',
+                                'v_dlcoll_max_batch': 'В коллекции {total} модулей, макс {max} за раз. Ставлю '
+                                                      'первые {max}…',
                                 'v_upd_cancel': '🚫 Отмена',
                                 'v_miniapp_title': 'Открыть в Mini App',
-                                'v_miniapp_body': 'Открой Vector как Mini App в Telegram — '
-                                                  'мгновенный автовход, без паролей, сессия '
-                                                  'зашифрована. Один тап и ты внутри.',
+                                'v_miniapp_body': 'Открой Vector как Mini App в Telegram — мгновенный автовход, '
+                                                  'без паролей, сессия зашифрована. Один тап и ты внутри.',
                                 'v_miniapp_btn': '🚀 Открыть Vector'},
                     'commands': {'vector': {'description': '<запрос> — поиск модулей в Vector.'},
-                                 'vecupdate': {'description': '[-f|--force] — обновить модуль '
-                                                              'Vector.'},
-                                 'vecdl': {'description': '<slug_или_ссылка> — скачать и '
-                                                          'установить всю коллекцию модулей из '
-                                                          'Vector.'},
-                                 'vecme': {'description': '— открыть Vector как Mini App в '
-                                                          'Telegram.'}}},
+                                 'vecupdate': {'description': '[-f|--force] — обновить модуль Vector.'},
+                                 'vecdl': {'description': '<slug_или_ссылка> — скачать и установить всю коллекцию '
+                                                          'модулей из Vector.'},
+                                 'vecme': {'description': '— открыть Vector как Mini App в Telegram.'}}},
              'jp': {'name': 'Vector',
                     'description': 'Hotaru用モジュール検索。\nhttps://www.0xvector.lol',
                     'strings': {'name': 'Vector',
@@ -343,8 +319,7 @@ HOTARU = {'id': 'vector',
                                 'v_install_fail_requirements': 'Pip依存関係の失敗: <code>{detail}</code>',
                                 'v_install_fail_dependency': '不足している依存関係: <code>{detail}</code>',
                                 'v_install_fail_packages': 'システムパッケージの失敗: <code>{detail}</code>',
-                                'v_install_fail_core_overwrite': 'コアを上書きしようとしました '
-                                                                 '<code>{detail}</code>',
+                                'v_install_fail_core_overwrite': 'コアを上書きしようとしました <code>{detail}</code>',
                                 'v_install_fail_ffmpeg': 'ffmpegが必要です（未インストール）',
                                 'v_install_fail_inline': 'インラインモードが必要です（利用不可）',
                                 'v_install_fail_heroku_min': 'Heroku ≥ <code>{detail}</code>が必要です',
@@ -362,8 +337,7 @@ HOTARU = {'id': 'vector',
                                 'v_dlcoll_fail_item': '❌ {name}: {reason}',
                                 'v_dlcoll_empty': '<b>コレクションは空です</b>',
                                 'v_dlcoll_not_found': '<b>コレクションが見つかりません</b>',
-                                'v_vecdl_usage': '<b>コレクションを指定: </b><code>{p}vecdl '
-                                                 '<slugかURL></code>',
+                                'v_vecdl_usage': '<b>コレクションを指定: </b><code>{p}vecdl <slugかURL></code>',
                                 'v_dlcoll_max_batch': 'コレクションに{total}モジュール、最大{max}まで。最初の{max}をインストール中…',
                                 'v_upd_cancel': '🚫 キャンセル',
                                 'v_miniapp_title': 'Mini Appで開く',
@@ -372,8 +346,7 @@ HOTARU = {'id': 'vector',
                                 'v_miniapp_btn': '🚀 Vectorを開く'},
                     'commands': {'vector': {'description': '<クエリ> — Vectorでモジュールを検索。'},
                                  'vecupdate': {'description': '[-f|--force] — Vectorモジュールを更新します。'},
-                                 'vecdl': {'description': '<slugかURL> — '
-                                                          'Vectorからコレクション全体をダウンロードしてインストール。'},
+                                 'vecdl': {'description': '<slugかURL> — Vectorからコレクション全体をダウンロードしてインストール。'},
                                  'vecme': {'description': '— VectorをTelegram Mini Appとして開く。'}}},
              'ua': {'name': 'Vector',
                     'description': 'Пошук модулів для Hotaru.\nhttps://www.0xvector.lol',
@@ -395,8 +368,7 @@ HOTARU = {'id': 'vector',
                                 'v_err_404': 'Немає записів за запитом: {q}',
                                 'v_err_len': 'Довжина запиту обмежена 120 символами.',
                                 'v_err_api': 'Відмова в доступі від сервера Vector.',
-                                'v_token_fail': '❌ Не вдалося отримати токен доступу Vector. '
-                                                'Спробуйте пізніше.',
+                                'v_token_fail': '❌ Не вдалося отримати токен доступу Vector. Спробуйте пізніше.',
                                 'v_ban_notice': '⛔ <b>Доступ до Vector заблоковано.</b>\n'
                                                 '<b>Причина:</b> <code>{reason}</code>\n'
                                                 '<b>Термін:</b> <code>{term}</code>',
@@ -411,8 +383,7 @@ HOTARU = {'id': 'vector',
                                 'v_lim_cfg': 'Ліміти виводу пошуку.',
                                 'v_max_batch_cfg': 'Макс модулів за одну установку.',
                                 'v_auto_upd_cfg': 'Повідомляти про оновлення модулів (за хешами).',
-                                'v_install_cfg': 'Вмикає або вимикає кнопки Vector Install у '
-                                                 'каналах.',
+                                'v_install_cfg': 'Вмикає або вимикає кнопки Vector Install у каналах.',
                                 'v_btn_sec': '🛡 Перевірка коду',
                                 'v_aud_hdr': 'Аудит коду: {name}',
                                 'v_aud_req': "З'єднання з Security API...",
@@ -457,46 +428,37 @@ HOTARU = {'id': 'vector',
                                 'v_upd_err': 'Помилка оновлення!',
                                 'v_upd_check': 'Перевірка хешів…',
                                 'v_install_log_hdr': 'Журнал встановлення: {name}',
-                                'v_install_fail_forbidden': 'Заборонений метод: '
-                                                            '<code>{detail}</code>',
-                                'v_install_fail_requirements': 'Pip-залежності не стали: '
-                                                               '<code>{detail}</code>',
-                                'v_install_fail_dependency': 'Бракує залежності: '
-                                                             '<code>{detail}</code>',
-                                'v_install_fail_packages': 'Системні пакунки не стали: '
-                                                           '<code>{detail}</code>',
+                                'v_install_fail_forbidden': 'Заборонений метод: <code>{detail}</code>',
+                                'v_install_fail_requirements': 'Pip-залежності не стали: <code>{detail}</code>',
+                                'v_install_fail_dependency': 'Бракує залежності: <code>{detail}</code>',
+                                'v_install_fail_packages': 'Системні пакунки не стали: <code>{detail}</code>',
                                 'v_install_fail_core_overwrite': 'Намагається перезаписати ядро '
                                                                  '<code>{detail}</code>',
                                 'v_install_fail_ffmpeg': 'Потрібен ffmpeg (не встановлено)',
                                 'v_install_fail_inline': 'Потрібен inline-режим (недоступний)',
-                                'v_install_fail_heroku_min': 'Потрібен Heroku ≥ '
-                                                             '<code>{detail}</code>',
-                                'v_install_fail_not_found': 'Не знайдено в підключених '
-                                                            'репозиторіях',
+                                'v_install_fail_heroku_min': 'Потрібен Heroku ≥ <code>{detail}</code>',
+                                'v_install_fail_not_found': 'Не знайдено в підключених репозиторіях',
                                 'v_install_fail_download': 'Не вдалося завантажити модуль',
                                 'v_install_fail_unknown': 'Невідома помилка: <code>{detail}</code>',
-                                'v_upd_same': '🌟 <b>У тебе остання версія. Оновитися '
-                                              'примусово?</b>',
+                                'v_upd_same': '🌟 <b>У тебе остання версія. Оновитися примусово?</b>',
                                 'v_upd_force_btn': '🧭 Оновитися',
                                 'v_dlcoll_hdr': '<b>Колекція {name}</b>',
                                 'v_dlcoll_count': 'Модулів: {count}',
                                 'v_dlcoll_start': '<b>Встановлюю всі модулі з колекції...</b>',
                                 'v_dlcoll_done': '<b>Всі модулі з колекції встановлено</b>',
-                                'v_dlcoll_done_partial': '<b>Деякі модулі не вдалося '
-                                                         'встановити</b>',
+                                'v_dlcoll_done_partial': '<b>Деякі модулі не вдалося встановити</b>',
                                 'v_dlcoll_done_none': '<b>Жоден модуль не встановлено</b>',
                                 'v_dlcoll_fail_item': '❌ {name}: {reason}',
                                 'v_dlcoll_empty': '<b>Колекція порожня</b>',
                                 'v_dlcoll_not_found': '<b>Колекцію не знайдено</b>',
                                 'v_vecdl_usage': '<b>Вкажи колекцію: </b><code>{p}vecdl <slug або '
                                                  'посилання></code>',
-                                'v_dlcoll_max_batch': 'У колекції {total} модулів, макс {max} за '
-                                                      'раз. Ставлю перші {max}…',
+                                'v_dlcoll_max_batch': 'У колекції {total} модулів, макс {max} за раз. Ставлю '
+                                                      'перші {max}…',
                                 'v_upd_cancel': '🚫 Скасувати',
                                 'v_miniapp_title': 'Відкрити в Mini App',
-                                'v_miniapp_body': 'Відкрий Vector як Mini App у Telegram — '
-                                                  'миттєвий автовхід, без паролів, сесія '
-                                                  'зашифрована. Один тап і ти всередині.',
+                                'v_miniapp_body': 'Відкрий Vector як Mini App у Telegram — миттєвий автовхід, без '
+                                                  'паролів, сесія зашифрована. Один тап і ти всередині.',
                                 'v_miniapp_btn': '🚀 Відкрити Vector'},
                     'commands': {}},
              'de': {'name': 'Vector',
@@ -519,8 +481,8 @@ HOTARU = {'id': 'vector',
                                 'v_err_404': 'Keine Einträge für: {q}',
                                 'v_err_len': 'Abfragelänge ist auf 120 Zeichen begrenzt.',
                                 'v_err_api': 'Zugriff durch Vector-Server verweigert.',
-                                'v_token_fail': '❌ Vector-Zugriffstoken konnte nicht abgerufen '
-                                                'werden. Bitte später erneut versuchen.',
+                                'v_token_fail': '❌ Vector-Zugriffstoken konnte nicht abgerufen werden. Bitte '
+                                                'später erneut versuchen.',
                                 'v_ban_notice': '⛔ <b>Zugriff auf Vector gesperrt.</b>\n'
                                                 '<b>Grund:</b> <code>{reason}</code>\n'
                                                 '<b>Dauer:</b> <code>{term}</code>',
@@ -534,10 +496,9 @@ HOTARU = {'id': 'vector',
                                 'v_dl_err': 'Installation fehlgeschlagen!',
                                 'v_lim_cfg': 'Suchausgabe-Limits.',
                                 'v_max_batch_cfg': 'Max Module pro Batch-Installation.',
-                                'v_auto_upd_cfg': 'Benachrichtige bei Modul-Updates '
-                                                  '(Hash-basiert).',
-                                'v_install_cfg': 'Aktiviert oder deaktiviert '
-                                                 'Vector-Install-Schaltflächen in Kanälen.',
+                                'v_auto_upd_cfg': 'Benachrichtige bei Modul-Updates (Hash-basiert).',
+                                'v_install_cfg': 'Aktiviert oder deaktiviert Vector-Install-Schaltflächen in '
+                                                 'Kanälen.',
                                 'v_btn_sec': '🛡 Sicherheits-Scan',
                                 'v_aud_hdr': 'Code-Audit: {name}',
                                 'v_aud_req': 'Verbindung zur Security-API...',
@@ -582,64 +543,49 @@ HOTARU = {'id': 'vector',
                                 'v_upd_err': 'Aktualisierung fehlgeschlagen!',
                                 'v_upd_check': 'Überprüfe Hashes…',
                                 'v_install_log_hdr': 'Installationsprotokoll: {name}',
-                                'v_install_fail_forbidden': 'Verbotene Methode: '
-                                                            '<code>{detail}</code>',
+                                'v_install_fail_forbidden': 'Verbotene Methode: <code>{detail}</code>',
                                 'v_install_fail_requirements': 'Pip-Abhängigkeiten fehlgeschlagen: '
                                                                '<code>{detail}</code>',
-                                'v_install_fail_dependency': 'Fehlende Abhängigkeit: '
-                                                             '<code>{detail}</code>',
-                                'v_install_fail_packages': 'Systempakete fehlgeschlagen: '
-                                                           '<code>{detail}</code>',
-                                'v_install_fail_core_overwrite': 'Versucht Kern '
-                                                                 '<code>{detail}</code> zu '
+                                'v_install_fail_dependency': 'Fehlende Abhängigkeit: <code>{detail}</code>',
+                                'v_install_fail_packages': 'Systempakete fehlgeschlagen: <code>{detail}</code>',
+                                'v_install_fail_core_overwrite': 'Versucht Kern <code>{detail}</code> zu '
                                                                  'überschreiben',
                                 'v_install_fail_ffmpeg': 'Benötigt ffmpeg (nicht installiert)',
                                 'v_install_fail_inline': 'Benötigt Inline-Modus (nicht verfügbar)',
-                                'v_install_fail_heroku_min': 'Benötigt Heroku ≥ '
-                                                             '<code>{detail}</code>',
-                                'v_install_fail_not_found': 'Nicht in konfigurierten Repos '
-                                                            'gefunden',
+                                'v_install_fail_heroku_min': 'Benötigt Heroku ≥ <code>{detail}</code>',
+                                'v_install_fail_not_found': 'Nicht in konfigurierten Repos gefunden',
                                 'v_install_fail_download': 'Modul-Download fehlgeschlagen',
-                                'v_install_fail_unknown': 'Unbekannter Fehler: '
-                                                          '<code>{detail}</code>',
+                                'v_install_fail_unknown': 'Unbekannter Fehler: <code>{detail}</code>',
                                 'v_upd_same': '🌟 <b>Du hast bereits die neueste Version. Trotzdem '
                                               'aktualisieren?</b>',
                                 'v_upd_force_btn': '🧭 Aktualisieren',
                                 'v_dlcoll_hdr': '<b>Sammlung {name}</b>',
                                 'v_dlcoll_count': '{count} Module',
-                                'v_dlcoll_start': '<b>Alle Module aus der Sammlung werden '
-                                                  'installiert...</b>',
+                                'v_dlcoll_start': '<b>Alle Module aus der Sammlung werden installiert...</b>',
                                 'v_dlcoll_done': '<b>Alle Module aus der Sammlung installiert</b>',
-                                'v_dlcoll_done_partial': '<b>Einige Module konnten nicht '
-                                                         'installiert werden</b>',
+                                'v_dlcoll_done_partial': '<b>Einige Module konnten nicht installiert werden</b>',
                                 'v_dlcoll_done_none': '<b>Keine Module installiert</b>',
                                 'v_dlcoll_fail_item': '❌ {name}: {reason}',
                                 'v_dlcoll_empty': '<b>Sammlung ist leer</b>',
                                 'v_dlcoll_not_found': '<b>Sammlung nicht gefunden</b>',
-                                'v_vecdl_usage': '<b>Sammlung angeben: </b><code>{p}vecdl <slug '
-                                                 'oder URL></code>',
-                                'v_dlcoll_max_batch': 'Sammlung hat {total} Module, max {max} pro '
-                                                      'Durchlauf. Installiere erste {max}…',
+                                'v_vecdl_usage': '<b>Sammlung angeben: </b><code>{p}vecdl <slug oder URL></code>',
+                                'v_dlcoll_max_batch': 'Sammlung hat {total} Module, max {max} pro Durchlauf. '
+                                                      'Installiere erste {max}…',
                                 'v_upd_cancel': '🚫 Abbrechen',
                                 'v_miniapp_title': 'In Mini App öffnen',
-                                'v_miniapp_body': 'Öffne Vector als Telegram Mini App — sofortiger '
-                                                  'Auto-Login, keine Passwörter, verschlüsselte '
-                                                  'Sitzung. Ein Tipp und du bist drin.',
+                                'v_miniapp_body': 'Öffne Vector als Telegram Mini App — sofortiger Auto-Login, '
+                                                  'keine Passwörter, verschlüsselte Sitzung. Ein Tipp und du bist '
+                                                  'drin.',
                                 'v_miniapp_btn': '🚀 Vector öffnen'},
-                    'commands': {'vector': {'description': '<Abfrage> — Suche nach Modulen in '
-                                                           'Vector.'},
-                                 'vecupdate': {'description': '[-f|--force] — Vector-Modul '
-                                                              'aktualisieren.'},
-                                 'vecdl': {'description': '<slug_oder_url> — gesamte Modulsammlung '
-                                                          'von Vector herunterladen und '
-                                                          'installieren.'},
-                                 'vecme': {'description': '— Vector als Telegram Mini App '
-                                                          'öffnen.'}}},
+                    'commands': {'vector': {'description': '<Abfrage> — Suche nach Modulen in Vector.'},
+                                 'vecupdate': {'description': '[-f|--force] — Vector-Modul aktualisieren.'},
+                                 'vecdl': {'description': '<slug_oder_url> — gesamte Modulsammlung von Vector '
+                                                          'herunterladen und installieren.'},
+                                 'vecme': {'description': '— Vector als Telegram Mini App öffnen.'}}},
              'neofit': {'name': 'Vector',
                         'description': 'Search modules for Hotaru.\nhttps://www.0xvector.lol',
                         'strings': {'name': 'Vector',
-                                    '_cls_doc': 'Search modules for Hotaru.\n'
-                                                'https://www.0xvector.lol',
+                                    '_cls_doc': 'Search modules for Hotaru.\nhttps://www.0xvector.lol',
                                     'v_dev_lbl': 'by',
                                     'v_dev_str': 'dev',
                                     'v_dev_ofc': 'verified',
@@ -652,13 +598,13 @@ HOTARU = {'id': 'vector',
                                     'v_hid_cmd': '+ {rem} hidden cmds.',
                                     'v_hid_req': '+ {rem} hidden deps.',
                                     'v_res_hdr': 'stdout:',
-                                    'v_err_empty': '<b>SyntaxError:</b> missing query. '
-                                                   '<code>{p}vector &lt;text&gt;</code>',
+                                    'v_err_empty': '<b>SyntaxError:</b> missing query. <code>{p}vector '
+                                                   '&lt;text&gt;</code>',
                                     'v_err_404': '<b>grep:</b> <code>{q}</code> not found.',
                                     'v_err_len': '<b>Buffer overflow:</b> max 120 chars.',
                                     'v_err_api': '<b>403 Forbidden</b> by Vector API.',
-                                    'v_token_fail': '❌ <b>Token issuance failed.</b> Vector API '
-                                                    'did not return a valid token. Retry later.',
+                                    'v_token_fail': '❌ <b>Token issuance failed.</b> Vector API did not return a '
+                                                    'valid token. Retry later.',
                                     'v_ban_notice': '⛔ <b>Vector blocked access.</b>\n'
                                                     '<b>rule:</b> <code>{reason}</code>\n'
                                                     '<b>TTL:</b> <code>{term}</code>',
@@ -718,43 +664,33 @@ HOTARU = {'id': 'vector',
                                     'v_upd_err': 'Update failed.',
                                     'v_upd_check': "Checkin' hashes…",
                                     'v_install_log_hdr': 'install log: {name}',
-                                    'v_install_fail_forbidden': 'forbidden method: '
-                                                                '<code>{detail}</code>',
-                                    'v_install_fail_requirements': 'pip deps failed: '
-                                                                   '<code>{detail}</code>',
-                                    'v_install_fail_dependency': 'missing dep: '
-                                                                 '<code>{detail}</code>',
-                                    'v_install_fail_packages': 'system pkgs failed: '
-                                                               '<code>{detail}</code>',
+                                    'v_install_fail_forbidden': 'forbidden method: <code>{detail}</code>',
+                                    'v_install_fail_requirements': 'pip deps failed: <code>{detail}</code>',
+                                    'v_install_fail_dependency': 'missing dep: <code>{detail}</code>',
+                                    'v_install_fail_packages': 'system pkgs failed: <code>{detail}</code>',
                                     'v_install_fail_core_overwrite': 'core overwrite attempt: '
                                                                      '<code>{detail}</code>',
                                     'v_install_fail_ffmpeg': 'needs ffmpeg (not found)',
                                     'v_install_fail_inline': 'needs inline mode (dead)',
-                                    'v_install_fail_heroku_min': 'needs Heroku ≥ '
-                                                                 '<code>{detail}</code>',
+                                    'v_install_fail_heroku_min': 'needs Heroku ≥ <code>{detail}</code>',
                                     'v_install_fail_not_found': 'not in configured repos',
                                     'v_install_fail_download': 'download failed',
-                                    'v_install_fail_unknown': 'unknown error: '
-                                                              '<code>{detail}</code>',
+                                    'v_install_fail_unknown': 'unknown error: <code>{detail}</code>',
                                     'v_upd_same': '🌟 <b>Up to date. git pull --force?</b>',
                                     'v_upd_force_btn': '🧭 git pull',
                                     'v_dlcoll_hdr': '<b>Collection {name}</b>',
                                     'v_dlcoll_count': '{count} mods',
-                                    'v_dlcoll_start': '<b>git cloning collection and installing '
-                                                      'all mods via git pull && makepkg -si...</b>',
-                                    'v_dlcoll_done': '<b>All mods from collection installed (no '
-                                                     'errors, chad moment)</b>',
-                                    'v_dlcoll_done_partial': '<b>Some mods failed to install '
-                                                             '(skill issue)</b>',
-                                    'v_dlcoll_done_none': '<b>No mods installed (RTFM or gtfo, '
-                                                          'normie)</b>',
+                                    'v_dlcoll_start': '<b>git cloning collection and installing all mods via git '
+                                                      'pull && makepkg -si...</b>',
+                                    'v_dlcoll_done': '<b>All mods from collection installed (no errors, chad '
+                                                     'moment)</b>',
+                                    'v_dlcoll_done_partial': '<b>Some mods failed to install (skill issue)</b>',
+                                    'v_dlcoll_done_none': '<b>No mods installed (RTFM or gtfo, normie)</b>',
                                     'v_dlcoll_fail_item': '❌ {name}: {reason}',
                                     'v_dlcoll_empty': '<b>Empty collection, cope harder</b>',
                                     'v_dlcoll_not_found': '<b>404 collection not found, seethe</b>',
-                                    'v_vecdl_usage': '<b>specify collection: </b><code>{p}vecdl '
-                                                     '<slug></code>',
-                                    'v_dlcoll_max_batch': '{total} mods, max {max}. pulling first '
-                                                          '{max}…',
+                                    'v_vecdl_usage': '<b>specify collection: </b><code>{p}vecdl <slug></code>',
+                                    'v_dlcoll_max_batch': '{total} mods, max {max}. pulling first {max}…',
                                     'v_upd_cancel': '🚫 abort',
                                     'v_miniapp_title': '$ open --mode=webapp',
                                     'v_miniapp_body': '> webapp_open(): tg_session=auto\n'
@@ -763,17 +699,14 @@ HOTARU = {'id': 'vector',
                                     'v_miniapp_btn': '🚀 Launch',
                                     'v_aud_mem': 'Loaded from cache.'},
                         'commands': {'vector': {'description': '<query> — grep modules in Vector.'},
-                                     'vecupdate': {'description': '[-f|--force] — git pull '
-                                                                  'Vector.'},
-                                     'vecdl': {'description': '<slug or URL> — pull entire module '
-                                                              'collection from Vector.'},
+                                     'vecupdate': {'description': '[-f|--force] — git pull Vector.'},
+                                     'vecdl': {'description': '<slug or URL> — pull entire module collection from '
+                                                              'Vector.'},
                                      'vecme': {'description': '— $ ./mini_app --launch'}}},
              'tiktok': {'name': 'Vector',
-                        'description': 'Темка для поиска модулей для Hotaru.\n'
-                                       'https://www.0xvector.lol',
+                        'description': 'Темка для поиска модулей для Hotaru.\nhttps://www.0xvector.lol',
                         'strings': {'name': 'Vector',
-                                    '_cls_doc': 'Темка для поиска модулей для Hotaru.\n'
-                                                'https://www.0xvector.lol',
+                                    '_cls_doc': 'Темка для поиска модулей для Hotaru.\nhttps://www.0xvector.lol',
                                     'v_dev_lbl': 'Кодер:',
                                     'v_dev_str': 'дев:',
                                     'v_dev_ofc': 'офиц',
@@ -790,8 +723,7 @@ HOTARU = {'id': 'vector',
                                     'v_err_404': 'Пусто по запросу: {q}',
                                     'v_err_len': 'Длинновато, до 120 симв.',
                                     'v_err_api': 'Сервер Vector не пускает.',
-                                    'v_token_fail': '❌ Токен получить не вышло. Попробуй чуть '
-                                                    'позже.',
+                                    'v_token_fail': '❌ Токен получить не вышло. Попробуй чуть позже.',
                                     'v_ban_notice': '⛔ <b>Вектор тебя забанил.</b>\n'
                                                     '<b>Причина:</b> <code>{reason}</code>\n'
                                                     '<b>Срок:</b> <code>{term}</code>',
@@ -852,63 +784,47 @@ HOTARU = {'id': 'vector',
                                     'v_upd_check': 'Чекаю хэши…',
                                     'v_install_log_hdr': 'Лог установки: {name}',
                                     'v_install_fail_forbidden': 'Запрещёнка: <code>{detail}</code>',
-                                    'v_install_fail_requirements': 'Пип-либы не встали: '
-                                                                   '<code>{detail}</code>',
-                                    'v_install_fail_dependency': 'Не хватает: '
-                                                                 '<code>{detail}</code>',
-                                    'v_install_fail_packages': 'Системные пакеты мимо: '
-                                                               '<code>{detail}</code>',
-                                    'v_install_fail_core_overwrite': 'Лезет в ядро '
-                                                                     '<code>{detail}</code>',
+                                    'v_install_fail_requirements': 'Пип-либы не встали: <code>{detail}</code>',
+                                    'v_install_fail_dependency': 'Не хватает: <code>{detail}</code>',
+                                    'v_install_fail_packages': 'Системные пакеты мимо: <code>{detail}</code>',
+                                    'v_install_fail_core_overwrite': 'Лезет в ядро <code>{detail}</code>',
                                     'v_install_fail_ffmpeg': 'Нужен ffmpeg (нету)',
                                     'v_install_fail_inline': 'Нужен inline (не раб)',
-                                    'v_install_fail_heroku_min': 'Нужен Heroku ≥ '
-                                                                 '<code>{detail}</code>',
+                                    'v_install_fail_heroku_min': 'Нужен Heroku ≥ <code>{detail}</code>',
                                     'v_install_fail_not_found': 'Нет в подключённых репах',
                                     'v_install_fail_download': 'Не скачалось',
-                                    'v_install_fail_unknown': 'Непонятная ошибка: '
-                                                              '<code>{detail}</code>',
-                                    'v_upd_same': '🌟 <b>У тебя ласт версия. Все равно '
-                                                  'обновить?</b>',
+                                    'v_install_fail_unknown': 'Непонятная ошибка: <code>{detail}</code>',
+                                    'v_upd_same': '🌟 <b>У тебя ласт версия. Все равно обновить?</b>',
                                     'v_upd_force_btn': '🧭 Обнова',
                                     'v_dlcoll_hdr': '<b>Подборка {name}</b>',
                                     'v_dlcoll_count': 'Темок: {count}',
-                                    'v_dlcoll_start': '<b>Качаем все темки из подборки... сигма, '
-                                                      'подожди секунду, щавель уже в деле</b>',
-                                    'v_dlcoll_done': '<b>Все темки из подборки установлены! Сигма '
-                                                     'момент</b>',
-                                    'v_dlcoll_done_partial': '<b>Плаки, плаки. Некоторые темки не '
-                                                             'установились, кароче фейл</b>',
+                                    'v_dlcoll_start': '<b>Качаем все темки из подборки... сигма, подожди секунду, '
+                                                      'щавель уже в деле</b>',
+                                    'v_dlcoll_done': '<b>Все темки из подборки установлены! Сигма момент</b>',
+                                    'v_dlcoll_done_partial': '<b>Плаки, плаки. Некоторые темки не установились, '
+                                                             'кароче фейл</b>',
                                     'v_dlcoll_done_none': '<b>Ни одна темка не встала. Кринж</b>',
                                     'v_dlcoll_fail_item': '❌ {name}: {reason}',
                                     'v_dlcoll_empty': '<b>Подборка пустая, клоун</b>',
-                                    'v_dlcoll_not_found': '<b>Нет такой подборки, ризз или '
-                                                          'ливни</b>',
-                                    'v_vecdl_usage': '<b>Скажи подборку: </b><code>{p}vecdl <slug '
-                                                     'или ссылка></code>',
-                                    'v_dlcoll_max_batch': 'Темок {total}, макс {max}. Ставлю '
-                                                          'первые {max}…',
+                                    'v_dlcoll_not_found': '<b>Нет такой подборки, ризз или ливни</b>',
+                                    'v_vecdl_usage': '<b>Скажи подборку: </b><code>{p}vecdl <slug или '
+                                                     'ссылка></code>',
+                                    'v_dlcoll_max_batch': 'Темок {total}, макс {max}. Ставлю первые {max}…',
                                     'v_upd_cancel': '🚫 Отбой',
                                     'v_miniapp_title': 'Залетай в Mini App',
-                                    'v_miniapp_body': 'Залетай в Vector как мини апп в телеге — '
-                                                      'автовход по тг-акку, без паролей, '
-                                                      'шифрование. Один тап и ты внутри.',
+                                    'v_miniapp_body': 'Залетай в Vector как мини апп в телеге — автовход по '
+                                                      'тг-акку, без паролей, шифрование. Один тап и ты внутри.',
                                     'v_miniapp_btn': '🚀 Го в Vector',
                                     'v_aud_mem': 'Из кэша.'},
-                        'commands': {'vector': {'description': '<запрос> — чекнуть темки (модули) '
-                                                               'в Vector.'},
-                                     'vecupdate': {'description': '[-f|--force] — обновить эту '
-                                                                  'темку.'},
-                                     'vecdl': {'description': '<slug_или_ссылка> — скачать и '
-                                                              'вкатить всю подборку темок из '
-                                                              'Vector.'},
-                                     'vecme': {'description': '— открыть Vector как мини апп в '
-                                                              'телеге.'}}},
+                        'commands': {'vector': {'description': '<запрос> — чекнуть темки (модули) в Vector.'},
+                                     'vecupdate': {'description': '[-f|--force] — обновить эту темку.'},
+                                     'vecdl': {'description': '<slug_или_ссылка> — скачать и вкатить всю подборку '
+                                                              'темок из Vector.'},
+                                     'vecme': {'description': '— открыть Vector как мини апп в телеге.'}}},
              'leet': {'name': 'Vector',
                       'description': 'S34rch m0dul3s f0r H3r0ku.\nhttps://www.0xvector.lol',
                       'strings': {'name': 'Vector',
-                                  '_cls_doc': 'S34rch m0dul3s f0r H3r0ku.\n'
-                                              'https://www.0xvector.lol',
+                                  '_cls_doc': 'S34rch m0dul3s f0r H3r0ku.\nhttps://www.0xvector.lol',
                                   'v_dev_lbl': '4u7h0r:',
                                   'v_dev_str': 'd3v:',
                                   'v_dev_ofc': '0ff1c14l',
@@ -985,58 +901,45 @@ HOTARU = {'id': 'vector',
                                   'v_upd_err': 'Upd473 f41l3d!',
                                   'v_upd_check': 'Ch3ck1ng h45h35…',
                                   'v_install_log_hdr': '1n574ll l0g: {name}',
-                                  'v_install_fail_forbidden': 'f0rb1dd3n m37h0d: '
-                                                              '<code>{detail}</code>',
-                                  'v_install_fail_requirements': 'p1p d3p5 f41l3d: '
-                                                                 '<code>{detail}</code>',
+                                  'v_install_fail_forbidden': 'f0rb1dd3n m37h0d: <code>{detail}</code>',
+                                  'v_install_fail_requirements': 'p1p d3p5 f41l3d: <code>{detail}</code>',
                                   'v_install_fail_dependency': 'm1551n9 d3p: <code>{detail}</code>',
                                   'v_install_fail_packages': 'pkg5 f41l3d: <code>{detail}</code>',
-                                  'v_install_fail_core_overwrite': 'c0r3 0v3rwr173: '
-                                                                   '<code>{detail}</code>',
+                                  'v_install_fail_core_overwrite': 'c0r3 0v3rwr173: <code>{detail}</code>',
                                   'v_install_fail_ffmpeg': 'n33d5 ffmp39 (n07 f0und)',
                                   'v_install_fail_inline': 'n33d5 1nl1n3 (d34d)',
-                                  'v_install_fail_heroku_min': 'n33d5 H3r0ku ≥ '
-                                                               '<code>{detail}</code>',
+                                  'v_install_fail_heroku_min': 'n33d5 H3r0ku ≥ <code>{detail}</code>',
                                   'v_install_fail_not_found': "n07 1n c0nf16'd r3p05",
                                   'v_install_fail_download': 'd0wnl04d f41l3d',
                                   'v_install_fail_unknown': 'unkn0wn 3rr: <code>{detail}</code>',
-                                  'v_upd_same': '🌟 <b>U r 0n 7h3 l47357 v3r510n, pull upd4735 '
-                                                '4nyw4y?</b>',
+                                  'v_upd_same': '🌟 <b>U r 0n 7h3 l47357 v3r510n, pull upd4735 4nyw4y?</b>',
                                   'v_upd_force_btn': '🧭 Upd473',
                                   'v_dlcoll_hdr': '<b>C0ll3c710n {name}</b>',
                                   'v_dlcoll_count': '{count} m0d5',
                                   'v_dlcoll_start': '<b>1n574ll1n9 4ll m0d5 fr0m c0ll3c710n...</b>',
-                                  'v_dlcoll_done': '<b>4ll m0d5 fr0m c0ll3c710n 1n574ll3d '
-                                                   '5ucc355fully!</b>',
-                                  'v_dlcoll_done_partial': '<b>50m3 m0d5 f41l3d 2 1n574ll, '
-                                                           'b17ch</b>',
+                                  'v_dlcoll_done': '<b>4ll m0d5 fr0m c0ll3c710n 1n574ll3d 5ucc355fully!</b>',
+                                  'v_dlcoll_done_partial': '<b>50m3 m0d5 f41l3d 2 1n574ll, b17ch</b>',
                                   'v_dlcoll_done_none': '<b>N0 m0d5 1n574ll3d, f4gg07</b>',
                                   'v_dlcoll_fail_item': '❌ {name}: {reason}',
                                   'v_dlcoll_empty': '<b>3mp7y c0ll3c710n</b>',
                                   'v_dlcoll_not_found': '<b>C0ll3c710n n07 f0und</b>',
-                                  'v_vecdl_usage': '<b>5p3c1fy c0ll3c710n: </b><code>{p}vecdl '
-                                                   '<5lu9></code>',
-                                  'v_dlcoll_max_batch': '{total} m0d5, m4x {max}. 1n574ll1n9 f1r57 '
-                                                        '{max}…',
+                                  'v_vecdl_usage': '<b>5p3c1fy c0ll3c710n: </b><code>{p}vecdl <5lu9></code>',
+                                  'v_dlcoll_max_batch': '{total} m0d5, m4x {max}. 1n574ll1n9 f1r57 {max}…',
                                   'v_upd_cancel': '🚫 n0p3',
                                   'v_miniapp_title': 'L4unch M1n1 4pp',
-                                  'v_miniapp_body': 'L4unch V3c70r 4s 4 T3l3gr4m M1n1 4pp — '
-                                                    '1n574n7 4u70-l091n, n0 p455w0rd5, 3ncryp73d '
-                                                    '535510n. 0n3 74p 4nd uR 1n.',
+                                  'v_miniapp_body': 'L4unch V3c70r 4s 4 T3l3gr4m M1n1 4pp — 1n574n7 4u70-l091n, '
+                                                    'n0 p455w0rd5, 3ncryp73d 535510n. 0n3 74p 4nd uR 1n.',
                                   'v_miniapp_btn': '🚀 0p3n V3c70r',
                                   'v_aud_mem': 'L04d3d fr0m c4ch3.'},
                       'commands': {'vector': {'description': '<qu3ry> — 534rch m0dul35 1n V3c70r.'},
-                                   'vecupdate': {'description': '[-f|--force] — Upd473 V3c70r '
-                                                                'm0dul3.'},
-                                   'vecdl': {'description': '<5lu9_0r_url> — pull 3n71r3 m0dul3 '
-                                                            'c0ll3c710n fr0m V3c70r.'},
-                                   'vecme': {'description': '— 0p3n V3c70r 4s T3l3gr4m M1n1 '
-                                                            '4pp.'}}},
+                                   'vecupdate': {'description': '[-f|--force] — Upd473 V3c70r m0dul3.'},
+                                   'vecdl': {'description': '<5lu9_0r_url> — pull 3n71r3 m0dul3 c0ll3c710n fr0m '
+                                                            'V3c70r.'},
+                                   'vecme': {'description': '— 0p3n V3c70r 4s T3l3gr4m M1n1 4pp.'}}},
              'uwu': {'name': 'Vector',
                      'description': 'Sweawch moduwes fow Hewoku >w<\nhttps://www.0xvector.lol',
                      'strings': {'name': 'Vector',
-                                 '_cls_doc': 'Sweawch moduwes fow Hewoku >w<\n'
-                                             'https://www.0xvector.lol',
+                                 '_cls_doc': 'Sweawch moduwes fow Hewoku >w<\nhttps://www.0xvector.lol',
                                  'v_dev_lbl': 'Authow:',
                                  'v_dev_str': 'dev:',
                                  'v_dev_ofc': 'officiaw',
@@ -1053,8 +956,7 @@ HOTARU = {'id': 'vector',
                                  'v_err_404': 'N-No wecowds fow: {q} T_T',
                                  'v_err_len': 'Quewy too wong (120 chaws) >_<',
                                  'v_err_api': 'Access denied by Vectow Sewvew qwq.',
-                                 'v_token_fail': "❌ Couldn't get Vectow token >w<. Pwease twy "
-                                                 'again watew.',
+                                 'v_token_fail': "❌ Couldn't get Vectow token >w<. Pwease twy again watew.",
                                  'v_ban_notice': '⛔ <b>Vectow bwocked access.</b>\n'
                                                  '<b>Weason:</b> <code>{reason}</code>\n'
                                                  '<b>Tewm:</b> <code>{term}</code>',
@@ -1114,60 +1016,45 @@ HOTARU = {'id': 'vector',
                                  'v_upd_err': 'Update faiwed! ;w;',
                                  'v_upd_check': 'Checking hashy-washies… owo',
                                  'v_install_log_hdr': 'Instaww wog: {name} >w<',
-                                 'v_install_fail_forbidden': 'Fowbidden method: '
-                                                             '<code>{detail}</code> ;(',
-                                 'v_install_fail_requirements': 'Pip deps faiwed: '
-                                                                '<code>{detail}</code> owo',
-                                 'v_install_fail_dependency': 'Missing dep: <code>{detail}</code> '
-                                                              ';;w;;',
-                                 'v_install_fail_packages': 'System pkgs faiwed: '
-                                                            '<code>{detail}</code>',
-                                 'v_install_fail_core_overwrite': 'Twied to ovewwwite cowe '
-                                                                  '<code>{detail}</code>',
+                                 'v_install_fail_forbidden': 'Fowbidden method: <code>{detail}</code> ;(',
+                                 'v_install_fail_requirements': 'Pip deps faiwed: <code>{detail}</code> owo',
+                                 'v_install_fail_dependency': 'Missing dep: <code>{detail}</code> ;;w;;',
+                                 'v_install_fail_packages': 'System pkgs faiwed: <code>{detail}</code>',
+                                 'v_install_fail_core_overwrite': 'Twied to ovewwwite cowe <code>{detail}</code>',
                                  'v_install_fail_ffmpeg': 'Needs ffmpeg (not instawwed) uwu',
                                  'v_install_fail_inline': 'Needs inwine mode (unavaiwabwe)',
-                                 'v_install_fail_heroku_min': 'Needs Hewoku ≥ '
-                                                              '<code>{detail}</code>',
+                                 'v_install_fail_heroku_min': 'Needs Hewoku ≥ <code>{detail}</code>',
                                  'v_install_fail_not_found': 'Not found in wepos ;w;',
                                  'v_install_fail_download': 'Downwoad faiwed owo',
-                                 'v_install_fail_unknown': 'Unknown ewwow: <code>{detail}</code> '
-                                                           '>~<',
-                                 'v_upd_same': '🌟 <b>You awe on da watest vewsion, puww updates '
-                                               'anyway? (´• ω •`)</b>',
+                                 'v_install_fail_unknown': 'Unknown ewwow: <code>{detail}</code> >~<',
+                                 'v_upd_same': '🌟 <b>You awe on da watest vewsion, puww updates anyway? (´• ω '
+                                               '•`)</b>',
                                  'v_upd_force_btn': '🧭 Puww Update',
                                  'v_dlcoll_hdr': '<b>Cowwection {name}</b>',
                                  'v_dlcoll_count': '{count} moduwes',
-                                 'v_dlcoll_start': '<b>Instawwing aww da moduwes fwom '
-                                                   'cowwection... pwease wait a wittle, nyaa~ '
-                                                   '>w<</b>',
-                                 'v_dlcoll_done': '<b>Aww moduwes fwom cowwection instawwed '
-                                                  'successfuwwy! OwO yippee~</b>',
-                                 'v_dlcoll_done_partial': '<b>Some moduwes faiwed to instaww... '
-                                                          'sowwy senpai :c</b>',
+                                 'v_dlcoll_start': '<b>Instawwing aww da moduwes fwom cowwection... pwease wait a '
+                                                   'wittle, nyaa~ >w<</b>',
+                                 'v_dlcoll_done': '<b>Aww moduwes fwom cowwection instawwed successfuwwy! OwO '
+                                                  'yippee~</b>',
+                                 'v_dlcoll_done_partial': '<b>Some moduwes faiwed to instaww... sowwy senpai '
+                                                          ':c</b>',
                                  'v_dlcoll_done_none': '<b>Nyooo moduwes instawwed... >///<</b>',
                                  'v_dlcoll_fail_item': '❌ {name}: {reason}',
                                  'v_dlcoll_empty': '<b>Cowwection is emptyy ;-;</b>',
                                  'v_dlcoll_not_found': '<b>Cowwection not found owo</b>',
-                                 'v_vecdl_usage': '<b>Pwease specify cowwection: '
-                                                  '</b><code>{p}vecdl <swug></code>',
-                                 'v_dlcoll_max_batch': '{total} moduwes, max {max}. Instawwing '
-                                                       'fiwst {max}…',
+                                 'v_vecdl_usage': '<b>Pwease specify cowwection: </b><code>{p}vecdl <swug></code>',
+                                 'v_dlcoll_max_batch': '{total} moduwes, max {max}. Instawwing fiwst {max}…',
                                  'v_upd_cancel': '🚫 Nu ;-;',
                                  'v_miniapp_title': 'Open Mini App nya~',
-                                 'v_miniapp_body': 'Open Vectow as a Tewegwam Mini App — instant '
-                                                   'auto-wogin, no passwowds, encwypted session '
-                                                   "UwU. One tap and you're in!! owo",
+                                 'v_miniapp_body': 'Open Vectow as a Tewegwam Mini App — instant auto-wogin, no '
+                                                   "passwowds, encwypted session UwU. One tap and you're in!! owo",
                                  'v_miniapp_btn': '🚀 Open Vectow >w<',
                                  'v_aud_mem': 'Woaded fwom cache.'},
-                     'commands': {'vector': {'description': '<quewy> — seawch moduwes in Vectow '
-                                                            '(´• ω •`).'},
-                                  'vecupdate': {'description': '[-f|--force] — Update Vectow '
-                                                               'moduwe owo.'},
-                                  'vecdl': {'description': '<swug-ow-url> — downwoad and instaww '
-                                                           'entiwe moduwe cowwection fwom Vectow '
-                                                           '(・ω・).'},
-                                  'vecme': {'description': '— open Vectow as Tewegwam Mini App '
-                                                           'nya~'}}}},
+                     'commands': {'vector': {'description': '<quewy> — seawch moduwes in Vectow (´• ω •`).'},
+                                  'vecupdate': {'description': '[-f|--force] — Update Vectow moduwe owo.'},
+                                  'vecdl': {'description': '<swug-ow-url> — downwoad and instaww entiwe moduwe '
+                                                           'cowwection fwom Vectow (・ω・).'},
+                                  'vecme': {'description': '— open Vectow as Tewegwam Mini App nya~'}}}},
  'banner': 'https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vector.png',
  'tasks': {'token_keeper': {'interval': 72000, 'autostart': True},
            'sync_modules_keeper': {'interval': 1800, 'autostart': True}},
@@ -1184,7 +1071,8 @@ HOTARU = {'id': 'vector',
           'поиск',
           'отзывы',
           'рейтинги',
-          'комментарии']}
+          'комментарии'],
+ 'requires': []}
 
 # ====================================================================================================================
 #   ██████╗  ██████╗ ██╗   ██╗███╗   ███╗ ██████╗ ██████╗ ██╗   ██╗██╗     ███████╗███████╗
@@ -1205,1424 +1093,804 @@ HOTARU = {'id': 'vector',
 import ast
 import asyncio
 import base64
-import contextvars
-import html
-import inspect
-import json
-import secrets
-import time
-from types import SimpleNamespace
-
-_ctx = contextvars.ContextVar('context')
-_pending_inputs = {}
-
-
-def _context():
-    return _ctx.get()
-
-
-class _Strings(dict):
-    def __getitem__(self, key):
-        default = super().get(key, key)
-        ctx = _context()
-        try:
-            value = ctx.t(HOTARU['id'] + '.' + key, default)
-        except Exception:
-            value = None
-        return value if isinstance(value, str) and value else default
-
-    def get(self, key, default=None):
-        return self[key] if key in self else default
-
-    def __call__(self, key):
-        return self[key]
-
-
-
-
-
-
-class _Message:
-    def __init__(self, ctx=None, data=None, callback=None, form_key=None):
-        self.ctx = ctx or _context()
-        self.data = data if isinstance(data, dict) else getattr(self.ctx, '_msg', {})
-        self.callback = callback
-        self.form_key = form_key
-        self.chat_id = getattr(callback, 'chat_id', None) or self.data.get('chat_id') or self.ctx.chat_id
-        self.id = self.data.get('id') or self.data.get('message_id') or getattr(callback, 'message_id', None) or self.ctx.message_id
-        self.message_id = self.id
-        self.sender_id = getattr(callback, 'from_id', None) or self.data.get('sender_id') or self.data.get('from_id')
-        if isinstance(self.sender_id, dict):
-            self.sender_id = self.sender_id.get('user_id')
-        self.from_user = SimpleNamespace(id=self.sender_id)
-        self.raw_text = str(self.data.get('text') or self.data.get('message') or '')
-        self.text = self.raw_text
-        self.out = bool(self.data.get('out'))
-        self.unit_id = form_key or getattr(callback, 'inline_message_id', None) or str(self.chat_id) + ':' + str(self.id)
-        self.inline_message_id = self.unit_id
-        self.form = {}
-        self.reply_to_msg_id = (self.data.get('reply_to') or {}).get('reply_to_msg_id')
-        self.client = _Client()
-
-    async def answer(self, text='', show_alert=False, **kwargs):
-        if self.callback:
-            return await self.callback.respond(text, alert=show_alert)
-        if text:
-            return await self.ctx.respond(text)
-
-    async def edit(self, text='', reply_markup=None, **kwargs):
-        text = kwargs.pop('rich_message', None) or text
-        kwargs.pop('inline_message_id', None)
-        kwargs.pop('unit_id', None)
-        buttons = _buttons(reply_markup or [], self)
-        rich = bool(kwargs.pop('rich', False) or '<figure>' in text or '<h1>' in text or '<details>' in text)
-        if self.form_key and not self.callback:
-            await self.ctx.edit_form(self.form_key, text, buttons=buttons)
-        elif self.callback:
-            await self.callback.edit(text, reply_markup=buttons, rich=rich, **kwargs)
-        else:
-            await self.ctx.respond(text, buttons=buttons or None, rich=rich, **kwargs)
-        return self
-
-    async def delete(self):
-        if self.callback:
-            return await self.callback.delete()
-        if self.chat_id == self.ctx.chat_id and self.id == self.ctx.message_id:
-            return await self.ctx.delete()
-        return await self.ctx.tg.call('messages.deleteMessages', {'id': [self.id], 'revoke': True})
-
-    async def get_reply_message(self):
-        data = await self.ctx.reply()
-        return _Message(self.ctx, data) if data else None
-
-    async def reply(self, text, **kwargs):
-        return await self.ctx.respond(text, output='reply', **kwargs)
-
-    async def respond(self, text, **kwargs):
-        return await self.reply(text, **kwargs)
-
-
-def _buttons(rows, origin):
-    result = []
-    for row in rows:
-        built = []
-        for button in row:
-            item = dict(button)
-            fn = item.pop('callback', None)
-            handler = item.pop('handler', None)
-            args = item.pop('args', ())
-            prompt = item.pop('input', None)
-            if item.pop('action', None) == 'close':
-                item['action_id'] = 'close'
-            elif fn or handler:
-                key = secrets.token_hex(12)
-                async def dispatch(call, payload=None, fn=fn, handler=handler, args=args, prompt=prompt, origin=origin):
-                    token = _ctx.set(origin.ctx)
-                    try:
-                        target = _Message(origin.ctx, callback=call, form_key=origin.form_key)
-                        target.unit_id = origin.unit_id
-                        target.inline_message_id = origin.inline_message_id
-                        if handler:
-                            _pending_inputs[(target.chat_id, target.sender_id)] = (handler, args, target, time.monotonic() + 600)
-                            return await call.respond(str(prompt) + '\n\nSend your next message in this chat, or reply to this menu. Input expires in 10 minutes.', alert=True)
-                        value = fn(target, *args)
-                        if inspect.isawaitable(value):
-                            await value
-                        return None
-                    finally:
-                        _ctx.reset(token)
-                dispatch.__qualname__ = 'button_' + key
-                built_button = origin.ctx.ui.button(item.pop('text', ''), dispatch, style=item.pop('style', None))
-                item.update(built_button)
-            if 'copy' in item:
-                item['copy_text'] = {'text': str(item.pop('copy'))}
-            built.append(item)
-        result.append(built)
-    return result
-
-
-async def _consume_input(ctx):
-    data = getattr(ctx, '_msg', {})
-    sender = data.get('from_id') or data.get('sender_id')
-    if isinstance(sender, dict):
-        sender = sender.get('user_id')
-    key = (ctx.chat_id, sender)
-    pending = _pending_inputs.get(key)
-    if not pending:
-        return False
-    handler, args, target, expires = pending
-    if time.monotonic() > expires:
-        _pending_inputs.pop(key, None)
-        return False
-    reply_id = (data.get('reply_to') or {}).get('reply_to_msg_id')
-    if reply_id is not None and reply_id != target.id:
-        return False
-    _pending_inputs.pop(key, None)
-    token = _ctx.set(ctx)
-    try:
-        value = handler(target, str(data.get('text') or data.get('message') or ''), *args)
-        if inspect.isawaitable(value):
-            await value
-    finally:
-        _ctx.reset(token)
-    return True
-
-
-
-
-
-
-
-
-
-class _Client:
-    async def get_me(self):
-        data = await _context().tg.call('users.getUsers', {'id': [{'_': 'inputUserSelf'}]})
-        users = data if isinstance(data, list) else data.get('users', [])
-        return SimpleNamespace(**(users[0] if users else {}))
-
-    async def get_entity(self, value):
-        data = _context().resolve(value)
-        if inspect.isawaitable(data):
-            data = await data
-        return SimpleNamespace(**(data or {}))
-
-    async def get_input_entity(self, value):
-        return value
-
-    async def send_message(self, peer, text):
-        data = await _context().tg.call('messages.sendMessage', {'peer': peer, 'message': text, 'random_id': secrets.randbits(63)})
-        updates = data.get('updates', []) if isinstance(data, dict) else []
-        message = next((u.get('message') for u in updates if isinstance(u.get('message'), dict)), {})
-        return _Message(data={**message, 'chat_id': peer})
-
-    async def __call__(self, request):
-        method, data = request
-        return await _context().tg.call(method, data)
-
-    def conversation(self, peer, timeout=12, exclusive=False):
-        return _Conversation(peer, timeout)
-
-
-class _Conversation:
-    def __init__(self, peer, timeout):
-        self.peer = peer
-        self.timeout = timeout
-        self.sent = None
-
-    async def __aenter__(self):
-        history = await _context().chat_history(peer=self.peer, limit=1)
-        self.last_id = max((m.get('id', 0) for m in history.get('messages', [])), default=0)
-        return self
-
-    async def __aexit__(self, *args):
-        return False
-
-    async def send_message(self, text):
-        self.sent = await _Client().send_message(self.peer, text)
-        return self.sent
-
-    async def get_response(self):
-        deadline = time.monotonic() + self.timeout
-        while time.monotonic() < deadline:
-            body = await _context().chat_history(peer=self.peer, min_id=self.last_id, limit=10)
-            for message in sorted(body.get('messages', []), key=lambda m: m.get('id', 0)):
-                if message.get('id', 0) > self.last_id and not message.get('out'):
-                    return _Message(data={**message, 'chat_id': self.peer})
-            await asyncio.sleep(0.4)
-        raise asyncio.TimeoutError()
-
-
-
-
-
-
-
-
-
-def UnblockRequest(peer):
-    return 'contacts.unblock', {'id': peer}
-
-
-def InputNotifyPeer(peer):
-    return {'_': 'inputNotifyPeer', 'peer': peer}
-
-
-def InputPeerNotifySettings(**kwargs):
-    return {'_': 'inputPeerNotifySettings', **kwargs}
-
-
-def GetNotifySettingsRequest(peer):
-    return 'account.getNotifySettings', {'peer': peer}
-
-
-def UpdateNotifySettingsRequest(peer, settings):
-    return 'account.updateNotifySettings', {'peer': peer, 'settings': settings}
-
-
-__version__ = (2, 4, 11)
-import asyncio
-import base64
 import hashlib
 import hmac
+import html
 import json
 import logging
 import re
+import secrets
 import struct
+import threading
 import time
 import unicodedata
 from contextlib import suppress
 from email.utils import parsedate_to_datetime
-from typing import Any, Dict, List, Optional
-from urllib.parse import quote, urljoin, urlparse
-log = logging.getLogger('VectorMonolith')
-log.setLevel(logging.DEBUG)
+from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlparse, urlunparse
+
+log = logging.getLogger('Vector')
 apirt = 'https://www.0xvector.lol'
-jwtrx = re.compile('eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+')
 auths = 'vektor_heroku_searchmodulesModbySepiol026-wqGithub'
-brrx = re.compile('(?:Причина|Reason|理由|Grund|R3450n|Weason|Charge):\\s*(.+)', re.IGNORECASE)
-btrx = re.compile('(?:Срок|Term|期間|Dauer|73rm|Tewm):\\s*(.+)', re.IGNORECASE)
+jwtrx = re.compile(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+')
+brrx = re.compile(r'(?:Причина|Reason|理由|Grund|R3450n|Weason|Charge):\s*(.+)', re.IGNORECASE)
+btrx = re.compile(r'(?:Срок|Term|期間|Dauer|73rm|Tewm):\s*(.+)', re.IGNORECASE)
 _ntp_hosts = ('time.cloudflare.com', 'time.google.com', 'pool.ntp.org')
 _ntp_epoch_delta = 2208988800
 _http_time_hosts = ('https://www.cloudflare.com', 'https://www.google.com')
+clock = {'_time_offset': 0.0, '_time_offset_ts': 0.0, '_time_sync_lock': None}
+_token_lock = threading.Lock()
+_validated_token = ''
+_sessions = {}
 
-class Vector:
-    @property
-    def config(self):
-        return _context().config
+EMOJI = {'search': '<tg-emoji emoji-id=5447459604524971717>🔎</tg-emoji>', 'error': '<tg-emoji emoji-id=5388785832956016892>❌</tg-emoji>', 'warn': '<tg-emoji emoji-id=5881702736843511327>⚠️</tg-emoji>', 'description': '<tg-emoji emoji-id=6008090211181923982>📝</tg-emoji>', 'command': '<tg-emoji emoji-id=5877260593903177342>⚙</tg-emoji>', 'dependency': '<tg-emoji emoji-id=5325732612084351248>📦</tg-emoji>', 'module': '<tg-emoji emoji-id=5924720918826848520>📦</tg-emoji>', 'modules_list': '<tg-emoji emoji-id=5883973610606956186>🗂</tg-emoji>', 'shield': '<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>', 'safe': '<tg-emoji emoji-id=5776375003280838798>✅</tg-emoji>', 'stats': '<tg-emoji emoji-id=5877485980901971030>📊</tg-emoji>', 'quota': '<tg-emoji emoji-id=6311858554944888333>⌚️</tg-emoji>', 'verified': '<tg-emoji emoji-id=5958376256788502078>⭐️</tg-emoji>', 'comments': '<tg-emoji emoji-id=5886666250158870040>💬</tg-emoji>', 'reply': '↳', 'broken': '<tg-emoji emoji-id=5877260593903177342>💥</tg-emoji>', 'tag': '<tg-emoji emoji-id=5985433648810171091>🏷</tg-emoji>'}
 
-    def get(self, key, default=None):
-        return _context().state.get(key, default)
+def norm_hash_name(ctx, value):
+    log.debug('_norm_hash_name: value=%r', str(value)[:64] if value else '')
+    value = unicodedata.normalize('NFKC', str(value or ''))
+    value = value.replace('\u200b', '').replace('\u200c', '').replace('\u200d', '').replace('\ufeff', '')
+    return ' '.join(value.strip().split())
 
-    def set(self, key, value):
-        return _context().state.set(key, value)
+def fmt_comments(ctx, comments, m_name, pg=0, pp=5):
+    log.debug('_fmt_comments: name=%s count=%d pg=%d', m_name, len(comments) if comments else 0, pg)
+    h = f"{ctx.t('vector.v_talk_hdr', '{emoji} <b>Thread: {name}</b>', emoji=EMOJI['comments'], name=m_name)}\n<b>{ctx.t('vector.v_talk_desc', 'Community reviews')}</b>\n<i>{ctx.t('vector.v_talk_num', 'Posts: {count}', count=len(comments))}</i>"
+    if not comments:
+        return f"{h}\n\n{ctx.t('vector.v_talk_0', 'Thread is empty. Be the first!')}"
+    roots, chmap = ([], {})
+    for c in comments:
+        pid = c.get('parent_id')
+        if pid:
+            chmap.setdefault(str(pid), []).append(c)
+        else:
+            roots.append(c)
+        if c.get('replies'):
+            chmap.setdefault(str(c.get('id')), []).extend(c['replies'])
+    total_pages = max(1, (len(roots) + pp - 1) // pp)
+    pg = max(0, min(pg, total_pages - 1))
+    start, end = (pg * pp, min((pg + 1) * pp, len(roots)))
+    page_roots = roots[start:end]
+    blks = [h]
+    if total_pages > 1:
+        blks.append(f"<i>{ctx.t('vector.v_page', '[{idx}/{total}]', idx=pg + 1, total=total_pages)}</i>")
+    for r in page_roots:
+        rid = str(r.get('id'))
+        raw_uname = r.get('author_username')
+        uname = (str(raw_uname).strip() if raw_uname else '').lstrip('@')
+        meta = [f'@{html.escape(uname)}'] if uname else []
+        ts = str(r.get('created_at') or '').replace('T', ' ').replace('Z', '').strip()
+        if ts:
+            meta.append(html.escape(ts))
+        meta_str = f" <i>{' · '.join(meta)}</i>" if meta else ''
+        edit_mark = ' *' if r.get('can_edit') else ''
+        auth = f"<b>{html.escape(r.get('author_name') or r.get('author_username') or 'Unknown')}</b>{edit_mark}{meta_str}"
+        blks.append(f"╭─ {auth}\n╰─\n<blockquote>{html.escape(str(r.get('body', '')))}</blockquote>")
+        subs = chmap.get(rid, [])
+        for s in subs:
+            raw_s_uname = s.get('author_username')
+            s_uname = (str(raw_s_uname).strip() if raw_s_uname else '').lstrip('@')
+            s_meta = [f'@{html.escape(s_uname)}'] if s_uname else []
+            s_ts = str(s.get('created_at') or '').replace('T', ' ').replace('Z', '').strip()
+            if s_ts:
+                s_meta.append(html.escape(s_ts))
+            s_meta_str = f" <i>{' · '.join(s_meta)}</i>" if s_meta else ''
+            s_edit_mark = ' *' if s.get('can_edit') else ''
+            s_auth = f"<b>{html.escape(s.get('author_name') or s.get('author_username') or 'Unknown')}</b>{s_edit_mark}{s_meta_str}"
+            blks.append(f"  {EMOJI['reply']} {s_auth}\n<blockquote>{html.escape(str(s.get('body', '')))}</blockquote>")
+    return '\n\n'.join(blks)
 
-    def get_prefix(self):
-        return str(_context().prefix)
-
-    @property
-    def client(self):
-        return _Client()
-
-    strings = HOTARU["lexicon"]["en"]["strings"]
-
-
-
-
-
-
-
-
-
-    def _detect_lang_suffix(self):
-        lang = _context().i18n.language
-        return 'jp' if lang == 'ja' else lang
-    emj = {'search': '<tg-emoji emoji-id=5447459604524971717>🔎</tg-emoji>', 'error': '<tg-emoji emoji-id=5388785832956016892>❌</tg-emoji>', 'warn': '<tg-emoji emoji-id=5881702736843511327>⚠️</tg-emoji>', 'description': '<tg-emoji emoji-id=6008090211181923982>📝</tg-emoji>', 'command': '<tg-emoji emoji-id=5877260593903177342>⚙</tg-emoji>', 'dependency': '<tg-emoji emoji-id=5325732612084351248>📦</tg-emoji>', 'module': '<tg-emoji emoji-id=5924720918826848520>📦</tg-emoji>', 'modules_list': '<tg-emoji emoji-id=5883973610606956186>🗂</tg-emoji>', 'shield': '<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>', 'safe': '<tg-emoji emoji-id=5776375003280838798>✅</tg-emoji>', 'stats': '<tg-emoji emoji-id=5877485980901971030>📊</tg-emoji>', 'quota': '<tg-emoji emoji-id=6311858554944888333>⌚️</tg-emoji>', 'verified': '<tg-emoji emoji-id=5958376256788502078>⭐️</tg-emoji>', 'comments': '<tg-emoji emoji-id=5886666250158870040>💬</tg-emoji>', 'reply': '↳', 'broken': '<tg-emoji emoji-id=5877260593903177342>💥</tg-emoji>', 'tag': '<tg-emoji emoji-id=5985433648810171091>🏷</tg-emoji>'}
-
-    async def _safe_install(self, m_name, dl_url):
-        try:
-            token = await self._get_active_token()
-            response = await _context().net(dl_url, headers={'Authorization': 'Bearer ' + token} if token else {}, binary=True)
-            if response.get('status') != 200 or response.get('truncated'):
-                raise ValueError('module download failed')
-            source = base64.b64decode(response['body']).decode('utf-8')
-            tree = ast.parse(source)
-            if not tree.body or not isinstance(tree.body[0], ast.Assign) or (not any((isinstance(t, ast.Name) and t.id == 'HOTARU' for t in tree.body[0].targets))):
-                raise ValueError('Vector returned a Heroku module, not a Hotaru .hmod')
-            metadata = ast.literal_eval(tree.body[0].value)
-            result = await _context().modules.load(text=source)
-            action = result.get('action') if isinstance(result, dict) else ''
-            if action == 'confirm':
-                await _context().reply_file(source.encode(), filename=str(metadata.get('id', 'module')) + '.hmod', caption='Hotaru capability approval required. Reply to this file with <code>' + html.escape(str(_context().prefix)) + 'ld</code> to review permissions.')
-                return False
-            if action not in ('loaded', 'reloaded', 'updated', 'installed', 'activated'):
-                raise ValueError('module was not activated: ' + str(action))
-            inventory = self.get('vector_inventory', {})
-            inventory[metadata['id']] = {'url': dl_url, 'name': m_name}
-            self.set('vector_inventory', inventory)
-            return True
-        except Exception as exc:
-            log.warning('Hotaru install failed: %s', exc)
-            return False
-
-    def __init__(self):
-        self.seccache = {}
-        self._cmt_calls = {}
-        self.httpc = 0
-        self.bannote = ''
-        self.btid = 0
-        self._time_offset = 0.0
-        self._time_offset_ts = 0.0
-        self._time_sync_lock = None
-        self._token_lock = None
-        self._token_validated = False
-        self._usr_state = {}
-
-    def _st(self, uid):
-        return self._usr_state.setdefault(uid, {'pg': 0, 'exp': False})
-
-
-
-
-    async def _net_req(self, method, path, token='', params=None, json_data=None, as_bytes=False, timeout=None):
-        if path == '/api/search':
-            params = {**(params or {}), 'platform': 'hotaru'}
-        if timeout is None:
-            timeout = 90 if path == '/api/search' else 15
-        headers = {'User-Agent': 'VectorUserbotClient/2.0'}
-        if token:
-            headers['Authorization'] = 'Bearer ' + token
-        self.httpc = 0
-        try:
-            response = await _context().net(urljoin(apirt + '/', path.lstrip('/')), method=method, params=params, json=json_data, headers=headers, timeout=timeout, binary=as_bytes)
-            self.httpc = response['status']
-            if self.httpc >= 300 or response.get('truncated'):
-                return None
-            if as_bytes:
-                return base64.b64decode(response['body'])
-            return json.loads(response['body'])
-        except Exception as exc:
-            log.warning('HTTP request failed method=%s path=%s error=%r', method, path, exc)
-            self.httpc = -1
-            return None
-
-    async def _ntp_query(self, host, timeout=1.5):
-        stream = None
-        try:
-            stream = await _context().stream('udp://' + host + ':123', timeout=timeout)
-            t0 = time.time()
-            await stream.send(base64.b64encode(b'\x1b' + 47 * b'\x00').decode(), binary=True)
-
-            async def receive():
-                while True:
-                    event = await stream.recv(timeout=timeout)
-                    if not event or event.get('event') in ('close', 'error'):
-                        return None
-                    if event.get('event') == 'message':
-                        return event
-            event = await asyncio.wait_for(receive(), timeout)
-            t1 = time.time()
-            if not event:
-                return None
-            response = base64.b64decode(event['data']) if event.get('binary') else event['data'].encode()
-            if len(response) < 48:
-                return None
-            secs, frac = struct.unpack('!II', response[40:48])
-            return secs - _ntp_epoch_delta + frac / 2 ** 32 + max(0.0, (t1 - t0) / 2) - t1
-        except Exception:
-            return None
-        finally:
-            if stream:
-                await stream.close()
-
-    async def _sync_via_ntp(self):
-        for host in _ntp_hosts:
-            offset = await self._ntp_query(host)
-            if offset is not None:
-                return offset
-        return None
-
-    async def _sync_via_https(self):
-        for url in _http_time_hosts:
-            with suppress(Exception):
-                t0 = time.time()
-                response = await _context().net(url, method='HEAD', timeout=3)
-                t1 = time.time()
-                date_header = next((value for key, value in response.get('headers', {}).items() if key.lower() == 'date'), None)
-                if date_header:
-                    srv_ts = parsedate_to_datetime(date_header).timestamp()
-                    rtt_half = max(0.0, (t1 - t0) / 2)
-                    offset = srv_ts + rtt_half - t1
-                    log.debug('_sync_via_https: url=%s offset=%.3fs', url, offset)
-                    return offset
-        return None
-
-    async def _ensure_time_synced(self, max_age=300.0, force=False):
-        if not force and self._time_offset_ts and (time.time() - self._time_offset_ts < max_age):
-            return
-        if self._time_sync_lock is None:
-            self._time_sync_lock = asyncio.Lock()
-        async with self._time_sync_lock:
-            if not force and self._time_offset_ts and (time.time() - self._time_offset_ts < max_age):
-                return
-            source = 'ntp'
-            offset = await self._sync_via_ntp()
-            if offset is None:
-                source = 'https'
-                offset = await self._sync_via_https()
-            if offset is None:
-                log.warning('_ensure_time_synced: all external sources failed, keeping previous offset=%.3fs', self._time_offset)
-                self._time_offset_ts = time.time()
-                return
-            self._time_offset = offset
-            self._time_offset_ts = time.time()
-            log.info('_ensure_time_synced: offset=%.3fs source=%s', self._time_offset, source)
-
-    def _now(self):
-        return time.time() + self._time_offset
-
-    def _normalize_module(self, raw):
-        log.debug('_normalize_module: name=%s version=%s', raw.get('name', '?'), raw.get('version', '?'))
-        lang = self._detect_lang_suffix()
-        db_suffix = {'en': '', 'ua': '_ua'}.get(lang, f'_{lang}')
-        cmds = []
-        for c in raw.get('commands') or []:
-            if isinstance(c, dict):
-                cmd_desc_key = f'desc{db_suffix}'
-                cmd_desc = (c.get(cmd_desc_key) if cmd_desc_key != 'desc' else None) or c.get('description') or c.get('desc') or ''
-                cmds.append({'name': c.get('name') or c.get('cmd') or '', 'description': cmd_desc, 'is_inline': bool(c.get('is_inline')), 'is_placeholder': bool(c.get('is_placeholder'))})
-        dev = str(raw.get('developer') or raw.get('author') or '@Unknown')
-        ioff = bool(raw.get('official') or raw.get('is_official') or raw.get('verified') or raw.get('is_verified') or raw.get('telegram_verified') or raw.get('official_developer') or raw.get('is_official_developer'))
-        name = str(raw.get('name') or raw.get('class_name') or 'Unknown')
-        locales = raw.get('locales')
-        desc = raw.get('description') or ''
-        if isinstance(locales, dict):
-            loc_key = f'description{db_suffix}'
-            loc_val = locales.get(loc_key)
-            if isinstance(loc_val, str) and loc_val.strip():
-                desc = loc_val
-        return {'name': name, 'owner': raw.get('source_owner') or 'unknown', 'version': raw.get('version') or '?.?.?', 'author': dev, 'description': desc, 'commands': cmds, 'dependencies': [str(d) for d in raw.get('dependencies') or []], 'official': ioff, 'likes': int(raw.get('likes') or 0), 'dislikes': int(raw.get('dislikes') or 0), 'banner': raw.get('banner'), 'source_url': raw.get('source_url') or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source", 'tags': raw.get('tags') or [], 'dl_url': raw.get('source_url') or f"{apirt}/modules/{quote(raw.get('source_owner', 'unknown'), safe='')}/{quote(name, safe='')}/source"}
-
-    @staticmethod
-    def _extract_counts(data):
-        likes = dislikes = None
-        for container in (data, data.get('module'), data.get('data'), data.get('result'), data.get('summary')):
-            if not isinstance(container, dict):
-                continue
-            for lk in ('likes', 'likes_count', 'likesCount', 'likeCount', 'like_count'):
-                v = container.get(lk)
-                if v is not None:
-                    try:
-                        likes = int(v)
-                    except (ValueError, TypeError):
-                        pass
-                    break
-            for dk in ('dislikes', 'dislikes_count', 'dislikesCount', 'dislikeCount', 'dislike_count'):
-                v = container.get(dk)
-                if v is not None:
-                    try:
-                        dislikes = int(v)
-                    except (ValueError, TypeError):
-                        pass
-                    break
-            if likes is not None and dislikes is not None:
-                break
-        log.debug('_extract_counts: likes=%s dislikes=%s', likes, dislikes)
-        return (likes, dislikes)
-
-    def _parse_jwt(self, token):
-        log.debug('_parse_jwt: token len=%d', len(token) if token else 0)
-        try:
-            b64_part = token.split('.')[1]
-            b64_part += '=' * (-len(b64_part) % 4)
-            return json.loads(base64.urlsafe_b64decode(b64_part.encode()).decode())
-        except Exception:
-            return {}
-
-    @staticmethod
-    def _norm_hash_name(value):
-        log.debug('_norm_hash_name: value=%r', str(value)[:64] if value else '')
-        value = unicodedata.normalize('NFKC', str(value or ''))
-        value = value.replace('\u200b', '').replace('\u200c', '').replace('\u200d', '').replace('\ufeff', '')
-        return ' '.join(value.strip().split())
-
-    async def _validate_token(self, token):
-        res = await self._net_req('GET', '/api/search', token=token, params={'q': 'vector', 'limit': '1'})
-        if self.httpc == 401:
-            return False
-        return True
-
-    async def _get_active_token(self, force=False):
-        log.debug('_get_active_token: force=%s', force)
-        if force:
-            self.set('auth_token', None)
-            self._token_validated = False
-            log.debug('_get_active_token: auth_token cleared (force)')
-        await self._ensure_time_synced()
-        cached = self.get('auth_token')
-        if cached:
-            payload = self._parse_jwt(cached)
-            if payload.get('exp', 0) - self._now() > 60:
-                if self._token_validated:
-                    log.debug('_get_active_token: cached token valid, exp=%s', payload.get('exp'))
-                    return cached
-                log.debug('_get_active_token: persisted token not yet validated this session, probing')
-                if await self._validate_token(cached):
-                    self._token_validated = True
-                    log.debug('_get_active_token: persisted token validated ok')
-                    return cached
-                log.warning('_get_active_token: persisted token rejected by server despite unexpired exp, refreshing')
-            else:
-                log.debug('_get_active_token: cached token expired or expiring')
-        if self._token_lock is None:
-            self._token_lock = asyncio.Lock()
-        async with self._token_lock:
-            if not force:
-                cached = self.get('auth_token')
-                if cached:
-                    payload = self._parse_jwt(cached)
-                    if payload.get('exp', 0) - self._now() > 60 and self._token_validated:
-                        log.debug('_get_active_token: token obtained by concurrent caller, exp=%s', payload.get('exp'))
-                        return cached
-            log.info('_get_active_token: requesting fresh token')
-            bot_info = await self._net_req('GET', '/api/tg-bot')
-            bot_username = (bot_info or {}).get('username', '').strip().lstrip('@')
-            if not bot_username:
-                log.warning('No bot username returned from /api/tg-bot')
-                self.bannote = self.strings['v_token_fail']
-                return ''
-            me = await self.client.get_me()
-            uid = str(getattr(me, 'id', ''))
-            uname = getattr(me, 'username', '') or ''
-            fname = getattr(me, 'first_name', '') or ''
-            lname = getattr(me, 'last_name', '') or ''
-            dname = ' '.join(filter(None, [fname, lname])).strip() or uname or uid
-            uname = self._norm_hash_name(uname).lower()
-            dname = self._norm_hash_name(dname)
-            with suppress(Exception):
-                await self.client(UnblockRequest(bot_username))
-            new_jwt = ''
-            ban_notice = ''
-            for attempt in range(2):
-                b_stamp = int(self._now() // 10) - attempt
-                cmd_hash = hashlib.sha256(f'vector-token-v2|{uid}|{b_stamp}|{auths}'.encode()).hexdigest()[:32]
-                cmd_str = f'/{cmd_hash}'
+def extract_counts(ctx, data):
+    likes = dislikes = None
+    for container in (data, data.get('module'), data.get('data'), data.get('result'), data.get('summary')):
+        if not isinstance(container, dict):
+            continue
+        for lk in ('likes', 'likes_count', 'likesCount', 'likeCount', 'like_count'):
+            v = container.get(lk)
+            if v is not None:
                 try:
-                    async with self.client.conversation(bot_username, timeout=12, exclusive=False) as conv:
-                        out_msg = await conv.send_message(cmd_str)
-                        try:
-                            resp = await asyncio.wait_for(conv.get_response(), timeout=10)
-                            txt = getattr(resp, 'raw_text', getattr(resp, 'text', ''))
-                            match = jwtrx.search(txt)
-                            if match:
-                                new_jwt = match.group(0)
-                            elif 'заблок' in txt.lower() or '⛔' in txt:
-                                ban_notice = self._format_ban_notice(txt)
-                            with suppress(Exception):
-                                await out_msg.delete()
-                            if new_jwt or ban_notice:
-                                break
-                        except asyncio.TimeoutError:
-                            with suppress(Exception):
-                                await out_msg.delete()
-                except Exception as e:
-                    log.warning('Token conversation attempt=%s failed: %r', attempt, e)
-            if new_jwt:
-                self.set('auth_token', new_jwt)
-                self._token_validated = True
-                self.bannote = ''
-                log.info('_get_active_token: new token obtained')
-            elif ban_notice:
-                self.bannote = ban_notice
-                log.warning('_get_active_token: user banned')
+                    likes = int(v)
+                except (ValueError, TypeError):
+                    pass
+                break
+        for dk in ('dislikes', 'dislikes_count', 'dislikesCount', 'dislikeCount', 'dislike_count'):
+            v = container.get(dk)
+            if v is not None:
+                try:
+                    dislikes = int(v)
+                except (ValueError, TypeError):
+                    pass
+                break
+        if likes is not None and dislikes is not None:
+            break
+    log.debug('_extract_counts: likes=%s dislikes=%s', likes, dislikes)
+    return (likes, dislikes)
+
+async def sync_via_ntp(ctx):
+    for host in _ntp_hosts:
+        offset = await ntp_query(ctx, host)
+        if offset is not None:
+            return offset
+    return None
+
+def build_html(ctx, m_data, current_idx, total_cnt):
+    log.debug('_build_html: name=%s idx=%d/%d', m_data.get('name', '?'), current_idx, total_cnt)
+    name = html.escape(str(m_data.get('name', 'Unknown')))
+    author = html.escape(str(m_data.get('author', '@Unknown')))
+    ver = str(m_data.get('version', '?.?.?'))
+    blocks = []
+    banner = str(m_data.get('banner') or '')
+    if banner.startswith(('https://', 'http://')):
+        banner = html.escape(banner).replace('"', '&quot;')
+        blocks.append(f'<figure><img src="{banner}"/></figure>')
+    blocks.append(f"<h1>{EMOJI['module']} {name}</h1>")
+    status_text = ctx.t('vector.v_dev_ofc', 'official') if m_data.get('official') else ctx.t('vector.v_dev_unofc', 'unofficial')
+    blocks.append(f"<p>{EMOJI['verified']} <b>{html.escape(status_text)}</b></p>")
+    byline = f"{ctx.t('vector.v_dev_lbl', 'Author:')}: {author}"
+    if ver != '?.?.?':
+        byline += f' · <code>v{html.escape(ver)}</code>'
+    blocks.append(f'<p>{byline}</p>')
+    if total_cnt > 1:
+        blocks.append(f"<p><i>{ctx.t('vector.v_page', '[{idx}/{total}]', idx=current_idx, total=total_cnt)}</i></p>")
+    desc = str(m_data.get('description') or '').strip()
+    if desc:
+        desc_html = html.escape(desc).replace('\n', '<br>')
+        blocks.append(f"<details><summary>{EMOJI['description']} {ctx.t('vector.v_info', 'Info:')}</summary><p>{desc_html}</p></details>")
+    commands = m_data.get('commands', [])
+    if commands:
+        bot = 'bot'
+        rows = []
+        for command in commands:
+            command_name = html.escape(str(command.get('name', '')))
+            command_desc = html.escape(str(command.get('description', ''))).replace('\n', '<br>')
+            if command.get('is_placeholder'):
+                command_text = f'<code>{{{command_name}}}</code>'
+            elif command.get('is_inline'):
+                command_text = f'<code>@{html.escape(bot)} {command_name}</code>'
             else:
-                self.bannote = self.strings['v_token_fail']
-                log.warning('_get_active_token: no token obtained')
-            return new_jwt
+                command_text = f'<code>{str(ctx.prefix)}{command_name}</code>'
+            rows.append(f"<li>{command_text}{(': ' + command_desc if command_desc else '')}</li>")
+        blocks.append(f"<details><summary>{EMOJI['command']} {ctx.t('vector.v_cmds', 'Usage:')} ({len(commands)})</summary><ul>{''.join(rows)}</ul></details>")
+    tags = m_data.get('tags', [])
+    if tags:
+        blocks.append(f"<details><summary>{EMOJI['tag']} {ctx.t('vector.v_tags', 'Tags')} ({len(tags)})</summary><p>{' · '.join((html.escape(str(tag)) for tag in tags))}</p></details>")
+    dependencies = m_data.get('dependencies', [])
+    if dependencies:
+        blocks.append(f"<details><summary>{EMOJI['dependency']} {ctx.t('vector.v_deps', 'Dependencies')} ({len(dependencies)})</summary><ul>{''.join((f'<li><code>{html.escape(str(dependency))}</code></li>' for dependency in dependencies))}</ul></details>")
+    return '\n'.join(blocks)
 
-    def _format_ban_notice(self, raw_text):
-        log.debug('_format_ban_notice: raw_len=%d', len(raw_text) if raw_text else 0)
-        txt = str(raw_text or '').strip()
-        reason_match = brrx.search(txt)
-        term_match = btrx.search(txt)
-        reason_raw = reason_match.group(1).strip() if reason_match else ''
-        term_raw = term_match.group(1).strip() if term_match else ''
-        if not reason_raw or not term_raw:
-            for line in txt.splitlines():
-                if ':' not in line:
-                    continue
-                key, value = line.split(':', 1)
-                key_l = key.strip().lower()
-                val = value.strip()
-                if not reason_raw and key_l in {'причина', 'reason', '理由', 'grund', 'r3450n', 'weason', 'charge'}:
-                    reason_raw = val
-                if not term_raw and key_l in {'срок', 'term', '期間', 'dauer', '73rm', 'tewm'}:
-                    term_raw = val
-        reason = html.escape(reason_raw or '-')
-        term = html.escape(term_raw or 'permanent')
-        return self.strings['v_ban_notice'].format(reason=reason, term=term)
+def now(ctx):
+    return time.time() + clock['_time_offset']
 
-    async def _answer(self, target, response='', **kwargs):
-        photo = kwargs.pop('photo', None)
-        rich = kwargs.pop('rich_message', None)
-        if photo:
-            response = '<figure><img src="' + html.escape(str(photo), quote=True) + '"/></figure>\n' + response
-        if rich is not None:
-            response = rich
-        markup = kwargs.pop('reply_markup', None)
-        for key in ('ttl', 'silent', 'reply_to'):
-            kwargs.pop(key, None)
-        return await target.edit(response, reply_markup=markup, rich=True, **kwargs)
+def fmt_sec(ctx, m_name, payload):
+    log.debug('_fmt_sec: name=%s has_check=%s', m_name, bool(payload.get('check')))
+    payload = json.loads(json.dumps(payload), object_hook=lambda value: {key: html.escape(item, quote=False) if isinstance(item, str) else item for key, item in value.items()})
+    chk = payload.get('check')
+    qta = payload.get('quota') or (chk.get('quota') if chk else None) or {}
+    if not chk:
+        return f"{EMOJI['shield']} <b>{ctx.t('vector.v_aud_hdr', 'Code Audit: {name}', name=m_name)}</b>\n\n{EMOJI['warn']} {ctx.t('vector.v_aud_none', 'Not scanned yet. Takes 1 API slot.')}\n{EMOJI['quota']} <i>{ctx.t('vector.v_aud_left', 'Slots left: {remaining}/{limit}', remaining=qta.get('remaining', '?'), limit=qta.get('limit', '?'))}</i>"
+    v = str(chk.get('verdict', 'unknown'))
+    v_icon = EMOJI.get(v, EMOJI['shield'])
+    static = chk.get('details', {}).get('static', {})
+    fnds = static.get('findings', {})
+    lines = [f"{v_icon} <b>{ctx.t('vector.v_aud_hdr', 'Code Audit: {name}', name=m_name)}</b>\n", f"{EMOJI['shield']} <b>{ctx.t('vector.v_aud_lvl', 'Threat Level')}:</b> <code>{chk.get('label', v)}</code> (<code>{chk.get('confidence', 0)}%</code>)"]
+    if static.get('score', '?') != '?' or static.get('risk', 'unknown') != 'unknown':
+        lines.append(f"{EMOJI['stats']} <b>{ctx.t('vector.v_aud_stat', 'Scanner Data')}:</b> risk <code>{static.get('risk', 'unknown')}</code>, score <code>{static.get('score', '?')}</code>")
+    lines.append(f"{EMOJI['description']} <b>{ctx.t('vector.v_aud_out', 'Summary')}:</b>\n<blockquote expandable>{chk.get('summary', ctx.t('vector.v_aud_no_txt', 'No summary generated.'))}</blockquote>")
+    f_blocks = []
+    for hdr, key in [(ctx.t('vector.v_sig_crit', 'Critical'), 'critical'), (ctx.t('vector.v_sig_warn', 'Warnings'), 'warning'), (ctx.t('vector.v_sig_info', 'Notices'), 'info')]:
+        arr = fnds.get(key, [])
+        if arr:
+            f_blocks.append(f'<b>{hdr}</b>: ' + ', '.join((x.get('title', '?') for x in arr)))
+    if f_blocks:
+        lines.append(f"{EMOJI['search']} <b>{ctx.t('vector.v_aud_sigs', 'Triggers')}:</b>\n<blockquote expandable>{chr(10).join(f_blocks)}</blockquote>")
+    remaining = qta.get('remaining', '?')
+    if remaining != '?':
+        lines.append(f"{EMOJI['quota']} <i>{ctx.t('vector.v_aud_left', 'Slots left: {remaining}/{limit}', remaining=remaining, limit=qta.get('limit', '?'))}</i>")
+    return '\n'.join(lines)
 
-    def _build_html(self, m_data, current_idx, total_cnt):
-        log.debug('_build_html: name=%s idx=%d/%d', m_data.get('name', '?'), current_idx, total_cnt)
-        name = html.escape(str(m_data.get('name', 'Unknown')))
-        author = html.escape(str(m_data.get('author', '@Unknown')))
-        ver = str(m_data.get('version', '?.?.?'))
-        blocks = []
-        banner = str(m_data.get('banner') or '')
-        if banner.startswith(('https://', 'http://')):
-            banner = html.escape(banner).replace('"', '&quot;')
-            blocks.append(f'<figure><img src="{banner}"/></figure>')
-        blocks.append(f"<h1>{self.emj['module']} {name}</h1>")
-        status_text = self.strings['v_dev_ofc'] if m_data.get('official') else self.strings['v_dev_unofc']
-        blocks.append(f"<p>{self.emj['verified']} <b>{html.escape(status_text)}</b></p>")
-        byline = f"{self.strings['v_dev_lbl']}: {author}"
-        if ver != '?.?.?':
-            byline += f' · <code>v{html.escape(ver)}</code>'
-        blocks.append(f'<p>{byline}</p>')
-        if total_cnt > 1:
-            blocks.append(f"<p><i>{self.strings['v_page'].format(idx=current_idx, total=total_cnt)}</i></p>")
-        desc = str(m_data.get('description') or '').strip()
-        if desc:
-            desc_html = html.escape(desc).replace('\n', '<br>')
-            blocks.append(f"<details><summary>{self.emj['description']} {self.strings['v_info']}</summary><p>{desc_html}</p></details>")
-        commands = m_data.get('commands', [])
-        if commands:
-            bot = 'bot'
-            rows = []
-            for command in commands:
-                command_name = html.escape(str(command.get('name', '')))
-                command_desc = html.escape(str(command.get('description', ''))).replace('\n', '<br>')
-                if command.get('is_placeholder'):
-                    command_text = f'<code>{{{command_name}}}</code>'
-                elif command.get('is_inline'):
-                    command_text = f'<code>@{html.escape(bot)} {command_name}</code>'
-                else:
-                    command_text = f'<code>{self.get_prefix()}{command_name}</code>'
-                rows.append(f"<li>{command_text}{(': ' + command_desc if command_desc else '')}</li>")
-            blocks.append(f"<details><summary>{self.emj['command']} {self.strings['v_cmds']} ({len(commands)})</summary><ul>{''.join(rows)}</ul></details>")
-        tags = m_data.get('tags', [])
-        if tags:
-            blocks.append(f"<details><summary>{self.emj['tag']} {self.strings.get('v_tags', 'Tags')} ({len(tags)})</summary><p>{' · '.join((html.escape(str(tag)) for tag in tags))}</p></details>")
-        dependencies = m_data.get('dependencies', [])
-        if dependencies:
-            blocks.append(f"<details><summary>{self.emj['dependency']} {self.strings.get('v_deps', 'Dependencies')} ({len(dependencies)})</summary><ul>{''.join((f'<li><code>{html.escape(str(dependency))}</code></li>' for dependency in dependencies))}</ul></details>")
-        return '\n'.join(blocks)
-
-    def _build_kbd(self, item, idx, group, search_phrase, is_expanded=False, comments_pg=0):
-        log.debug('_build_kbd: name=%s idx=%d expanded=%s', item.get('name', '?'), idx, is_expanded)
-        m_name = str(item.get('name', ''))
-        m_owner = str(item.get('owner', 'unknown'))
-        kbd = [[{'text': self.strings['v_btn_copy'], 'copy': search_phrase}, {'text': self.strings['v_btn_dl'], 'callback': self.cb_install, 'args': (m_owner, m_name, idx, group, search_phrase)}, {'text': self.strings['v_btn_code'], 'url': item.get('source_url') or f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}], [{'text': f"👍 {item.get('likes', 0)}", 'callback': self.cb_rate, 'args': (m_owner, m_name, 'like', idx, group, search_phrase)}, {'text': f"👎 {item.get('dislikes', 0)}", 'callback': self.cb_rate, 'args': (m_owner, m_name, 'dislike', idx, group, search_phrase)}]]
-        if group and len(group) > 1:
-            prev_i = (idx - 1) % len(group)
-            next_i = (idx + 1) % len(group)
-            kbd.append([{'text': '◀️', 'callback': self.cb_nav, 'args': (prev_i, group, search_phrase, is_expanded)}, {'text': self.strings['v_page'].format(idx=idx + 1, total=len(group)), 'callback': self.cb_list, 'args': (idx, group, search_phrase)}, {'text': '▶️', 'callback': self.cb_nav, 'args': (next_i, group, search_phrase, is_expanded)}])
-        kbd.append([{'text': self.strings['v_btn_col' if is_expanded else 'v_btn_exp'], 'callback': self.cb_toggle, 'args': (m_owner, m_name, idx, group, search_phrase, not is_expanded)}])
-        if is_expanded:
-            kbd.append([{'text': self.strings['v_btn_talk'], 'callback': self.cb_comments, 'args': (m_owner, m_name, idx, group, search_phrase, comments_pg, is_expanded)}, {'text': self.strings['v_btn_sec'], 'callback': self.cb_sec_check, 'args': (m_owner, m_name, idx, group, search_phrase, is_expanded)}])
-        return kbd
-
-    async def _token_keeper(self):
-        log.info('_token_keeper: refreshing token')
-        await self._get_active_token()
-
-    async def _run_search(self, q, lang_sfx='', _retried=False):
-        token = await self._get_active_token()
-        if not token:
-            log.warning('_run_search: no token')
-            return ([], False)
-        log.info('_run_search: q=%r token=%s', q, bool(token))
-        raw_res = await self._net_req('GET', '/api/search', token=token, params={'q': q, 'limit': str(self.config['limit']), 'lang': lang_sfx})
-        if raw_res is None and self.httpc != 401:
-            if not _retried:
-                log.warning('_run_search: first attempt failed (httpc=%s), retrying', self.httpc)
-                return await self._run_search(q, lang_sfx, _retried=True)
-            log.error('_run_search: retry also failed, httpc=%s', self.httpc)
-            return (None, True)
-        if self.httpc == 401:
-            log.info('_run_search: got 401, forcing token refresh')
-            token = await self._get_active_token(force=True)
-            if not token:
-                return ([], False)
-            raw_res = await self._net_req('GET', '/api/search', token=token, params={'q': q, 'limit': str(self.config['limit']), 'lang': lang_sfx})
-        if raw_res is None and self.httpc != 401:
-            log.error('_run_search: API error after token refresh, httpc=%s', self.httpc)
-            return (None, True)
-        m_list = []
-        if isinstance(raw_res, dict):
-            m_list = raw_res.get('results', [])
-        elif isinstance(raw_res, list):
-            m_list = raw_res
-        m_list = [self._normalize_module(x) for x in m_list if isinstance(x, dict)]
-        log.info('_run_search: %d results', len(m_list))
-        return (m_list, True)
-
-    async def _show_search_fail(self, target, m_list, token_ok, q):
-        if not token_ok:
-            log.warning('vectorcmd: no token')
-            await self._answer(target, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{'text': self.strings['v_upd_cancel'], 'action': 'close'}]])
-        elif m_list is None:
-            log.error('vectorcmd: API unreachable')
-            await self._answer(target, f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>", reply_markup=[[{'text': self.strings['v_upd_cancel'], 'action': 'close'}]])
-        elif not m_list:
-            log.debug('vectorcmd: no results')
-            await self._answer(target, f"{self.emj['error']} <b>{self.strings['v_err_404'].format(q=f'<code>{html.escape(q)}</code>')}</b>", reply_markup=[[{'text': self.strings['v_upd_cancel'], 'action': 'close'}]])
-
-    async def vectorcmd(self, msg):
-        q = str(msg.ctx._msg.get('raw_args') or '')
-        log.info('vectorcmd: query=%r', q)
-        if not q:
-            log.debug('vectorcmd: empty query, aborting')
-            return await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_err_empty'].format(p=f'<code>{self.get_prefix()}</code>')}</b>")
-        if len(q) > 120:
-            return await self._answer(msg, f"{self.emj['warn']} <b>{self.strings['v_err_len']}</b>")
-        lang_sfx = self._detect_lang_suffix()
-        form = await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_loading_ui']}</b>", reply_markup=[[{'text': 'ㅤ', 'callback': self.cb_dummy}]], photo='https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vsearch.png', silent=True)
-        log.debug('vectorcmd: loading form sent, searching')
-        m_list, token_ok = await self._run_search(q, lang_sfx)
-        if not token_ok or not m_list:
-            return await self._show_search_fail(form, m_list, token_ok, q)
-        item = m_list[0]
-        uid = getattr(msg, 'sender_id', None) or getattr(getattr(msg, 'sender', None), 'id', None) or 0
-        st = self._st(uid)
-        st['pg'] = 0
-        st['exp'] = False
-        kbd = self._build_kbd(item, 0, m_list, q)
-        text = self._build_html(item, 1, len(m_list))
-        await self._answer(form, text, reply_markup=kbd)
-
-    async def vecupdate(self, msg):
-        args = str(msg.ctx._msg.get('raw_args') or '')
-        force = '-f' in args or '--force' in args
-        log.info('vecupdate: force=%s args=%r', force, args)
-        m_owner = 'sepiol026-wq'
-        m_name = 'Vector'
-        dl_path = f"/modules/{m_owner}/{quote(m_name, safe='')}/source"
-        dl_url = f"{apirt}/modules/{m_owner}/{quote(m_name, safe='')}/source"
-        log.debug('vecupdate: dl_url=%s', dl_url)
-        if force:
-            log.info('vecupdate: force flag set, installing immediately')
-            await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
-            ok = await self._safe_install(m_name, dl_url)
-            if ok:
-                log.info('vecupdate: force install successful')
-                await self._answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
-            else:
-                log.warning('vecupdate: force install failed')
-                await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
-            return
-        await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_check']}</b>")
-        token = await self._get_active_token()
-        if not token:
-            log.warning('vecupdate: no token, aborting')
-            return await self._answer(msg, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>")
-        src_bytes = await self._net_req('GET', dl_path, token=token, as_bytes=True)
-        if not src_bytes:
-            log.warning('vecupdate: download returned no bytes, installing anyway')
-            await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
-            ok = await self._safe_install(m_name, dl_url)
-            if ok:
-                await self._answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
-            else:
-                await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
-            return
-        log.debug('vecupdate: downloaded %d bytes', len(src_bytes))
-        remote_hash = hashlib.sha256(src_bytes).hexdigest()
-        brief = await _context().modules.info('vector')
-        local_hash = brief.get('digest', '')
-        if local_hash:
-            log.debug('vecupdate: local_hash=%s remote_hash=%s', local_hash[:16], remote_hash[:16])
-        else:
-            log.warning('vecupdate: could not read local source, assuming hashes differ')
-        if remote_hash == local_hash:
-            log.info('vecupdate: hashes match, showing force-update prompt')
-            await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>\n\n{self.strings['v_upd_same']}", reply_markup=[[{'text': self.strings['v_upd_force_btn'], 'callback': self._vecupdate_force, 'args': (dl_url,), 'style': 'primary'}, {'text': self.strings['v_upd_cancel'], 'action': 'close', 'style': 'danger'}]])
-            return
-        log.info('vecupdate: hashes differ, proceeding with install')
-        await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
-        ok = await self._safe_install(m_name, dl_url)
-        if ok:
-            log.info('vecupdate: install successful')
-            await self._answer(msg, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
-        else:
-            log.warning('vecupdate: install failed')
-            await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
-
-    async def _vecupdate_force(self, call, dl_url):
-        log.info('_vecupdate_force: force update triggered, url=%s', dl_url)
+async def sync_via_https(ctx):
+    for url in _http_time_hosts:
         with suppress(Exception):
-            await call.answer()
-        await self._answer(call, f"{self.emj['search']} <b>{self.strings['v_upd_req']}</b>")
-        ok = await self._safe_install('Vector', dl_url)
-        if ok:
-            log.info('_vecupdate_force: force install successful')
-            await self._answer(call, f"{self.emj['safe']} <b>{self.strings['v_upd_ok']}</b>")
-        else:
-            log.warning('_vecupdate_force: force install failed')
-            await self._answer(call, f"{self.emj['error']} <b>{self.strings['v_upd_err']}</b>")
+            t0 = time.time()
+            response = await ctx.net(url, method='HEAD', timeout=3)
+            t1 = time.time()
+            date_header = next((value for key, value in response.get('headers', {}).items() if key.lower() == 'date'), None)
+            if date_header:
+                srv_ts = parsedate_to_datetime(date_header).timestamp()
+                rtt_half = max(0.0, (t1 - t0) / 2)
+                offset = srv_ts + rtt_half - t1
+                log.debug('_sync_via_https: url=%s offset=%.3fs', url, offset)
+                return offset
+    return None
 
-
-    async def _sync_installed_modules(self):
-        token = await self._get_active_token()
-        if not token:
-            return False
-        installed = await _context().modules.list()
-        tracked = self.get('vector_inventory', {})
-        modules_data = []
-        for mod in installed:
-            item = tracked.get(mod['module_id'])
-            if not item or not mod.get('active') or (not mod.get('digest')):
+def format_ban_notice(ctx, raw_text):
+    log.debug('_format_ban_notice: raw_len=%d', len(raw_text) if raw_text else 0)
+    txt = str(raw_text or '').strip()
+    reason_match = brrx.search(txt)
+    term_match = btrx.search(txt)
+    reason_raw = reason_match.group(1).strip() if reason_match else ''
+    term_raw = term_match.group(1).strip() if term_match else ''
+    if not reason_raw or not term_raw:
+        for line in txt.splitlines():
+            if ':' not in line:
                 continue
-            modules_data.append({'class_name': item['name'], 'contentHash': mod['digest'], 'language': self._detect_lang_suffix()})
-        result = await self._net_req('PUT', '/api/users/me/modules', token=token, json_data={'modules': modules_data, 'replace_inventory': True})
-        return bool(result and result.get('ok'))
+            key, value = line.split(':', 1)
+            key_l = key.strip().lower()
+            val = value.strip()
+            if not reason_raw and key_l in {'причина', 'reason', '理由', 'grund', 'r3450n', 'weason', 'charge'}:
+                reason_raw = val
+            if not term_raw and key_l in {'срок', 'term', '期間', 'dauer', '73rm', 'tewm'}:
+                term_raw = val
+    reason = html.escape(reason_raw or '-')
+    term = html.escape(term_raw or 'permanent')
+    return ctx.t('vector.v_ban_notice', '⛔ <b>Vector access blocked.</b>\n<b>Reason:</b> <code>{reason}</code>\n<b>Term:</b> <code>{term}</code>', reason=reason, term=term)
 
-    async def _sync_modules_keeper(self):
-        if not self.config.get('auto_update_notify', True):
-            return
-        try:
-            await self._sync_installed_modules()
-        except Exception:
-            pass
+def parse_jwt(ctx, token):
+    log.debug('_parse_jwt: token len=%d', len(token) if token else 0)
+    try:
+        b64_part = token.split('.')[1]
+        b64_part += '=' * (-len(b64_part) % 4)
+        return json.loads(base64.urlsafe_b64decode(b64_part.encode()).decode())
+    except Exception:
+        return {}
 
-    async def vecdlcmd(self, msg):
-        raw_arg = str(msg.ctx._msg.get('raw_args') or '').strip()
-        slug = raw_arg.split('/collections/')[-1].split('/')[0].split('?')[0] if '/collections/' in raw_arg else raw_arg
-        log.info('vecdl: raw=%r slug=%r', raw_arg, slug)
-        if not slug:
-            return await self._answer(msg, f"{self.emj['error']} {self.strings['v_vecdl_usage'].format(p=self.get_prefix())}")
-        token = await self._get_active_token()
-        if not token:
-            return await self._answer(msg, self.bannote or f"{self.emj['error']} <b>{self.strings['v_err_api']}</b>")
-        raw = await self._net_req('GET', f"/api/collections/{quote(slug, safe='')}", token=token)
-        if not raw or not raw.get('ok'):
-            return await self._answer(msg, f"{self.emj['error']} <b>{self.strings['v_dlcoll_not_found']}</b>")
-        col = raw['collection']
-        modules = [entry['module'] for entry in col.get('modules') or [] if entry.get('module')]
-        if not modules:
-            return await self._answer(msg, f"{self.emj['warn']} <b>{self.strings['v_dlcoll_empty']}</b>")
-        await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_sending']}</b>")
-        max_batch = int(self.config.get('max_batch', 50))
-        total_orig = len(modules)
-        if total_orig > max_batch:
-            modules = modules[:max_batch]
-        col_name = col.get('name', slug)
-        await self._answer(msg, f"{self.emj['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=html.escape(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}", reply_markup=[[{'text': self.strings['v_btn_dl'], 'callback': self._vecdl_install, 'args': (modules, col_name)}, {'text': self.strings['v_upd_cancel'], 'action': 'close'}]], silent=True)
+async def ntp_query(ctx, host, timeout=1.5):
+    stream = None
+    try:
+        stream = await ctx.stream('udp://' + host + ':123', timeout=timeout)
+        t0 = time.time()
+        await stream.send(base64.b64encode(b'\x1b' + 47 * b'\x00').decode(), binary=True)
+
+        async def receive():
+            while True:
+                event = await stream.recv(timeout=timeout)
+                if not event or event.get('event') in ('close', 'error'):
+                    return None
+                if event.get('event') == 'message':
+                    return event
+        event = await asyncio.wait_for(receive(), timeout)
+        t1 = time.time()
+        if not event:
+            return None
+        response = base64.b64decode(event['data']) if event.get('binary') else event['data'].encode()
+        if len(response) < 48:
+            return None
+        secs, frac = struct.unpack('!II', response[40:48])
+        return secs - _ntp_epoch_delta + frac / 2 ** 32 + max(0.0, (t1 - t0) / 2) - t1
+    except Exception:
+        return None
+    finally:
+        if stream:
+            await stream.close()
+
+def normalize_module(ctx, raw):
+    log.debug('_normalize_module: name=%s version=%s', raw.get('name', '?'), raw.get('version', '?'))
+    lang = detect_lang_suffix(ctx)
+    db_suffix = {'en': '', 'ua': '_ua'}.get(lang, f'_{lang}')
+    cmds = []
+    for c in raw.get('commands') or []:
+        if isinstance(c, dict):
+            cmd_desc_key = f'desc{db_suffix}'
+            cmd_desc = (c.get(cmd_desc_key) if cmd_desc_key != 'desc' else None) or c.get('description') or c.get('desc') or ''
+            cmds.append({'name': c.get('name') or c.get('cmd') or '', 'description': cmd_desc, 'is_inline': bool(c.get('is_inline')), 'is_placeholder': bool(c.get('is_placeholder'))})
+    dev = str(raw.get('developer') or raw.get('author') or '@Unknown')
+    ioff = bool(raw.get('official') or raw.get('is_official') or raw.get('verified') or raw.get('is_verified') or raw.get('telegram_verified') or raw.get('official_developer') or raw.get('is_official_developer'))
+    name = str(raw.get('name') or raw.get('class_name') or 'Unknown')
+    locales = raw.get('locales')
+    desc = raw.get('description') or ''
+    if isinstance(locales, dict):
+        loc_key = f'description{db_suffix}'
+        loc_val = locales.get(loc_key)
+        if isinstance(loc_val, str) and loc_val.strip():
+            desc = loc_val
+    return {'name': name, 'owner': raw.get('source_owner') or 'unknown', 'version': raw.get('version') or '?.?.?', 'author': dev, 'description': desc, 'commands': cmds, 'dependencies': [str(d) for d in raw.get('dependencies') or []], 'official': ioff, 'likes': int(raw.get('likes') or 0), 'dislikes': int(raw.get('dislikes') or 0), 'banner': raw.get('banner'), 'source_url': module_url(raw.get('source_owner', 'unknown'), name), 'tags': raw.get('tags') or [], 'dl_url': module_url(raw.get('source_owner', 'unknown'), name)}
+
+async def ensure_time_synced(ctx, max_age=300.0, force=False):
+    if not force and clock['_time_offset_ts'] and (time.time() - clock['_time_offset_ts'] < max_age):
         return
+    if clock['_time_sync_lock'] is None:
+        clock['_time_sync_lock'] = threading.Lock()
+    while not clock['_time_sync_lock'].acquire(False):
+        await asyncio.sleep(0.05)
+    try:
+        if not force and clock['_time_offset_ts'] and (time.time() - clock['_time_offset_ts'] < max_age):
+            return
+        source = 'ntp'
+        offset = await sync_via_ntp(ctx)
+        if offset is None:
+            source = 'https'
+            offset = await sync_via_https(ctx)
+        if offset is None:
+            log.warning('_ensure_time_synced: all external sources failed, keeping previous offset=%.3fs', clock['_time_offset'])
+            clock['_time_offset_ts'] = time.time()
+            return
+        clock['_time_offset'] = offset
+        clock['_time_offset_ts'] = time.time()
+        log.info('_ensure_time_synced: offset=%.3fs source=%s', clock['_time_offset'], source)
+    finally:
+        clock['_time_sync_lock'].release()
 
-    async def _vecdl_install(self, cb, modules, col_name):
-        log.info('_vecdl_install: count=%d name=%r', len(modules), col_name)
+def detect_lang_suffix(ctx):
+    return {'ja': 'jp', 'uk': 'ua'}.get(ctx.i18n.language, ctx.i18n.language)
+
+
+def platform_url(value):
+    parsed = urlparse(urljoin(apirt + '/', value))
+    query = dict(parse_qsl(parsed.query))
+    query['platform'] = 'hotaru'
+    return urlunparse(parsed._replace(query=urlencode(query)))
+
+
+def module_url(owner, name):
+    return platform_url('/modules/' + quote(str(owner), safe='') + '/' + quote(str(name), safe='') + '/source')
+
+
+async def net_req(ctx, method, path, token='', params=None, json_data=None, as_bytes=False, timeout=None):
+    headers = {'User-Agent': 'VectorHotaru/' + HOTARU['version']}
+    if token:
+        headers['Authorization'] = 'Bearer ' + token
+    try:
+        response = await ctx.net(platform_url(path), method=method, params={**(params or {}), 'platform': 'hotaru'}, json=json_data, headers=headers, timeout=timeout or (90 if path == '/api/search' else 15), binary=as_bytes)
+        status = response.get('status', 0)
+        if status >= 300 or response.get('truncated'):
+            return None, status
+        body = response.get('body', '')
+        if as_bytes:
+            return (base64.b64decode(body) if response.get('encoding') == 'base64' else str(body).encode()), status
+        return (json.loads(body) if isinstance(body, str) else body), status
+    except Exception as exc:
+        log.warning('Vector %s %s: %s', method, path, exc)
+        return None, -1
+
+
+async def get_active_token(ctx, force=False):
+    global _validated_token
+    if force:
+        ctx.state.delete('auth_token')
+        _validated_token = ''
+    await ensure_time_synced(ctx)
+    while not _token_lock.acquire(False):
+        await asyncio.sleep(0.05)
+    try:
+        cached = ctx.state.get('auth_token', '')
+        if cached and parse_jwt(ctx, cached).get('exp', 0) - now(ctx) > 60:
+            if _validated_token == cached:
+                return cached
+            result, status = await net_req(ctx, 'GET', '/api/search', token=cached, params={'q': 'vector', 'limit': 1})
+            if status not in (401, 403) and result is not None:
+                _validated_token = cached
+                return cached
+        info, status = await net_req(ctx, 'GET', '/api/tg-bot')
+        username = str((info or {}).get('username', '')).strip().lstrip('@')
+        if not username:
+            ctx.state.set('ban_notice', ctx.t('vector.v_token_fail'))
+            return ''
+        me = await ctx.tg.call('users.getUsers', {'id': [{'_': 'inputUserSelf'}]})
+        me = (me if isinstance(me, list) else me.get('users', []))[0]
+        uid = str(me['id'])
+        bot = await ctx.resolve(username)
+        bot_id = int(bot.get('id') or bot.get('user_id') or 0)
+        if bot_id:
+            ctx.state.set('bot_id', bot_id)
         with suppress(Exception):
-            await cb.answer()
-        max_batch = int(self.config.get('max_batch', 50))
-        total_orig = len(modules)
-        if total_orig > max_batch:
-            modules = modules[:max_batch]
-        await self._answer(cb, f"{self.emj['modules_list']} {self.strings['v_dlcoll_hdr'].format(name=html.escape(col_name))}\n{self.strings['v_dlcoll_count'].format(count=len(modules))}\n\n{self.emj['search']} {self.strings['v_dlcoll_start']}", reply_markup=[[{'text': '…', 'callback': self.cb_dummy}]])
-        ok = 0
-        failed = []
-        for mod in modules:
-            dl_url = mod.get('source_download_url') or mod.get('source_raw_url') or f"{apirt}/modules/{quote(str(mod.get('source_owner', 'unknown')), safe='')}/{quote(mod.get('name') or '', safe='')}/source"
-            m_name = mod.get('name', '?')
-            ok_flag = await self._safe_install(m_name, dl_url)
-            if ok_flag:
-                ok += 1
-            else:
-                failed.append(self.strings['v_dlcoll_fail_item'].format(name=html.escape(m_name), reason=self.strings['v_dl_err']))
-            await asyncio.sleep(2)
-        if ok == len(modules):
-            result = f"{self.emj['safe']} {self.strings['v_dlcoll_done']}"
-        elif ok > 0:
-            result = f"{self.emj['warn']} {self.strings['v_dlcoll_done_partial']}"
-        else:
-            result = f"{self.emj['error']} {self.strings['v_dlcoll_done_none']}"
-        result += f'\n<b>{ok}/{len(modules)}</b>'
-        if failed:
-            result += '\n\n' + '\n'.join(failed)
-        if total_orig > max_batch:
-            result += f"\n\n<i>{self.strings['v_dlcoll_max_batch'].format(total=total_orig, max=max_batch)}</i>"
-        await self._answer(cb, result, reply_markup=[[{'text': '✖️', 'action': 'close'}]])
-
-    async def vector_install_payload_watcher(self, msg):
-        if getattr(msg, 'out', False):
-            return
-        if not self.config.get('VectorInstall', True):
-            return
-        if not self.btid:
+            await ctx.tg.call('contacts.unblock', {'id': username})
+        for attempt in range(2):
+            history = await ctx.chat_history(peer=username, limit=1)
+            last = max((m.get('id', 0) for m in history.get('messages', [])), default=0)
+            stamp = int(now(ctx) // 10) - attempt
+            digest = hashlib.sha256(f'vector-token-v2|{uid}|{stamp}|{auths}'.encode()).hexdigest()[:32]
+            sent = await ctx.tg.call('messages.sendMessage', {'peer': username, 'message': '/' + digest, 'random_id': secrets.randbits(63)})
+            sent_ids = [u['message']['id'] for u in (sent or {}).get('updates', []) if isinstance(u.get('message'), dict) and u['message'].get('id')]
             try:
-                binfo = await self._net_req('GET', '/api/tg-bot')
-                buname = (binfo or {}).get('username', '').strip().lstrip('@')
-                if buname:
-                    ent = await self.client.get_entity(buname)
-                    self.btid = getattr(ent, 'id', 0)
-            except Exception:
-                self.btid = -1
-        if self.btid <= 0:
-            return
-        sid = getattr(msg, 'sender_id', None) or getattr(getattr(msg, 'sender', None), 'id', None) or 0
-        if not sid or int(sid) != self.btid:
-            return
-        text = (getattr(msg, 'raw_text', None) or '').strip()
-        log.debug('vector_install_payload_watcher: text_len=%d starts_with_payload=%s', len(text), text.startswith('#v_payload:') if len(text) > 5 else False)
-        saved_notify = None
-        notify_peer = None
-        with suppress(Exception):
-            peer = await self.client.get_input_entity(msg.chat_id)
-            notify_peer = InputNotifyPeer(peer=peer)
-        if notify_peer is not None:
-            with suppress(Exception):
-                saved_notify = await self.client(GetNotifySettingsRequest(notify_peer))
-            with suppress(Exception):
-                await self.client(UpdateNotifySettingsRequest(peer=notify_peer, settings=InputPeerNotifySettings(mute_until=2 ** 31 - 1)))
-        try:
-            if not text.startswith('#v_payload:'):
-                return
-            parts = text.split(':', 4)
-            if len(parts) != 5:
-                log.debug('vector_install_payload_watcher: invalid parts count=%d', len(parts))
-                return
-            _, owner_module, action, ts_raw, signature = parts
-            if '|' in owner_module:
-                owner, module_name = owner_module.split('|', 1)
-            else:
-                owner, module_name = ('unknown', owner_module)
-            log.info('vector_install_payload_watcher: owner=%s module=%s action=%s', owner, module_name, action)
-            if not owner_module or not action or (not ts_raw) or (not signature):
-                return
-            if action not in {'install', 'like', 'dislike', 'update'}:
-                return
-            if not re.fullmatch('[^:]+', module_name):
-                return
-            if not ts_raw.isdigit():
-                return
-            await self._ensure_time_synced()
-            ts = int(ts_raw)
-            now = int(self._now())
-            if abs(now - ts) > 60:
-                return
-            local_payload = f'{owner_module}:{action}:{ts}'
-            local_signature = hmac.new(auths.encode('utf-8'), local_payload.encode('utf-8'), hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(local_signature, signature):
-                return
-            with suppress(Exception):
-                await msg.delete()
+                deadline = time.monotonic() + 10
+                while time.monotonic() < deadline:
+                    history = await ctx.chat_history(peer=username, min_id=last, limit=10)
+                    for message in sorted(history.get('messages', []), key=lambda m: m.get('id', 0)):
+                        if message.get('out') or message.get('id', 0) <= last:
+                            continue
+                        sender = message.get('from_id')
+                        sender = sender.get('user_id') if isinstance(sender, dict) else sender
+                        if bot_id and sender and int(sender) != bot_id:
+                            continue
+                        text = str(message.get('message') or message.get('text') or '')
+                        match = jwtrx.search(text)
+                        if match and str(parse_jwt(ctx, match.group()).get('sub')) == uid:
+                            token = match.group()
+                            ctx.state.set('auth_token', token)
+                            ctx.state.set('ban_notice', '')
+                            _validated_token = token
+                            return token
+                        if 'заблок' in text.lower() or '⛔' in text:
+                            ctx.state.set('ban_notice', format_ban_notice(ctx, text))
+                            return ''
+                    await asyncio.sleep(0.4)
+            finally:
+                if sent_ids:
+                    with suppress(Exception):
+                        await ctx.tg.call('messages.deleteMessages', {'id': sent_ids, 'revoke': True})
+        ctx.state.set('ban_notice', ctx.t('vector.v_token_fail'))
+        return ''
+    finally:
+        _token_lock.release()
 
-            async def send_feedback(status, reason='', banned_until=''):
-                feedback_ts = int(self._now())
-                safe_reason = (reason or '').replace(':', ' ').strip()
-                safe_until = (banned_until or '').replace(':', ' ').strip()
-                feedback_payload = f'{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}'
-                feedback_signature = hmac.new(auths.encode('utf-8'), feedback_payload.encode('utf-8'), hashlib.sha256).hexdigest()
-                with suppress(Exception):
-                    await self.client.send_message(msg.chat_id, f'#v_feedback:{owner_module}:{action}:{status}:{feedback_ts}:{safe_reason}:{safe_until}:{feedback_signature}')
-                with suppress(Exception):
-                    await _context().net(f'{apirt}/api/tg-bot/install-feedback', method='POST', json={'owner_module': owner_module, 'status': status, 'reason': safe_reason}, headers={'content-type': 'application/json', 'x-bot-secret': auths}, timeout=5)
-            token = await self._get_active_token()
-            if not token:
-                reason = 'User is banned' if not self.bannote else self.bannote
-                await send_feedback('banned', reason, 'permanent')
-                return
-            if action == 'install':
-                log.info('vector_install_payload_watcher: install action for %s/%s', owner, module_name)
-                dl_url = f"{apirt}/modules/{quote(owner, safe='')}/{quote(module_name, safe='')}/source"
-                ok = await self._safe_install(module_name, dl_url)
-                log.info('vector_install_payload_watcher: install result=%s', ok)
-                await send_feedback('ok' if ok else 'error')
-                return
-            if action == 'update':
-                log.info('vector_install_payload_watcher: update action for module_id=%s', owner_module)
-                mod_info = await self._net_req('GET', f"/api/modules/by-id?id={quote(owner_module, safe='')}", token=token)
-                if not mod_info or not mod_info.get('ok'):
-                    await send_feedback('error', 'module not found')
-                    return
-                mod_data = mod_info.get('module', {})
-                mod_name = mod_data.get('name', '')
-                mod_owner = mod_data.get('source_owner', '')
-                if not mod_name:
-                    await send_feedback('error', 'invalid module data')
-                    return
-                dl_url = f"{apirt}/modules/{quote(mod_owner, safe='')}/{quote(mod_name, safe='')}/source"
-                ok = await self._safe_install(mod_name, dl_url)
-                log.info('vector_install_payload_watcher: update result=%s', ok)
-                await send_feedback('ok' if ok else 'error')
-                return
-            log.info('vector_install_payload_watcher: rate action %s for %s/%s', action, owner, module_name)
-            uid = self._parse_jwt(token).get('sub', '')
-            res = await self._net_req('POST', f"/api/rate/{quote(str(uid), safe='')}/{quote(owner, safe='')}/{quote(module_name, safe='')}/{action}", token=token)
-            if not res and self.httpc in {401, 403}:
-                log.warning('vector_install_payload_watcher: banned (401/403)')
-                await send_feedback('banned', 'User is banned', 'permanent')
-                return
-            await send_feedback('ok' if res and res.get('ok') else 'error')
-        finally:
-            if notify_peer is not None:
-                with suppress(Exception):
-                    await self.client(UpdateNotifySettingsRequest(peer=notify_peer, settings=InputPeerNotifySettings(mute_until=saved_notify.get('mute_until', 0) if isinstance(saved_notify, dict) else 0)))
 
-    async def vecmecmd(self, msg):
-        await self._answer(msg, f"{self.emj['search']} <b>{self.strings['v_sending']}</b>")
-        bot_info = await self._net_req('GET', '/api/tg-bot')
-        bot_uname = (bot_info or {}).get('username', '').strip().lstrip('@')
-        if not bot_uname:
-            await self._answer(msg, self.strings['v_err_api'])
-            return
-        text = f"{self.emj['shield']} <b>{self.strings['v_miniapp_title']}</b>\n\n{self.strings['v_miniapp_body']}"
-        link = f'https://t.me/{bot_uname}/vector'
-        await self._answer(msg, text, reply_markup=[[{'text': self.strings['v_miniapp_btn'], 'url': link}, {'text': self.strings['v_upd_cancel'], 'action': 'close'}]], silent=True)
-
-    async def cb_dummy(self, cb):
-        log.debug('cb_dummy: no-op callback')
-        with suppress(Exception):
-            await cb.answer()
-
-    async def cb_nav(self, cb, target_i, group, q, expanded=None, comments_pg=0):
-        uid = getattr(cb, 'from_user', None) and cb.from_user.id or 0
-        st = self._st(uid)
-        if expanded is None:
-            expanded = st['exp']
-        st['exp'] = expanded
-        log.debug('cb_nav: target_i=%d group_len=%d expanded=%s', target_i, len(group) if group else 0, expanded)
-        with suppress(Exception):
-            await cb.answer()
-        if 0 <= target_i < len(group):
-            item = group[target_i]
-            await self._answer(cb, self._build_html(item, target_i + 1, len(group)), reply_markup=self._build_kbd(item, target_i, group, q, expanded, comments_pg))
-
-    async def cb_list(self, cb, curr_i, group, q):
-        log.debug('cb_list: curr_i=%d group_len=%d', curr_i, len(group) if group else 0)
-        with suppress(Exception):
-            await cb.answer()
-        uid = getattr(cb, 'from_user', None) and cb.from_user.id or 0
-        st = self._st(uid)
-        total_pages = max(1, (len(group) + 4) // 5)
-        pg = st['pg'] % total_pages
-        start, end = (pg * 5, min((pg + 1) * 5, len(group)))
-        kb = []
-        for i in range(start, end):
-            m = group[i]
-            kb.append([{'text': f"{i + 1}. {m.get('name')} by {m.get('author')}", 'callback': self.cb_nav, 'args': (i, group, q)}])
-        prev_pg = (pg - 1) % total_pages
-        next_pg = (pg + 1) % total_pages
-        kb.append([{'text': '◀️', 'callback': self.cb_page, 'args': (prev_pg, group, q, curr_i)}, {'text': self.strings['v_page'].format(idx=pg + 1, total=total_pages), 'callback': self.cb_dummy}, {'text': '▶️', 'callback': self.cb_page, 'args': (next_pg, group, q, curr_i)}])
-        kb.append([{'text': self.strings['v_btn_bck'], 'callback': self.cb_nav, 'args': (curr_i, group, q)}])
-        await self._answer(cb, f"{self.emj['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
-
-    async def cb_page(self, cb, pg, group, q, orig_i):
-        uid = getattr(cb, 'from_user', None) and cb.from_user.id or 0
-        st = self._st(uid)
-        st['pg'] = pg
-        log.debug('cb_page: pg=%d group_len=%d orig_i=%d', pg, len(group) if group else 0, orig_i)
-        with suppress(Exception):
-            await cb.answer()
-        total_pages = max(1, (len(group) + 4) // 5)
-        start, end = (pg * 5, min((pg + 1) * 5, len(group)))
-        kb = []
-        for i in range(start, end):
-            m = group[i]
-            kb.append([{'text': f"{i + 1}. {m.get('name')} by {m.get('author')}", 'callback': self.cb_nav, 'args': (i, group, q)}])
-        prev_pg = (pg - 1) % total_pages
-        next_pg = (pg + 1) % total_pages
-        kb.append([{'text': '◀️', 'callback': self.cb_page, 'args': (prev_pg, group, q, orig_i)}, {'text': self.strings['v_page'].format(idx=pg + 1, total=total_pages), 'callback': self.cb_dummy}, {'text': '▶️', 'callback': self.cb_page, 'args': (next_pg, group, q, orig_i)}])
-        kb.append([{'text': self.strings['v_btn_bck'], 'callback': self.cb_nav, 'args': (orig_i, group, q)}])
-        await self._answer(cb, f"{self.emj['modules_list']} <b>{self.strings['v_res_hdr']}</b>", reply_markup=kb)
-
-    async def cb_toggle(self, cb, m_owner, m_name, i, group, q, exp):
-        uid = getattr(cb, 'from_user', None) and cb.from_user.id or 0
-        st = self._st(uid)
-        st['exp'] = exp
-        log.debug('cb_toggle: name=%s idx=%d exp=%s', m_name, i, exp)
-        with suppress(Exception):
-            await cb.answer()
-        item = group[i] if group and 0 <= i < len(group) else {'name': m_name, 'source_url': f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
-        await self._answer(cb, self._build_html(item, i + 1, len(group or [item])), reply_markup=self._build_kbd(item, i, group, q, exp))
-
-    async def cb_rate(self, cb, m_owner, m_name, action, i, group, q):
-        log.info('cb_rate: name=%s action=%s', m_name, action)
-        token = await self._get_active_token()
+async def safe_install(ctx, name, url):
+    try:
+        token = await get_active_token(ctx)
         if not token:
-            with suppress(Exception):
-                await cb.answer(self.bannote or self.strings['v_err_api'], show_alert=True)
-            return
-        uid = self._parse_jwt(token).get('sub', '')
-        res = await self._net_req('POST', f"/api/rate/{quote(str(uid), safe='')}/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/{action}", token=token)
-        if not res or not res.get('ok'):
-            token = await self._get_active_token(force=True)
-            uid = self._parse_jwt(token).get('sub', '')
-            res = await self._net_req('POST', f"/api/rate/{quote(str(uid), safe='')}/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/{action}", token=token)
-            if not res or not res.get('ok'):
-                with suppress(Exception):
-                    await cb.answer(self.strings['v_dl_err'], show_alert=True)
-                return
-        new_likes, new_dislikes = self._extract_counts(res)
-        log.debug('cb_rate: new likes=%s dislikes=%s', new_likes, new_dislikes)
-        if group and i < len(group):
-            if new_likes is not None:
-                group[i]['likes'] = new_likes
-            if new_dislikes is not None:
-                group[i]['dislikes'] = new_dislikes
-            item = group[i]
-        else:
-            item = {'name': m_name, 'likes': new_likes or 0, 'dislikes': new_dislikes or 0, 'source_url': f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}
-        await self._answer(cb, self._build_html(item, i + 1, len(group or [item])), reply_markup=self._build_kbd(item, i, group, q))
-        s_val = res.get('rating', {}).get('state')
-        with suppress(Exception):
-            await cb.answer(self.strings['v_fb_rm' if s_val == 'removed' else 'v_fb_add'], show_alert=True)
-
-    async def cb_install(self, cb, m_owner, m_name, i, group, q):
-        log.info('cb_install: name=%s', m_name)
-        token = await self._get_active_token()
-        if not token:
-            log.warning('cb_install: no token')
-            with suppress(Exception):
-                await cb.answer(self.bannote or self.strings['v_err_api'], show_alert=True)
-            return
-        dl_url = f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"
-        ok = await self._safe_install(m_name, dl_url)
-        key = 'v_dl_ok' if ok else 'v_dl_err'
-        with suppress(Exception):
-            await cb.answer(self.strings[key], show_alert=True)
-
-    async def cb_sec_check(self, cb, m_owner, m_name, i, group, q, expanded=False):
-        log.info('cb_sec_check: name=%s', m_name)
-
-        def _get_sec_kb(has_run, payload=None):
-            k = []
-            if not has_run:
-                k.append([{'text': self.strings['v_btn_aud_run'], 'callback': self.cb_sec_run, 'args': (m_owner, m_name, i, group, q, expanded)}])
-            k.append([{'text': self.strings['v_btn_code'], 'url': f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}])
-            k.append([{'text': self.strings['v_btn_bck'], 'callback': self.cb_nav, 'args': (i, group or [], q, expanded)}])
-            return k
-        cached = self.seccache.get(m_name)
-        if cached and cached.get('check'):
-            log.debug('cb_sec_check: cache hit for %s', m_name)
-            return await self._answer(cb, f'{self._fmt_sec(m_name, cached)}', reply_markup=_get_sec_kb(True, cached))
-        with suppress(Exception):
-            await cb.answer()
-        token = await self._get_active_token()
-        if not token:
-            with suppress(Exception):
-                await cb.answer(self.bannote or self.strings['v_err_api'], show_alert=True)
-            return
-        res = await self._net_req('GET', f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/security-check", token=token)
-        if not res or self.httpc >= 400:
-            log.warning('cb_sec_check: API error for %s, http=%s', m_name, self.httpc)
-            return await self._answer(cb, f"{self.emj['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=_get_sec_kb(True))
-        if res.get('check'):
-            self.seccache[m_name] = res
-            log.debug('cb_sec_check: cached result for %s', m_name)
-        await self._answer(cb, self._fmt_sec(m_name, res), reply_markup=_get_sec_kb(bool(res.get('check')), res))
-
-    async def cb_sec_run(self, cb, m_owner, m_name, i, group, q, expanded=False):
-        log.info('cb_sec_run: name=%s', m_name)
-        await self._answer(cb, f"{self.emj['search']} <b>{self.strings['v_aud_proc']}</b>", reply_markup=[[{'text': self.strings['v_btn_bck'], 'callback': self.cb_nav, 'args': (i, group or [], q, expanded)}]])
-        token = await self._get_active_token()
-        if not token:
-            with suppress(Exception):
-                await cb.answer(self.bannote or self.strings['v_err_api'], show_alert=True)
-            return
-        res = await self._net_req('POST', f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/security-check", token=token, timeout=120)
-        if self.httpc == 429:
-            log.warning('cb_sec_run: rate limited (429)')
-            return await self._answer(cb, f"{self.emj['warn']} <b>{self.strings['v_aud_zero']}</b>", reply_markup=[[{'text': self.strings['v_btn_bck'], 'callback': self.cb_nav, 'args': (i, group or [], q, expanded)}]])
-        if not res or self.httpc >= 400:
-            log.warning('cb_sec_run: API error, http=%s', self.httpc)
-            return await self._answer(cb, f"{self.emj['error']} <b>{self.strings['v_aud_err']}</b>", reply_markup=[[{'text': self.strings['v_btn_bck'], 'callback': self.cb_nav, 'args': (i, group or [], q, expanded)}]])
-        log.info('cb_sec_run: scan complete for %s', m_name)
-        if res.get('check'):
-            self.seccache[m_name] = res
-            log.debug('cb_sec_run: cached result for %s', m_name)
-        await self._answer(cb, self._fmt_sec(m_name, res), reply_markup=[[{'text': self.strings['v_btn_code'], 'url': f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}], [{'text': self.strings['v_btn_bck'], 'callback': self.cb_nav, 'args': (i, group or [], q, expanded)}]])
-
-    def _fmt_sec(self, m_name, payload):
-        log.debug('_fmt_sec: name=%s has_check=%s', m_name, bool(payload.get('check')))
-        chk = payload.get('check')
-        qta = payload.get('quota') or (chk.get('quota') if chk else None) or {}
-        if not chk:
-            return f"{self.emj['shield']} <b>{self.strings['v_aud_hdr'].format(name=m_name)}</b>\n\n{self.emj['warn']} {self.strings['v_aud_none']}\n{self.emj['quota']} <i>{self.strings['v_aud_left'].format(remaining=qta.get('remaining', '?'), limit=qta.get('limit', '?'))}</i>"
-        v = str(chk.get('verdict', 'unknown'))
-        v_icon = self.emj.get(v, self.emj['shield'])
-        static = chk.get('details', {}).get('static', {})
-        fnds = static.get('findings', {})
-        lines = [f"{v_icon} <b>{self.strings['v_aud_hdr'].format(name=m_name)}</b>\n", f"{self.emj['shield']} <b>{self.strings['v_aud_lvl']}:</b> <code>{chk.get('label', v)}</code> (<code>{chk.get('confidence', 0)}%</code>)"]
-        if static.get('score', '?') != '?' or static.get('risk', 'unknown') != 'unknown':
-            lines.append(f"{self.emj['stats']} <b>{self.strings['v_aud_stat']}:</b> risk <code>{static.get('risk', 'unknown')}</code>, score <code>{static.get('score', '?')}</code>")
-        lines.append(f"{self.emj['description']} <b>{self.strings['v_aud_out']}:</b>\n<blockquote expandable>{chk.get('summary', self.strings['v_aud_no_txt'])}</blockquote>")
-        f_blocks = []
-        for hdr, key in [(self.strings['v_sig_crit'], 'critical'), (self.strings['v_sig_warn'], 'warning'), (self.strings['v_sig_info'], 'info')]:
-            arr = fnds.get(key, [])
-            if arr:
-                f_blocks.append(f'<b>{hdr}</b>: ' + ', '.join((x.get('title', '?') for x in arr)))
-        if f_blocks:
-            lines.append(f"{self.emj['search']} <b>{self.strings['v_aud_sigs']}:</b>\n<blockquote expandable>{chr(10).join(f_blocks)}</blockquote>")
-        remaining = qta.get('remaining', '?')
-        if remaining != '?':
-            lines.append(f"{self.emj['quota']} <i>{self.strings['v_aud_left'].format(remaining=remaining, limit=qta.get('limit', '?'))}</i>")
-        return '\n'.join(lines)
-
-    async def cb_comments(self, cb, m_owner, m_name, i, group, q, pg=0, expanded=False, _comments=None):
-        log.info('cb_comments: name=%s pg=%d cached=%s', m_name, pg, bool(_comments))
-        with suppress(Exception):
-            await cb.answer()
-        if _comments is not None:
-            comments = _comments
-        else:
-            token = await self._get_active_token()
-            if not token:
-                log.warning('cb_comments: no token')
-                with suppress(Exception):
-                    await cb.answer(self.bannote or self.strings['v_err_api'], show_alert=True)
-                return
-            res = await self._net_req('GET', f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/comments", token=token)
-            if not res or not isinstance(res, dict):
-                log.warning('cb_comments: bad response for %s', m_name)
-                with suppress(Exception):
-                    await cb.answer(self.strings['v_talk_err'], show_alert=True)
-                return
-            comments = res.get('comments', [])
-        self._cmt_calls[m_name] = cb
-        log.debug('cb_comments: %d comments for %s', len(comments), m_name)
-        roots = [c for c in comments if not c.get('parent_id')]
-        total_pages = max(1, (len(roots) + 4) // 5)
-        pg = max(0, min(pg, total_pages - 1))
-        prev_pg = (pg - 1) % total_pages if total_pages > 1 else 0
-        next_pg = (pg + 1) % total_pages if total_pages > 1 else 0
-        kb = [[{'text': self.strings['v_btn_wrt'], 'input': self.strings['v_rep_ask'], 'handler': self.cb_post_comment, 'args': (m_owner, m_name, i, group, q, pg, expanded)}]]
-        if total_pages > 1:
-            kb.append([{'text': '◀️', 'callback': self.cb_comments, 'args': (m_owner, m_name, i, group, q, prev_pg, expanded)}, {'text': self.strings['v_page'].format(idx=pg + 1, total=total_pages), 'callback': self.cb_dummy}, {'text': '▶️', 'callback': self.cb_comments, 'args': (m_owner, m_name, i, group, q, next_pg, expanded)}])
-        kb.append([{'text': self.strings['v_btn_code'], 'url': f"{apirt}/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/source"}])
-        kb.append([{'text': self.strings['v_btn_bck'], 'callback': self.cb_nav, 'args': (i, group or [], q, expanded, pg)}])
-        item = group[i] if group and 0 <= i < len(group) else {}
-        await self._answer(cb, self._fmt_comments(comments, m_name, pg), reply_markup=kb, photo=item.get('banner'))
-
-    async def cb_post_comment(self, cb, text, m_owner, m_name, i, group, q, pg=0, expanded=False):
-        log.info('cb_post_comment: name=%s text_len=%d', m_name, len(text) if text else 0)
-        token = await self._get_active_token()
-        if not token:
-            log.warning('cb_post_comment: no token')
-            with suppress(Exception):
-                await cb.answer(self.bannote or self.strings['v_err_api'], show_alert=True)
-            return
-        c_txt = str(text or '').strip()
-        if not c_txt:
-            log.debug('cb_post_comment: empty text, cancelled')
-            with suppress(Exception):
-                await cb.answer(self.strings['v_rep_cncl'], show_alert=True)
-            return
-        if len(c_txt) < 2 or len(c_txt) > 1800:
-            with suppress(Exception):
-                await cb.answer(self.strings['v_rep_min' if len(c_txt) < 2 else 'v_rep_max'], show_alert=True)
-            return
-        with suppress(Exception):
-            await cb.answer(self.strings['v_rep_snt'], show_alert=True)
-        res = await self._net_req('POST', f"/api/modules/{quote(m_owner, safe='')}/{quote(m_name, safe='')}/comments", token=token, json_data={'body': c_txt})
-        if not res:
-            log.warning('cb_post_comment: API error posting to %s', m_name)
-            with suppress(Exception):
-                await cb.answer(self.strings['v_rep_err'], show_alert=True)
-            return
-        log.info('cb_post_comment: posted to %s successfully', m_name)
-        with suppress(Exception):
-            await cb.answer(self.strings['v_rep_ok'], show_alert=True)
-        await asyncio.sleep(1.5)
-        cached = res.get('comments') if isinstance(res, dict) else None
-        orig = self._cmt_calls.get(m_name, cb)
-        await self.cb_comments(orig, m_owner, m_name, i, group, q, pg, expanded, _comments=cached)
-
-    def _fmt_comments(self, comments, m_name, pg=0, pp=5):
-        log.debug('_fmt_comments: name=%s count=%d pg=%d', m_name, len(comments) if comments else 0, pg)
-        h = f"{self.strings['v_talk_hdr'].format(emoji=self.emj['comments'], name=m_name)}\n<b>{self.strings['v_talk_desc']}</b>\n<i>{self.strings['v_talk_num'].format(count=len(comments))}</i>"
-        if not comments:
-            return f"{h}\n\n{self.strings['v_talk_0']}"
-        roots, chmap = ([], {})
-        for c in comments:
-            pid = c.get('parent_id')
-            if pid:
-                chmap.setdefault(str(pid), []).append(c)
-            else:
-                roots.append(c)
-            if c.get('replies'):
-                chmap.setdefault(str(c.get('id')), []).extend(c['replies'])
-        total_pages = max(1, (len(roots) + pp - 1) // pp)
-        pg = max(0, min(pg, total_pages - 1))
-        start, end = (pg * pp, min((pg + 1) * pp, len(roots)))
-        page_roots = roots[start:end]
-        blks = [h]
-        if total_pages > 1:
-            blks.append(f"<i>{self.strings['v_page'].format(idx=pg + 1, total=total_pages)}</i>")
-        for r in page_roots:
-            rid = str(r.get('id'))
-            raw_uname = r.get('author_username')
-            uname = (str(raw_uname).strip() if raw_uname else '').lstrip('@')
-            meta = [f'@{html.escape(uname)}'] if uname else []
-            ts = str(r.get('created_at') or '').replace('T', ' ').replace('Z', '').strip()
-            if ts:
-                meta.append(html.escape(ts))
-            meta_str = f" <i>{' · '.join(meta)}</i>" if meta else ''
-            edit_mark = ' *' if r.get('can_edit') else ''
-            auth = f"<b>{html.escape(r.get('author_name') or r.get('author_username') or 'Unknown')}</b>{edit_mark}{meta_str}"
-            blks.append(f"╭─ {auth}\n╰─\n<blockquote>{html.escape(str(r.get('body', '')))}</blockquote>")
-            subs = chmap.get(rid, [])
-            for s in subs:
-                raw_s_uname = s.get('author_username')
-                s_uname = (str(raw_s_uname).strip() if raw_s_uname else '').lstrip('@')
-                s_meta = [f'@{html.escape(s_uname)}'] if s_uname else []
-                s_ts = str(s.get('created_at') or '').replace('T', ' ').replace('Z', '').strip()
-                if s_ts:
-                    s_meta.append(html.escape(s_ts))
-                s_meta_str = f" <i>{' · '.join(s_meta)}</i>" if s_meta else ''
-                s_edit_mark = ' *' if s.get('can_edit') else ''
-                s_auth = f"<b>{html.escape(s.get('author_name') or s.get('author_username') or 'Unknown')}</b>{s_edit_mark}{s_meta_str}"
-                blks.append(f"  {self.emj['reply']} {s_auth}\n<blockquote>{html.escape(str(s.get('body', '')))}</blockquote>")
-        return '\n\n'.join(blks)
+            raise ValueError(ctx.state.get('ban_notice', '') or ctx.t('vector.v_err_api'))
+        url = platform_url(url)
+        parsed = urlparse(url)
+        if parsed.scheme != 'https' or parsed.netloc != urlparse(apirt).netloc or not parsed.path.startswith('/modules/') or not parsed.path.endswith('/source'):
+            raise ValueError('Expected a Vector Hotaru source endpoint')
+        body, status = await net_req(ctx, 'GET', url, token=token, as_bytes=True)
+        if status != 200 or not body:
+            raise ValueError('Module download failed')
+        source = body.decode('utf-8-sig')
+        tree = ast.parse(source)
+        first = tree.body[0] if tree.body else None
+        if not isinstance(first, ast.Assign) or not any(isinstance(t, ast.Name) and t.id == 'HOTARU' for t in first.targets):
+            raise ValueError('Not a native Hotaru .hmod')
+        metadata = ast.literal_eval(first.value)
+        module_id = metadata.get('id')
+        if not isinstance(module_id, str) or not re.fullmatch('[a-z][a-z0-9_]{0,63}', module_id):
+            raise ValueError('Invalid Hotaru module identity')
+        if name.casefold() == 'vector' and module_id != 'vector':
+            raise ValueError('Vector update identity mismatch')
+        result = await ctx.modules.load(text=source)
+        action = result.get('action', '')
+        inventory = ctx.state.get('vector_inventory', {})
+        inventory[module_id] = {'url': url, 'name': name, 'digest': hashlib.sha256(body).hexdigest(), 'pending': action == 'confirm'}
+        if action == 'confirm':
+            ctx.state.set('vector_inventory', inventory)
+            upload = await ctx.upload_file(source.encode(), file_name=module_id + '.hmod')
+            media = ctx.file_media(upload, file_name=module_id + '.hmod')
+            await ctx.tg.call('messages.sendMedia', {'peer': ctx.chat_id, 'media': media, 'message': 'Hotaru capability approval required. Reply with ' + str(ctx.prefix) + 'ld to review requested permissions. No permissions were granted.', 'random_id': secrets.randbits(63)})
+            return 'confirm', ', '.join(result.get('capabilities', []))
+        if action not in ('loaded', 'reloaded', 'updated', 'installed', 'activated'):
+            raise ValueError('Module activation: ' + action)
+        ctx.state.set('vector_inventory', inventory)
+        return 'ok', ''
+    except Exception as exc:
+        log.warning('Install %s failed: %s', name, exc)
+        return 'error', str(exc)
 
 
-_instance = Vector()
-Vector.strings = _Strings(Vector.strings)
+async def show(ctx, text, rows=None):
+    await ctx.screens.show({'text': text, 'rows': rows or [], 'rich': True})
+
+
+def button(ctx, text, session, action, **values):
+    return ctx.ui.button(text, 'vector_action', {'session': session, 'action': action, **values})
+
+
+def save_session(ctx, value):
+    key = secrets.token_urlsafe(12)
+    value = {**value, 'language': ctx.i18n.language, 'config': dict(ctx.config), 'prefix': str(ctx.prefix), 'created': time.time()}
+    ctx.state.set('menu:' + key, value)
+    _sessions[key] = ctx
+    return key
+
+
+def card(ctx, key, state):
+    group = state['group']
+    idx = max(0, min(int(state.get('index', 0)), len(group) - 1))
+    item = group[idx]
+    source = module_url(item['owner'], item['name'])
+    rows = [[{'text': ctx.t('vector.v_btn_copy'), 'copy_text': state['query']}, button(ctx, ctx.t('vector.v_btn_dl'), key, 'install'), {'text': ctx.t('vector.v_btn_code'), 'url': source}], [button(ctx, '👍 ' + str(item['likes']), key, 'like'), button(ctx, '👎 ' + str(item['dislikes']), key, 'dislike')]]
+    if len(group) > 1:
+        rows.append([button(ctx, '◀️', key, 'nav', index=(idx - 1) % len(group)), button(ctx, ctx.t('vector.v_page', idx=idx + 1, total=len(group)), key, 'list'), button(ctx, '▶️', key, 'nav', index=(idx + 1) % len(group))])
+    rows.append([button(ctx, ctx.t('vector.v_btn_col' if state.get('expanded') else 'vector.v_btn_exp'), key, 'toggle')])
+    if state.get('expanded'):
+        rows.append([button(ctx, ctx.t('vector.v_btn_talk'), key, 'comments'), button(ctx, ctx.t('vector.v_btn_sec'), key, 'audit')])
+    return build_html(ctx, item, idx + 1, len(group)), rows
+
 
 async def command_vector(ctx, invocation):
-    token = _ctx.set(ctx)
-    try:
-        await _instance.vectorcmd(_Message(ctx))
-        return None
-    finally:
-        _ctx.reset(token)
+    query = invocation.raw_args.strip()
+    if not query:
+        return await ctx.respond(ctx.t('vector.v_err_empty', p=html.escape(str(ctx.prefix))))
+    if len(query) > 120:
+        return await ctx.respond(ctx.t('vector.v_err_len'))
+    await ctx.respond('<figure><img src="https://raw.githubusercontent.com/sepiol026-wq/GoyModules/refs/heads/main/assets/vsearch.png"/></figure>\n' + EMOJI['search'] + ' ' + ctx.t('vector.v_loading_ui'), rich=True)
+    token = await get_active_token(ctx)
+    if not token:
+        return await ctx.respond(ctx.state.get('ban_notice', '') or ctx.t('vector.v_err_api'))
+    result = None
+    for attempt in range(2):
+        result, status = await net_req(ctx, 'GET', '/api/search', token=token, params={'q': query, 'limit': ctx.config.get('limit', 30), 'lang': detect_lang_suffix(ctx)})
+        if result is not None:
+            break
+        if status == 401:
+            token = await get_active_token(ctx, force=True)
+            if not token:
+                break
+    group = result.get('results', []) if isinstance(result, dict) else result or []
+    group = [normalize_module(ctx, item) for item in group if isinstance(item, dict) and item.get('platform', 'hotaru') == 'hotaru']
+    if not group:
+        return await ctx.respond(ctx.t('vector.v_err_api') if result is None else ctx.t('vector.v_err_404', q=html.escape(query)))
+    key = save_session(ctx, {'group': group, 'query': query, 'index': 0, 'expanded': False, 'page': 0})
+    text, rows = card(ctx, key, ctx.state.get('menu:' + key))
+    await show(ctx, text, rows)
 
-async def command_vecupdate(ctx, invocation):
-    token = _ctx.set(ctx)
-    try:
-        await _instance.vecupdate(_Message(ctx))
-        return None
-    finally:
-        _ctx.reset(token)
-
-async def command_vecdl(ctx, invocation):
-    token = _ctx.set(ctx)
-    try:
-        await _instance.vecdlcmd(_Message(ctx))
-        return None
-    finally:
-        _ctx.reset(token)
 
 async def command_vecme(ctx, invocation):
-    token = _ctx.set(ctx)
-    try:
-        await _instance.vecmecmd(_Message(ctx))
-        return None
-    finally:
-        _ctx.reset(token)
+    info, status = await net_req(ctx, 'GET', '/api/tg-bot')
+    username = str((info or {}).get('username', '')).strip().lstrip('@')
+    if not re.fullmatch('[A-Za-z0-9_]+', username):
+        return await ctx.respond(ctx.t('vector.v_err_api'))
+    await show(ctx, EMOJI['shield'] + ' <b>' + ctx.t('vector.v_miniapp_title') + '</b>\n\n' + ctx.t('vector.v_miniapp_body'), [[{'text': ctx.t('vector.v_miniapp_btn'), 'url': 'https://t.me/' + username + '/vector?startapp=hotaru'}, ctx.ui.close(ctx.t('vector.v_upd_cancel'))]])
 
-async def watch_inputs(ctx, invocation):
-    return await _consume_input(ctx)
 
-async def watch_install(ctx, invocation):
-    token = _ctx.set(ctx)
-    try:
-        return await _instance.vector_install_payload_watcher(_Message(ctx))
-    finally:
-        _ctx.reset(token)
+async def command_vecupdate(ctx, invocation):
+    url = module_url('sepiol026-wq', 'Vector')
+    if not any(arg in ('-f', '--force') for arg in invocation.args):
+        await ctx.respond(ctx.t('vector.v_upd_check'))
+        token = await get_active_token(ctx)
+        body, status = await net_req(ctx, 'GET', url, token=token, as_bytes=True)
+        if not body:
+            return await ctx.respond(ctx.t('vector.v_upd_err'))
+        local = await ctx.modules.info('vector')
+        if hashlib.sha256(body).hexdigest() == local.get('digest'):
+            key = save_session(ctx, {'update': url})
+            return await show(ctx, ctx.t('vector.v_upd_same'), [[button(ctx, ctx.t('vector.v_upd_force_btn'), key, 'update'), ctx.ui.close(ctx.t('vector.v_upd_cancel'))]])
+    status, detail = await safe_install(ctx, 'Vector', url)
+    await ctx.respond(ctx.t('vector.v_upd_ok' if status == 'ok' else 'vector.v_upd_err') if status != 'confirm' else 'Hotaru permission review required; .hmod exported.')
+
+
+async def command_vecdl(ctx, invocation):
+    raw = invocation.raw_args.strip()
+    slug = raw.split('/collections/')[-1].split('/')[0].split('?')[0] if '/collections/' in raw else raw
+    if not slug:
+        return await ctx.respond(ctx.t('vector.v_vecdl_usage', p=html.escape(str(ctx.prefix))))
+    token = await get_active_token(ctx)
+    result, status = await net_req(ctx, 'GET', '/api/collections/' + quote(slug, safe=''), token=token)
+    if not result or not result.get('ok'):
+        return await ctx.respond(ctx.t('vector.v_dlcoll_not_found'))
+    collection = result['collection']
+    modules = [entry['module'] for entry in collection.get('modules', []) if isinstance(entry.get('module'), dict) and entry['module'].get('platform', 'hotaru') == 'hotaru']
+    if not modules:
+        return await ctx.respond(ctx.t('vector.v_dlcoll_empty'))
+    limit = ctx.config.get('max_batch', 50)
+    key = save_session(ctx, {'collection': modules, 'name': collection.get('name', slug)})
+    text = ctx.t('vector.v_dlcoll_hdr', name=html.escape(collection.get('name', slug))) + '\n' + ctx.t('vector.v_dlcoll_count', count=min(len(modules), limit))
+    if len(modules) > limit:
+        text += '\n' + ctx.t('vector.v_dlcoll_max_batch', total=len(modules), max=limit)
+    await show(ctx, text, [[button(ctx, ctx.t('vector.v_btn_dl'), key, 'collection'), ctx.ui.close(ctx.t('vector.v_upd_cancel'))]])
+
+
+async def sync_inventory(ctx):
+    token = await get_active_token(ctx)
+    if not token:
+        return False
+    tracked = ctx.state.get('vector_inventory', {})
+    modules = []
+    for module in await ctx.modules.list():
+        record = tracked.get(module['module_id'])
+        if record and module.get('active') and module.get('digest'):
+            modules.append({'class_name': record['name'], 'module_id': module['module_id'], 'contentHash': module['digest'], 'language': detect_lang_suffix(ctx), 'platform': 'hotaru'})
+    result, status = await net_req(ctx, 'PUT', '/api/users/me/modules', token=token, json_data={'modules': modules, 'replace_inventory': True, 'platform': 'hotaru'})
+    return bool(result and result.get('ok'))
+
 
 async def task_token_keeper(ctx):
-    token = _ctx.set(ctx)
-    try:
-        return await _instance._token_keeper()
-    finally:
-        _ctx.reset(token)
+    await get_active_token(ctx)
+
 
 async def task_sync_modules_keeper(ctx):
-    token = _ctx.set(ctx)
+    if ctx.config.get('auto_update_notify', True):
+        await sync_inventory(ctx)
+
+
+async def vector_action(call, payload):
+    key = str((payload or {}).get('session', ''))
+    ctx = _sessions.get(key)
+    if ctx is None:
+        return await call.respond('This Vector menu expired. Run .vector again.', alert=True)
+    state = ctx.state.get('menu:' + key)
+    if not state:
+        return await call.respond('This Vector menu expired.', alert=True)
+    action = payload.get('action')
+    if action == 'update':
+        status, detail = await safe_install(ctx, 'Vector', state['update'])
+        return await call.respond(ctx.t('vector.v_upd_ok' if status == 'ok' else 'vector.v_upd_err') if status != 'confirm' else 'Hotaru permission review required; .hmod exported.', alert=True)
+    if action == 'collection':
+        modules = state['collection'][:ctx.config.get('max_batch', 50)]
+        await call.respond(ctx.t('vector.v_dlcoll_start'))
+        successes = 0
+        failed = []
+        for item in modules:
+            status, detail = await safe_install(ctx, item['name'], module_url(item.get('source_owner', 'unknown'), item['name']))
+            successes += status == 'ok'
+            if status != 'ok':
+                failed.append(ctx.t('vector.v_dlcoll_fail_item', name=html.escape(item['name']), reason=html.escape(detail or ('Hotaru permission review required' if status == 'confirm' else ctx.t('vector.v_dl_err')))))
+        result = ctx.t('vector.v_dlcoll_done' if successes == len(modules) else 'vector.v_dlcoll_done_partial' if successes else 'vector.v_dlcoll_done_none')
+        return await call.edit(result + f'\n<b>{successes}/{len(modules)}</b>\n' + '\n'.join(failed), reply_markup=[[ctx.ui.close()]], rich=True)
+    group = state['group']
+    if action == 'nav':
+        state['index'] = int(payload['index']) % len(group)
+    elif action == 'toggle':
+        state['expanded'] = not state.get('expanded')
+    idx = state.get('index', 0)
+    item = group[idx]
+    owner, name = item['owner'], item['name']
+    path = '/api/modules/' + quote(owner, safe='') + '/' + quote(name, safe='')
+    source = module_url(owner, name)
+    back = [[button(ctx, ctx.t('vector.v_btn_bck'), key, 'nav', index=idx)]]
+    if action == 'list':
+        pages = max(1, (len(group) + 4) // 5)
+        page = int(payload.get('page', state.get('page', 0))) % pages
+        state['page'] = page
+        ctx.state.set('menu:' + key, state)
+        rows = [[button(ctx, str(i + 1) + '. ' + m['name'] + ' by ' + m['author'], key, 'nav', index=i)] for i, m in enumerate(group) if page * 5 <= i < (page + 1) * 5]
+        rows.append([button(ctx, '◀️', key, 'list', page=(page - 1) % pages), {'text': ctx.t('vector.v_page', idx=page + 1, total=pages), 'disabled': True}, button(ctx, '▶️', key, 'list', page=(page + 1) % pages)])
+        return await call.edit(EMOJI['modules_list'] + ' ' + ctx.t('vector.v_res_hdr'), reply_markup=rows + back, rich=True)
+    if action in ('like', 'dislike'):
+        token = await get_active_token(ctx)
+        result = None
+        for attempt in range(2):
+            uid = str(parse_jwt(ctx, token).get('sub', ''))
+            result, status = await net_req(ctx, 'POST', '/api/rate/' + quote(uid, safe='') + '/' + quote(owner, safe='') + '/' + quote(name, safe='') + '/' + action, token=token)
+            if result and result.get('ok'):
+                break
+            if attempt == 0:
+                token = await get_active_token(ctx, force=True)
+        if not result or not result.get('ok'):
+            return await call.respond(ctx.t('vector.v_rep_err'), alert=True)
+        likes, dislikes = extract_counts(ctx, result)
+        if likes is not None:
+            item['likes'] = likes
+        if dislikes is not None:
+            item['dislikes'] = dislikes
+        await call.respond(ctx.t('vector.v_fb_rm' if result.get('rating', {}).get('state') == 'removed' else 'vector.v_fb_add'), alert=True)
+    elif action == 'install':
+        status, detail = await safe_install(ctx, name, source)
+        text = ctx.t('vector.v_dl_ok' if status == 'ok' else 'vector.v_dl_err')
+        if status == 'confirm':
+            text = 'Hotaru permission review required; .hmod exported. ' + detail
+        elif detail:
+            text += '\n' + detail
+        return await call.respond(text, alert=True)
+    elif action in ('audit', 'audit_run'):
+        token = await get_active_token(ctx)
+        cached = ctx.state.get('audit:' + owner + '/' + name)
+        if action == 'audit' and cached and cached.get('check'):
+            result, status = cached, 200
+        else:
+            await call.respond(ctx.t('vector.v_aud_proc' if action == 'audit_run' else 'vector.v_aud_req'))
+            result, status = await net_req(ctx, 'POST' if action == 'audit_run' else 'GET', path + '/security-check', token=token, timeout=120)
+        rows = [[{'text': ctx.t('vector.v_btn_code'), 'url': source}]] + back
+        if status == 429:
+            return await call.edit(ctx.t('vector.v_aud_zero'), reply_markup=rows)
+        if not result or status >= 400:
+            return await call.edit(ctx.t('vector.v_aud_err'), reply_markup=rows)
+        if result.get('check'):
+            ctx.state.set('audit:' + owner + '/' + name, result)
+        else:
+            rows.insert(0, [button(ctx, ctx.t('vector.v_btn_aud_run'), key, 'audit_run')])
+        return await call.edit(fmt_sec(ctx, html.escape(name), result), reply_markup=rows, rich=True)
+    elif action == 'comments':
+        state['comments_page'] = int(payload.get('page', state.get('comments_page', 0)))
+        ctx.state.set('menu:' + key, state)
+        text, rows = await comments_screen(ctx, key, state)
+        await show(ctx, text, rows)
+        return await call.respond()
+    ctx.state.set('menu:' + key, state)
+    text, rows = card(ctx, key, state)
+    await call.edit(text, reply_markup=rows, rich=True)
+    if action not in ('like', 'dislike'):
+        await call.respond()
+
+
+async def comments_screen(ctx, key, state, comments=None):
+    item = state['group'][state['index']]
+    owner, name = item['owner'], item['name']
+    if comments is None:
+        token = await get_active_token(ctx)
+        result, status = await net_req(ctx, 'GET', '/api/modules/' + quote(owner, safe='') + '/' + quote(name, safe='') + '/comments', token=token)
+        if not isinstance(result, dict):
+            return ctx.t('vector.v_talk_err'), [[button(ctx, ctx.t('vector.v_btn_bck'), key, 'nav', index=state['index'])]]
+        comments = result.get('comments', [])
+    pages = max(1, (len([c for c in comments if not c.get('parent_id')]) + 4) // 5)
+    page = max(0, min(state.get('comments_page', 0), pages - 1))
+    rows = [[{'text': ctx.t('vector.v_btn_wrt'), 'k': 'input', 'm': 'vector', 'f': 'comment_submit', 'p': ctx.t('vector.v_rep_ask'), 'a': {'session': key}}]]
+    if pages > 1:
+        rows.append([button(ctx, '◀️', key, 'comments', page=(page - 1) % pages), {'text': ctx.t('vector.v_page', idx=page + 1, total=pages), 'disabled': True}, button(ctx, '▶️', key, 'comments', page=(page + 1) % pages)])
+    rows += [[{'text': ctx.t('vector.v_btn_code'), 'url': module_url(owner, name)}], [button(ctx, ctx.t('vector.v_btn_bck'), key, 'nav', index=state['index'])]]
+    text = fmt_comments(ctx, comments, html.escape(name), page)
+    if item.get('banner'):
+        text = '<figure><img src="' + html.escape(item['banner'], quote=True) + '"/></figure>\n' + text
+    return text, rows
+
+
+async def comment_submit(ctx, nav):
+    key = nav.arg('session')
+    state = ctx.state.get('menu:' + key)
+    text = str(nav.value or '').strip()
+    if not state:
+        return ctx.t('vector.v_rep_err')
+    if len(text) < 2 or len(text) > 1800:
+        return ctx.t('vector.v_rep_min' if len(text) < 2 else 'vector.v_rep_max')
+    item = state['group'][state['index']]
+    token = await get_active_token(ctx)
+    result, status = await net_req(ctx, 'POST', '/api/modules/' + quote(item['owner'], safe='') + '/' + quote(item['name'], safe='') + '/comments', token=token, json_data={'body': text})
+    if not result or status >= 400:
+        return ctx.t('vector.v_rep_err')
+    text, rows = await comments_screen(ctx, key, state, result.get('comments'))
+    return ctx.screens.screen(text, rows, rich=True, toast=ctx.t('vector.v_rep_ok'))
+
+
+async def watcher_install(ctx, invocation):
+    data = ctx._msg
+    text = str(data.get('text') or data.get('message') or '').strip()
+    if data.get('out') or not ctx.config.get('VectorInstall', True) or not text.startswith('#v_payload_hotaru:'):
+        return
+    sender = data.get('from_id')
+    sender = sender.get('user_id') if isinstance(sender, dict) else sender
+    bot_id = ctx.state.get('bot_id', 0)
+    if not bot_id:
+        info, status = await net_req(ctx, 'GET', '/api/tg-bot')
+        username = str((info or {}).get('username', '')).strip().lstrip('@')
+        if not username:
+            return
+        bot = await ctx.resolve(username)
+        bot_id = int(bot.get('id') or bot.get('user_id') or 0)
+        ctx.state.set('bot_id', bot_id)
+    if not bot_id or sender != bot_id:
+        return
+    parts = text.split(':', 4)
+    if len(parts) != 5:
+        return
+    _, owner_module, action, stamp, signature = parts
+    if not owner_module or action not in ('install', 'update', 'like', 'dislike') or not stamp.isdigit():
+        return
+    await ensure_time_synced(ctx)
+    if abs(now(ctx) - int(stamp)) > 60:
+        return
+    expected = hmac.new(auths.encode(), f'{owner_module}:{action}:{stamp}'.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        return
+    if ctx.state.get('payload:' + signature):
+        return
+    ctx.state.set('payload:' + signature, int(stamp))
+    for key in ctx.state.keys():
+        if key.startswith('payload:') and now(ctx) - ctx.state.get(key, 0) > 120:
+            ctx.state.delete(key)
+    owner, name = owner_module.split('|', 1) if '|' in owner_module else ('unknown', owner_module)
+    if not name or ':' in name:
+        return
+    peer = {'_': 'inputNotifyPeer', 'peer': ctx.chat_id}
+    saved = None
     try:
-        return await _instance._sync_modules_keeper()
+        with suppress(Exception):
+            saved = await ctx.tg.call('account.getNotifySettings', {'peer': peer})
+            await ctx.tg.call('account.updateNotifySettings', {'peer': peer, 'settings': {'_': 'inputPeerNotifySettings', 'mute_until': 2 ** 31 - 1}})
+        with suppress(Exception):
+            await ctx.tg.call('messages.deleteMessages', {'id': [ctx.message_id], 'revoke': True})
+        token = await get_active_token(ctx)
+        status, reason = 'error', ''
+        if not token:
+            status, reason = 'banned', ctx.state.get('ban_notice', '') or 'User is banned'
+        elif action in ('install', 'update'):
+            if action == 'update':
+                result, code = await net_req(ctx, 'GET', '/api/modules/by-id', token=token, params={'id': owner_module})
+                module = (result or {}).get('module', {})
+                owner, name = module.get('source_owner', ''), module.get('name', '')
+            if owner and name:
+                status, reason = await safe_install(ctx, name, module_url(owner, name))
+        else:
+            uid = str(parse_jwt(ctx, token).get('sub', ''))
+            result, code = await net_req(ctx, 'POST', '/api/rate/' + quote(uid, safe='') + '/' + quote(owner, safe='') + '/' + quote(name, safe='') + '/' + action, token=token)
+            status = 'ok' if result and result.get('ok') else 'banned' if code in (401, 403) else 'error'
+        timestamp = int(now(ctx))
+        reason = str(reason).replace(':', ' ').strip()
+        until = 'permanent' if status == 'banned' else ''
+        feedback = f'{owner_module}:{action}:{status}:{timestamp}:{reason}:{until}'
+        signed = hmac.new(auths.encode(), feedback.encode(), hashlib.sha256).hexdigest()
+        with suppress(Exception):
+            await ctx.tg.call('messages.sendMessage', {'peer': ctx.chat_id, 'message': '#v_feedback:' + feedback + ':' + signed, 'random_id': secrets.randbits(63)})
+        with suppress(Exception):
+            await ctx.net(platform_url('/api/tg-bot/install-feedback'), method='POST', json={'owner_module': owner_module, 'status': status, 'reason': reason, 'platform': 'hotaru'}, headers={'x-bot-secret': auths}, timeout=5)
     finally:
-        _ctx.reset(token)
+        if isinstance(saved, dict):
+            settings = {k: v for k, v in saved.items() if k in ('show_previews', 'silent', 'mute_until', 'sound', 'stories_muted', 'stories_hide_sender', 'stories_sound')}
+            with suppress(Exception):
+                await ctx.tg.call('account.updateNotifySettings', {'peer': peer, 'settings': {'_': 'inputPeerNotifySettings', **settings}})

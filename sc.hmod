@@ -1,6 +1,6 @@
 HOTARU = {
     "id": "sc",
-    "requires": ["yt-dlp", "imageio-ffmpeg"],
+    "requires": ["yt-dlp", "imageio-ffmpeg", "Pillow"],
     "version": "4.6",
     "commands": ["sc", "scpl", "scadd", "scrm", "scbatch", "scexport", "scimport"],
     "capabilities": ["net", "shell", "state", "files", "assets"],
@@ -206,7 +206,7 @@ def _t(ctx, key, **fmt):
 
 
 def _esc(text):
-    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace(chr(34), "&quot;").replace("'", "&#x27;")
 
 
 def _btn(ctx, text, cb, payload=None):
@@ -216,7 +216,7 @@ def _btn(ctx, text, cb, payload=None):
 
 async def _fetch_bytes(ctx, url):
     r = await ctx.net(url, method="GET", binary=True, headers=SC_HDRS, timeout=15)
-    if r["status"] != 200:
+    if r["status"] != 200 or r.get("truncated"):
         raise RuntimeError("HTTP " + str(r["status"]))
     import base64
     return base64.b64decode(r["body"], validate=True)
@@ -246,7 +246,7 @@ class Banners:
             return "white"
 
     def _get_font(self, size, font_bytes):
-        return ImageFont.truetype(io.BytesIO(font_bytes), size)
+        return ImageFont.truetype(io.BytesIO(font_bytes), size) if font_bytes else ImageFont.load_default(size=size)
 
     def _prepare_cover(self, size, radius):
         cover = Image.open(io.BytesIO(self.track_cover)).convert("RGBA")
@@ -515,7 +515,10 @@ async def _ensure_visual_assets(ctx, track_info, duration_sec, paths, meta=None)
             return
         with open(paths["thumb"], "wb") as file_obj:
             file_obj.write(cover_bytes)
-    font_bytes = await _get_font_bytes(ctx)
+    try:
+        font_bytes = await _get_font_bytes(ctx)
+    except Exception:
+        font_bytes = None
     banners = Banners(
         title=track_info.get("title", "Unknown"),
         artists=track_info.get("uploader") or track_info.get("channel") or "Unknown",
@@ -551,7 +554,7 @@ async def _get_client_id(ctx, html):
 
 async def _download_soundcloud_track(ctx, track_url, out_path):
     r = await _net_get(ctx, track_url)
-    if r["status"] != 200:
+    if r["status"] != 200 or r.get("truncated"):
         raise ValueError("SoundCloud page not reachable")
     html = r["body"] or ""
     c_id = await _get_client_id(ctx, html)
@@ -634,12 +637,17 @@ async def _run_proc(ctx, cmd, timeout=60):
     cmd = list(cmd)
     dependency_path = os.path.abspath(".media-deps")
     if cmd[:3] == [sys.executable, "-m", "yt_dlp"]:
-        import yt_dlp
-        source = os.path.dirname(yt_dlp.__file__)
+        import importlib.util
+        source = os.path.dirname(importlib.util.find_spec("yt_dlp").origin)
         destination = os.path.join(dependency_path, "yt_dlp")
         if not os.path.exists(destination):
             os.makedirs(dependency_path, exist_ok=True)
-            shutil.copytree(source, destination)
+            for root, _, files in os.walk(source):
+                target = os.path.join(destination, os.path.relpath(root, source))
+                os.makedirs(target, exist_ok=True)
+                for name in files:
+                    with open(os.path.join(root, name), "rb") as src, open(os.path.join(target, name), "wb") as dst:
+                        shutil.copyfileobj(src, dst)
         cmd[0] = "/usr/bin/python3" if os.path.exists("/usr/bin/python3") else sys.executable
     for index, argument in enumerate(cmd):
         if (index and cmd[index - 1] == "--ffmpeg-location") or (index == 0 and "ffmpeg" in os.path.basename(str(argument))):
@@ -648,7 +656,9 @@ async def _run_proc(ctx, cmd, timeout=60):
             elif os.path.isfile(argument):
                 target = os.path.abspath(".media-ffmpeg")
                 if not os.path.exists(target):
-                    shutil.copy2(argument, target)
+                    with open(argument, "rb") as src, open(target, "wb") as dst:
+                        shutil.copyfileobj(src, dst)
+                    os.chmod(target, 0o700)
                 cmd[index] = target
     job = await ctx.cap("shell", {"op": "start", "command": "PYTHONPATH=" + shlex.quote(dependency_path) + " " + " ".join(shlex.quote(str(arg)) for arg in cmd), "timeout": timeout})
     try:
@@ -660,7 +670,7 @@ async def _run_proc(ctx, cmd, timeout=60):
                     return -1, b"", str(state["error"]).encode()
                 return result.get("returncode", -1), (result.get("stdout") or "").encode(), (result.get("stderr") or "").encode()
     finally:
-        await ctx.cap("shell", {"op": "forget", "id": job["id"]})
+        await ctx.cap("shell", {"op": "cancel", "id": job["id"]})
 
 
 def _parse_sc_error(ctx, stderr_bytes):
@@ -686,11 +696,17 @@ def _time_to_sec(t_str):
 
 
 def _ffmpeg_path():
-    try:
-        import imageio_ffmpeg
-        return imageio_ffmpeg.get_ffmpeg_exe()
-    except Exception:
-        return shutil.which("ffmpeg") or "ffmpeg"
+    import importlib.util
+    from pathlib import Path
+    system = shutil.which("ffmpeg")
+    if system:
+        return system
+    spec = importlib.util.find_spec("imageio_ffmpeg")
+    if spec and spec.origin:
+        for binary in (Path(spec.origin).parent / "binaries").glob("ffmpeg-*"):
+            if binary.is_file() and os.access(binary, os.X_OK):
+                return str(binary)
+    return "ffmpeg"
 
 
 async def _ensure_soundcloud_track_cached(ctx, track_info):
@@ -754,7 +770,8 @@ async def _ensure_soundcloud_track_cached(ctx, track_info):
                 "stdout_size": len(stdout or b""),
                 "webpage_url": track_url,
             }
-        shutil.copy(mp3_path, paths["audio"])
+        with open(mp3_path, "rb") as src, open(paths["audio"], "wb") as dst:
+            shutil.copyfileobj(src, dst)
         _write_json_file(paths["meta"], meta)
         await _ensure_visual_assets(ctx, {**track_info, **meta}, duration_sec, paths, meta=meta)
         return paths, meta
@@ -824,7 +841,7 @@ async def _dl_and_send(ctx, call_or_msg, track_info, target_chat_id):
         "track": _esc(track_title),
         "artists": _esc(track_artist),
         "duration": f"{duration_sec//60}:{duration_sec%60:02}",
-        "sc_url": sc_url,
+        "sc_url": _esc(sc_url),
     }
     try:
         caption = ctx.config.get("custom_text", HOTARU["config_schema"]["custom_text"]["default"]).format(**sdata)
@@ -1003,7 +1020,8 @@ async def watcher_global(ctx, invocation):
                 return
             playlists[new_name] = playlists.pop(old_name)
             _set_playlists(ctx, playlists)
-            await ctx.delete()
+            with contextlib.suppress(Exception):
+                await ctx.delete()
             await ctx.respond(_t(ctx, "pl_renamed", old=_esc(old_name), new=_esc(new_name)), parse_mode="HTML")
         return
 
@@ -1020,8 +1038,8 @@ async def watcher_global(ctx, invocation):
             return await ctx.respond(_t(ctx, "trim_gone"), parse_mode="HTML")
         track = playlists[pl_name][track_idx]
         track_id = track.get("id")
-        in_path = os.path.join(STORAGE_DIR, f"{track_id}.mp3")
-        out_path = os.path.join(STORAGE_DIR, f"{track_id}_cut.mp3")
+        in_path = _get_track_paths(track_id)["audio"]
+        out_path = in_path[:-4] + "_cut.mp3"
         if not os.path.exists(in_path):
             return await ctx.respond(_t(ctx, "trim_nofile"), parse_mode="HTML")
         await ctx.respond(_t(ctx, "trim_cut"), parse_mode="HTML")
@@ -1054,10 +1072,10 @@ async def command_scexport(ctx, invocation=None):
 async def command_scimport(ctx, invocation=None):
     reply = await ctx.reply()
     attachment = ctx.reply_attachment
-    if not attachment:
+    if not reply or not attachment:
         return await ctx.respond(_t(ctx, "import_need"), parse_mode="HTML")
     try:
-        downloaded = await ctx.download({"chat_id": ctx.chat_id, "id": reply["id"]})
+        downloaded = await ctx.download_file({"chat_id": ctx.chat_id, "id": reply["id"]})
         with open(downloaded, "rb") as handle:
             new_pl = json.load(handle)
         if not isinstance(new_pl, dict) or any(not isinstance(k, str) or not isinstance(v, list) or any(not isinstance(t, dict) for t in v) for k, v in new_pl.items()):
@@ -1082,7 +1100,7 @@ async def command_scbatch(ctx, invocation):
         return await ctx.respond(_t(ctx, "batch_fmt"), parse_mode="HTML")
     pl_name, url = args.split(" ", 1)
     await ctx.respond(_t(ctx, "batch_parsing"), parse_mode="HTML")
-    cmd = _get_base_dlp_args() + ["--flat-playlist", "--dump-json", url]
+    cmd = _get_base_dlp_args() + ["--yes-playlist", "--flat-playlist", "--dump-json", url]
     ret, stdout, _ = await _run_proc(ctx, cmd, timeout=120)
     if not stdout:
         return await ctx.respond(_t(ctx, "batch_none"), parse_mode="HTML")
@@ -1117,7 +1135,7 @@ async def command_sc(ctx, invocation):
     results = await _search_tracks(ctx, args)
     if not results:
         return await ctx.respond(_t(ctx, "no_tracks"), parse_mode="HTML")
-    call_id = str(ctx.message.id)
+    call_id = f"{ctx.chat_id}:{ctx.message_id}"
     target_chat_id = ctx.chat_id
     SEARCH_CACHE[call_id] = results
     _cleanup_cache()
@@ -1180,7 +1198,7 @@ async def command_scadd(ctx, invocation):
         if not os.path.exists(storage_path):
             temp_raw_path = os.path.join(STORAGE_DIR, f"raw_{track_id}.bin")
             try:
-                await ctx.download({"chat_id": ctx.chat_id, "id": reply["id"]}, destination=temp_raw_path)
+                await ctx.download_file({"chat_id": ctx.chat_id, "id": reply["id"]}, destination=temp_raw_path)
                 cmd = [
                     _ffmpeg_path(), "-y", "-i", temp_raw_path,
                     "-metadata", f"title={title}",

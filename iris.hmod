@@ -869,6 +869,7 @@ _RT = {"peers": {}, "bot_ids": {}}
 
 
 def _t(ctx, key, default="", **params):
+    default = HOTARU["lexicon"]["en"]["strings"].get(key, default)
     try:
         value = ctx.t("iris." + key, default, **params)
     except Exception:
@@ -991,19 +992,8 @@ def _format_dt(ctx, ts):
 
 
 def _lang_code(ctx):
-    try:
-        probe = ctx.t("iris.now", "now")
-    except Exception:
-        probe = "now"
-    if probe == "now":
-        return "en"
-    if probe == "сейчас":
-        return "ru"
-    if probe == "зараз":
-        return "uk"
-    if probe == "今":
-        return "ja"
-    return "ru"
+    language = str(ctx.i18n.language or "ru").split("_")[0]
+    return "jp" if language == "ja" else language
 
 
 def _format_td(ctx, seconds):
@@ -1352,29 +1342,44 @@ def _is_day_top_response(text):
     return "топ дня" in source and "бесед" in source
 
 
-_PROFILE_LOCALIZE = {
-    "en": {
-        "status": {"был недавно": "recently online", "в сети": "online"},
-        "gender": {"не указан": "not set", "не указана": "not set"},
-        "birth": {"не указан": "not set", "не указана": "not set"},
-        "city": {"не указан": "not set", "не указана": "not set"},
-        "rank": {"🙂 ноунейм (0)": "🙂 No-name (0)"},
-    },
-    "uk": {
-        "status": {"был недавно": "був нещодавно", "в сети": "онлайн"},
-        "gender": {"не указан": "не вказано", "не указана": "не вказано"},
-        "birth": {"не указан": "не вказано", "не указана": "не вказано"},
-        "city": {"не указан": "не вказано", "не указана": "не вказано"},
-        "rank": {"🙂 ноунейм (0)": "🙂 Нонейм (0)"},
-    },
-    "ja": {
-        "status": {"был недавно": "最近オンライン", "в сети": "オンライン"},
-        "gender": {"не указан": "未設定", "не указана": "未設定"},
-        "birth": {"не указан": "未設定", "не указана": "未設定"},
-        "city": {"не указан": "未設定", "не указана": "未設定"},
-        "rank": {"🙂 ноунейм (0)": "🙂 ノーネーム (0)"},
-    },
-}
+_PROFILE_LOCALIZE = {'tiktok': {'status': {'был недавно': 'недавно в сети', 'в сети': 'в сети ща'},
+            'gender': {'не указан': 'не пробит', 'не указана': 'не пробит'},
+            'birth': {'не указан': 'не пробит', 'не указана': 'не пробит'},
+            'city': {'не указан': 'не пробит', 'не указана': 'не пробит'},
+            'rank': {'🙂 ноунейм (0)': '🙂 ноунейм skid (0)'}},
+ 'leet': {'status': {'был недавно': 'r3c3n7ly 0nl1n3', 'в сети': '0nl1n3'},
+          'gender': {'не указан': 'n07 537', 'не указана': 'n07 537'},
+          'birth': {'не указан': 'n07 537', 'не указана': 'n07 537'},
+          'city': {'не указан': 'n07 537', 'не указана': 'n07 537'},
+          'rank': {'🙂 ноунейм (0)': '🙂 n0n4m3 (0)'}},
+ 'uwu': {'status': {'был недавно': 'wecentwy onwine', 'в сети': 'onwine uwu'},
+         'gender': {'не указан': 'not set uwu', 'не указана': 'not set uwu'},
+         'birth': {'не указан': 'not set uwu', 'не указана': 'not set uwu'},
+         'city': {'не указан': 'not set uwu', 'не указана': 'not set uwu'},
+         'rank': {'🙂 ноунейм (0)': '🙂 no-name uwu (0)'}},
+ 'en': {'status': {'был недавно': 'recently online', 'в сети': 'online'},
+        'gender': {'не указан': 'not set', 'не указана': 'not set'},
+        'birth': {'не указан': 'not set', 'не указана': 'not set'},
+        'city': {'не указан': 'not set', 'не указана': 'not set'},
+        'rank': {'🙂 ноунейм (0)': '🙂 No-name (0)'}},
+ 'de': {'status': {'был недавно': 'kürzlich online', 'в сети': 'online'},
+        'gender': {'не указан': 'nicht angegeben',
+                   'не указана': 'nicht angegeben'},
+        'birth': {'не указан': 'nicht angegeben',
+                  'не указана': 'nicht angegeben'},
+        'city': {'не указан': 'nicht angegeben',
+                 'не указана': 'nicht angegeben'},
+        'rank': {'🙂 ноунейм (0)': '🙂 No-Name (0)'}},
+ 'jp': {'status': {'был недавно': '最近オンライン', 'в сети': 'オンライン'},
+        'gender': {'не указан': '未設定', 'не указана': '未設定'},
+        'birth': {'не указан': '未設定', 'не указана': '未設定'},
+        'city': {'не указан': '未設定', 'не указана': '未設定'},
+        'rank': {'🙂 ноунейм (0)': '🙂 ノーネーム (0)'}},
+ 'uk': {'status': {'был недавно': 'був нещодавно', 'в сети': 'онлайн'},
+        'gender': {'не указан': 'не вказано', 'не указана': 'не вказано'},
+        'birth': {'не указан': 'не вказано', 'не указана': 'не вказано'},
+        'city': {'не указан': 'не вказано', 'не указана': 'не вказано'},
+        'rank': {'🙂 ноунейм (0)': '🙂 Нонейм (0)'}}}
 
 
 def _localize_profile_value(ctx, value, field):
@@ -1646,6 +1651,8 @@ async def command_irf(ctx, invocation):
         _add_log(ctx, "⛔ Manual stop")
         await ctx.respond(_t(ctx, "farm_stopping", "Autofarm stopped."), parse_mode="HTML")
         return
+    if not start:
+        return
     if st.get("running"):
         await ctx.respond(_t(ctx, "farm_already", "Autofarm is already running."), parse_mode="HTML")
         return
@@ -1797,4 +1804,5 @@ async def command_irreset(ctx, invocation):
     ctx.state.set("bot_loads", {})
     ctx.state.set("bot_loads_updated", 0.0)
     ctx.state.set("active_bot", IRIS_BOTS[0])
+    await _mute_all(ctx, False)
     await ctx.respond(_t(ctx, "reset_done", "Iris data reset completed."), parse_mode="HTML")
