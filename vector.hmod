@@ -1471,11 +1471,13 @@ async def get_active_token(ctx, force=False):
         me = users_list[0] if users_list else {}
         uid = str(me.get('id', ''))
         bot = await ctx.resolve(username)
-        bot_id = int(bot.get('id') or bot.get('user_id') or 0)
+        bot_id = int(bot.get('id') or bot.get('user_id') or 0) if isinstance(bot, dict) else 0
+        bot_hash = int(bot.get('access_hash') or 0) if isinstance(bot, dict) else 0
         if bot_id:
             ctx.state.set('bot_id', bot_id)
         with suppress(Exception):
-            await ctx.tg.call('contacts.unblock', {'id': username})
+            unblock_id = {'_': 'inputPeerUser', 'user_id': bot_id, 'access_hash': bot_hash} if bot_id and bot_hash else username
+            await ctx.tg.call('contacts.unblock', {'id': unblock_id})
         for attempt in range(2):
             history = await ctx.chat_history(peer=username, limit=1)
             last = max((m.get('id', 0) for m in history.get('messages', [])), default=0)
