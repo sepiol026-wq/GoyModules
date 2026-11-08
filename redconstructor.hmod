@@ -399,16 +399,13 @@ def InputNotifyPeer(peer):
     return {'_': 'inputNotifyPeer', 'peer': peer}
 
 
-def InputPeerNotifySettings(**kwargs):
-    return {'_': 'inputPeerNotifySettings', **kwargs}
 
 
-def GetNotifySettingsRequest(peer):
-    return 'account.getNotifySettings', {'peer': peer}
 
 
-def UpdateNotifySettingsRequest(peer, settings):
-    return 'account.updateNotifySettings', {'peer': peer, 'settings': settings}
+
+
+
 
 
 __version__ = ('1', '0', '0')
@@ -670,13 +667,7 @@ def _validate_syntax(code):
     except SyntaxError as e:
         return 'SyntaxError at line {}: {}'.format(e.lineno, e.msg)
 
-def _validate_body_syntax(code):
-    wrapped = 'async def _tmp(self, message):\n'
-    wrapped += _indent(code or 'pass', 4)
-    syntax_error = _validate_syntax(wrapped)
-    if syntax_error:
-        return syntax_error
-    return _validate_runtime_contracts(wrapped, line_offset=1)
+
 
 def _literal(node):
     try:
@@ -1009,16 +1000,7 @@ def _parse_validator_meta(validator, raw):
         return ({'regex': text}, None)
     return ({}, None)
 
-def _validator_expr(cfg):
-    validator = cfg.get('validator', 'String')
-    meta = cfg.get('validator_args') or {}
-    if validator in {'Choice', 'MultiChoice'}:
-        possible_values = meta.get('possible_values') or []
-        return 'loader.validators.{}({})'.format(validator, repr(list(possible_values)))
-    if validator == 'RegExp':
-        regex = meta.get('regex', '')
-        return 'loader.validators.RegExp({})'.format(repr(regex))
-    return 'loader.validators.{}()'.format(validator)
+
 
 def _validate_config_validator(cfg):
     key = cfg.get('key', '?')
@@ -1227,154 +1209,9 @@ def _project_runtime_strings(project):
                     lang_strings[_command_resource_string_key(cmd_name, kind, key)] = _serialize_resource_value(kind, value)
     return strings
 
-def _build_module_code(project, extra_imports=None):
-    meta = project['meta']
-    commands = project['commands']
-    watchers = project.get('watchers', {})
-    loops = project.get('loops', {})
-    dependencies = _parse_dependencies(project.get('dependencies') or [])
-    configs = project['configs']
-    strings = _project_runtime_strings(project)
-    project_langs = _project_languages(project)
-    normalized_name, _ = _normalize_module_name(meta.get('name', 'MyModule'))
-    module_name = meta.get('class_name') or (normalized_name['class_name'] if normalized_name else 'MyModuleMod')
-    visible_name = meta.get('name') or (normalized_name['display_name'] if normalized_name else module_name.removesuffix('Mod'))
-    prefix = meta.get('prefix', '')
-    version_expr = _version_tuple_expr(meta.get('version'))
-    import_lines = _collect_project_imports(project)
-    if extra_imports:
-        import_lines.update(extra_imports)
-    lines = []
-    for meta_comment in (('license', 'IyBMaWNlbnNlOiB7fQ=='), ('developer', 'IyBtZXRhIGRldmVsb3Blcjoge30='), ('banner', 'IyBtZXRhIGJhbm5lcjoge30='), ('pic', 'IyBtZXRhIHBpYzoge30='), ('heroku_min', 'IyBzY29wZSBoZXJva3VfbWluOiB7fQ==')):
-        raw_value = _normalize_meta_text(meta.get(meta_comment[0]))
-        if raw_value:
-            lines.append(_b64decode_text(meta_comment[1]).format(raw_value))
-    if lines:
-        lines.append('')
-    lines.extend(['import json', 'from herokutl.types import Message', 'from .. import loader, translations, utils'])
-    for imp in sorted(import_lines):
-        lines.append(imp)
-    lines += ['', '', '@loader.tds', 'class {}(loader.Module):'.format(module_name)]
-    lines.append('')
 
-    def _fmt_dict(lang_strings, varname):
-        out = ['    {} = {{'.format(varname)]
-        for k, v in lang_strings.items():
-            out.append('        {}: {},'.format(repr(str(k)), repr(str(v))))
-        out.append('    }')
-        return out
-    base = {'name': visible_name}
-    base.update(strings.get('en', {}))
-    lines += _fmt_dict(base, 'strings')
-    lines.append('')
-    if version_expr:
-        lines.append('    __version__ = {}'.format(version_expr))
-        lines.append('')
-    if dependencies:
-        lines.append('    __dependencies__ = {}'.format(repr(dependencies)))
-        lines.append('')
-    for lang in project_langs:
-        if lang == 'en':
-            continue
-        lang_dict = strings.get(lang, {})
-        if lang_dict:
-            lines += _fmt_dict(lang_dict, 'strings_{}'.format(lang))
-            lines.append('')
-    lines += ['    def _ma_lang(self):', '        raw_langs = ""', '        try:', '            raw_langs = self._db.get(translations.__name__, "lang", "en")', '        except Exception:', '            raw_langs = "en"', '        if not isinstance(raw_langs, str):', '            return "en"', '        for lang in raw_langs.split()[::-1]:', '            lang = str(lang).lower().replace("-", "_")', '            if lang == "ua":', '                lang = "uk"', '            if hasattr(type(self), "strings_{}".format(lang)):', '                return lang', '        return "en"', '', '    def _ma_pack(self):', '        base = dict(type(self).strings)', '        lang = self._ma_lang()', '        override = dict(getattr(type(self), "strings_{}".format(lang), {})) if lang != "en" else {}', '        return {**base, **override}', '', '    def _ma_cmd_raw(self, cmd: str, kind: str, key: str, default=None):', '        pack = self._ma_pack()', '        value = pack.get("__cmd__{}__{}__{}".format(cmd, kind, key))', "        if value in (None, ''):", '            return default', '        return value', '', "    def _ma_cmd_text(self, cmd: str, key: str, default: str = '') -> str:", "        value = self._ma_cmd_raw(cmd, 'text', key, default)", '        return str(default if value is None else value)', '', '    def _ma_cmd_list(self, cmd: str, key: str, default=None):', '        default = [] if default is None else default', "        raw = self._ma_cmd_raw(cmd, 'list', key, None)", '        if raw is None:', '            return list(default)', '        try:', '            value = json.loads(raw)', '        except Exception:', '            return list(default)', '        return value if isinstance(value, list) else list(default)', '', '    def _ma_cmd_value(self, cmd: str, key: str, default=None):', "        raw = self._ma_cmd_raw(cmd, 'value', key, None)", '        if raw is None:', '            return default', '        try:', '            return json.loads(raw)', '        except Exception:', '            return default', '']
-    if configs:
-        lines.append('    def __init__(self):')
-        lines.append('        self.config = loader.ModuleConfig(')
-        for cfg in configs:
-            key = cfg['key']
-            default = repr(cfg.get('default', ''))
-            validator = cfg.get('validator', 'String')
-            lines.append('            loader.ConfigValue(')
-            lines.append('                "{}",'.format(key))
-            lines.append('                {},'.format(default))
-            lines.append('                lambda: self.strings("{}_doc"),'.format(key))
-            lines.append('                validator={},'.format(_validator_expr(cfg)))
-            lines.append('            ),')
-        lines.append('        )')
-        lines.append('')
-    for cmd_name, cmd in commands.items():
-        dec_args = []
-        for lang in project_langs:
-            doc = _command_doc(project, cmd_name, lang)
-            if doc:
-                dec_args.append('{}_doc="{}"'.format(lang, str(doc).replace('"', '\\"')))
-        tags = cmd.get('tags', {})
-        for tag_key, tag_value in tags.items():
-            if isinstance(tag_value, str):
-                dec_args.append('{}="{}"'.format(tag_key, tag_value.replace('"', '\\"')))
-            else:
-                dec_args.append('{}={}'.format(tag_key, repr(tag_value)))
-        if dec_args:
-            lines.append('    @loader.command(')
-            for arg in dec_args:
-                lines.append('        {},'.format(arg))
-            lines.append('    )')
-        else:
-            lines.append('    @loader.command()')
-        full_cmd = '{}{}'.format(prefix, cmd_name) if prefix else cmd_name
-        lines.append('    async def {}cmd(self, message: Message):'.format(full_cmd))
-        body = _command_body_source(cmd).strip()
-        if body:
-            for body_line in body.splitlines():
-                lines.append('        ' + body_line)
-        else:
-            lines.append('        pass')
-        lines.append('')
-    for watcher_name, watcher in watchers.items():
-        tags = dict((watcher or {}).get('tags') or {})
-        if tags:
-            lines.append('    @loader.watcher(')
-            for tag_key, tag_value in sorted(tags.items()):
-                if tag_value:
-                    lines.append('        {}=True,'.format(tag_key))
-            lines.append('    )')
-        else:
-            lines.append('    @loader.watcher()')
-        lines.append('    async def {}watcher(self, message: Message):'.format(watcher_name))
-        body = _command_body_source(watcher).strip()
-        if body:
-            for body_line in body.splitlines():
-                lines.append('        ' + body_line)
-        else:
-            lines.append('        pass')
-        lines.append('')
-    for loop_name, loop_meta in loops.items():
-        interval = int((loop_meta or {}).get('interval') or 60)
-        lines.append('    @loader.loop(interval={})'.format(interval))
-        lines.append('    async def {}loop(self):'.format(loop_name))
-        body = _command_body_source(loop_meta).strip()
-        if body:
-            for body_line in body.splitlines():
-                lines.append('        ' + body_line)
-        else:
-            lines.append('        pass')
-        lines.append('')
-    return '\n'.join(lines)
 
-def _build_module_code_with_import_repair(project, *, max_passes=4):
-    resolved_imports = _collect_project_imports(project)
-    code = _build_module_code(project, resolved_imports)
-    err = None
-    for _ in range(max_passes):
-        err = _validate_syntax(code)
-        if not err:
-            err = _validate_runtime_contracts(code)
-        inferred_imports = set(resolved_imports)
-        inferred_imports.update(_ast_detect_imports(code))
-        inferred_imports.update(_missing_name_to_imports(err))
-        if inferred_imports == resolved_imports:
-            break
-        resolved_imports = inferred_imports
-        code = _build_module_code(project, resolved_imports)
-    if err is None:
-        err = _validate_syntax(code)
-        if not err:
-            err = _validate_runtime_contracts(code)
-    return (code, err, resolved_imports)
+
 
 def _provider_base_url(provider, model, custom_base_url=''):
     if custom_base_url.strip():

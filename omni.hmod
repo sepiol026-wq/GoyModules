@@ -53,8 +53,7 @@ HOTARU = {
                 "expired": "<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Кэш устарел.</b> Сделай запрос заново.",
                 "caption": "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Сурс</a>",
             },
-        },
-    },
+        }, 'de': {'name': 'OmniLoad', 'description': 'Universal media downloader — async chunked upload, instant.', 'strings': {'no_args': '<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> <b>Kein URL angegeben.</b>', 'fetching': '<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Ziel wird analysiert...</b>', 'menu': '<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Ziel:</b> <i>{title}</i>\nWählen Sie die Qualität:', 'downloading': '<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Herunterladen & Verarbeiten...</b>', 'uploading': '<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Hochladen zu Telegram...</b>', 'error': '<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Fehler:</b> <code>{error}</code>', 'expired': '<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>Cache abgelaufen.</b> Bitte erneut versuchen.', 'caption': "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>Quelle</a>"}, 'commands': {'omni': {'description': '<url> - Download media (Video/Audio) from any service'}}}, 'jp': {'name': 'OmniLoad', 'description': 'Universal media downloader — async chunked upload, instant.', 'strings': {'no_args': '<tg-emoji emoji-id=5256079005731271025>📟</tg-emoji> <b>URLが提供されていません。</b>', 'fetching': '<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>ターゲットを解析中...</b>', 'menu': '<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>ターゲット:</b> <i>{title}</i>\n品質を選択してください:', 'downloading': '<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>ダウンロードとレンダリング中...</b>', 'uploading': '<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> <b>Telegramにアップロード中...</b>', 'error': '<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>エラー:</b> <code>{error}</code>', 'expired': '<tg-emoji emoji-id=5256054975389247793>📛</tg-emoji> <b>キャッシュの期限切れ。</b> 再試行してください。', 'caption': "<tg-emoji emoji-id=5253651477330667400>🎞</tg-emoji> <b>{title}</b>\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> {author}\n<tg-emoji emoji-id=5253490441826870592>🔗</tg-emoji> <a href='{url}'>ソース</a>"}, 'commands': {'omni': {'description': '<url> - Download media (Video/Audio) from any service'}}}},
 }
 
 # ====================================================================================================================
@@ -77,6 +76,7 @@ import uuid
 
 
 def _t(ctx, key, default="", **params):
+    default = HOTARU["lexicon"]["en"]["strings"].get(key, default)
     try:
         value = ctx.t("omni." + key, default, **params)
     except Exception:

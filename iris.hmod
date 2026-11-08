@@ -426,6 +426,411 @@ HOTARU = {
                 "last_farm_line": "{time} через <b>{bot}</b> (+{coins} i¢)",
                 "start_now": "сейчас"
             }
+        },
+        "de": {
+            "name": "Iris",
+            "description": "Iris control: autofarm, bag, profile, chat tops across five Iris bots with load balancing.",
+            "commands": {
+                "irf": {
+                    "description": "<on/off> | iris autofarm"
+                },
+                "iris": {
+                    "description": "| iris status"
+                },
+                "irlogs": {
+                    "description": "<count/date> | farm logs"
+                },
+                "irbag": {
+                    "description": "| bag"
+                },
+                "irprofile": {
+                    "description": "| profile"
+                },
+                "irsupertop": {
+                    "description": "| super top"
+                },
+                "irdaytop": {
+                    "description": "| day top"
+                },
+                "irreset": {
+                    "description": "| reset data"
+                }
+            },
+            "strings": {
+                "state_on": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Aktiv",
+                "state_off": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Inaktiv",
+                "unknown": "—",
+                "now": "jetzt",
+                "not_yet": "noch nicht",
+                "no_data": "keine Daten",
+                "td_h": "h",
+                "td_m": "m",
+                "td_s": "s",
+                "loading_status": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Iris-Status wird geladen...</b>",
+                "loading_logs": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Logs werden geladen...</b>",
+                "loading_bag": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Tasche wird geladen...</b>",
+                "loading_profile": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Profil wird geladen...</b>",
+                "loading_super_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Super-Chat-Top wird geladen...</b>",
+                "loading_day_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Tages-Chat-Top wird geladen...</b>",
+                "loading_reset": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Moduldaten werden zurückgesetzt...</b>",
+                "checking_load": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Bot-Auslastung wird geprüft...</b>",
+                "farm_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Autofarm läuft bereits.</b>",
+                "farm_started": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris запущен</b>\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Бот: <b>{bot}</b>\n<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Нагрузка: <b>{load}%</b>\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Первый запуск: <b>{first}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Пояс: <b>{tz}</b>",
+                "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Autofarm ist bereits gestoppt.</b>",
+                "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Автофарм остановлен.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Очистка диалога завершена.",
+                "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris — статус</b>",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Фарм: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Аптайм: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Сессия: <b>{session} i¢</b> | Всего: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Фармов в сессии: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Часовой пояс: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Последний: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris-кд: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> План модуля: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Целевой бот: <b>{active_bot}</b>\n\n<b>Загрузка ботов</b>\n{loads}",
+                "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
+                "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
+                "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>Logs sind leer.</b>",
+                "logs_bad_arg": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Формат:</b> <code>.irlogs</code>, <code>.irlogs 10</code>, <code>.irlogs 26.07</code>",
+                "logs_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Логи ({count})</b>",
+                "bag_title": "<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> <b>Мешок</b> ({bot})",
+                "bag_text": "<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Владелец: <b>{owner}</b>\n🍬 Ирисок: <b>{candies}</b> | 🌕 Ирис-голд: <b>{gold}</b>\n☢️ i¢: <b>{icoins}</b> | ✨ Звёздочек: <b>{stars}</b>{bag_extra}",
+                "bag_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить мешок у {bot}:</b>\n<code>{err}</code>",
+                "profile_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Анкета</b> ({bot})",
+                "profile_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить анкету у {bot}:</b>\n<code>{err}</code>",
+                "profile_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Бот вернул пустую анкету.</b>",
+                "profile_text": "{title}\n\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Это <b>{name}</b> ({status})\n🆔 <b>{handle}</b>\n\n⏱ {universe_label}: <b>{since_date}</b> ({since_span})\n👨 Пол: <b>{gender}</b>\n📆 Дата рождения: <b>{birth}</b>\n🗺 Город: <b>{city}</b>\n📊 Активность: <b>{day}</b> | <b>{week}</b> | <b>{month}</b> | <b>{total}</b>\n✨ Звёздность: <b>{rank}</b>\n\n<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> Баланс\n🍬 <b>{candies}</b> | ✨ <b>{stars}</b>\n☢️ <b>{icoins}</b> | 🌕 <b>{gold}</b>\n⭐️ <b>{tg_stars}</b>{profile_extra}",
+                "profile_universe": "Во вселенной Iris",
+                "tg_stars_line": "\n⭐️ Тг-звёзды: <b>{value}</b>",
+                "donate_points_line": "\n🥯 Очки доната: <b>{value}</b>",
+                "super_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Супер Топ Бесед</b> ({bot})",
+                "day_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Топ Дня</b> ({bot})",
+                "top_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось разобрать топ бесед.</b>",
+                "top_join_open": "Войти",
+                "top_join_apply": "Попроситься через {name}",
+                "top_card": "Карточка Iris",
+                "top_entry": "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                "no_response": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нет ответа от {bot}.</b>",
+                "reset_done": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Сброс данных Iris завершён.</b>",
+                "last_farm_line": "{time} через <b>{bot}</b> (+{coins} i¢)",
+                "start_now": "сейчас"
+            }
+        },
+        "neofit": {
+            "name": "Iris",
+            "description": "Iris control: autofarm, bag, profile, chat tops across five Iris bots with load balancing.",
+            "commands": {
+                "irf": {
+                    "description": "<on/off> | iris autofarm"
+                },
+                "iris": {
+                    "description": "| iris status"
+                },
+                "irlogs": {
+                    "description": "<count/date> | farm logs"
+                },
+                "irbag": {
+                    "description": "| bag"
+                },
+                "irprofile": {
+                    "description": "| profile"
+                },
+                "irsupertop": {
+                    "description": "| super top"
+                },
+                "irdaytop": {
+                    "description": "| day top"
+                },
+                "irreset": {
+                    "description": "| reset data"
+                }
+            },
+            "strings": {
+                "state_on": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Работает",
+                "state_off": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> Спит",
+                "unknown": "—",
+                "now": "сейчас",
+                "not_yet": "ещё не было",
+                "no_data": "нет данных",
+                "td_h": "h",
+                "td_m": "m",
+                "td_s": "s",
+                "loading_status": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Собираю движ по Iris...</b>",
+                "loading_logs": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Поднимаю логи...</b>",
+                "loading_bag": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Смотрю твой мешок...</b>",
+                "loading_profile": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Собираю анкету...</b>",
+                "loading_super_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Тащу супер топ...</b>",
+                "loading_day_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Тащу дневной топ...</b>",
+                "loading_reset": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Обнуляю модуль...</b>",
+                "checking_load": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Пробиваю загруженность ботов...</b>",
+                "farm_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже запущен.</b>",
+                "farm_started": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris запущен</b>\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Бот: <b>{bot}</b>\n<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Нагрузка: <b>{load}%</b>\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Первый запуск: <b>{first}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Пояс: <b>{tz}</b>",
+                "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже остановлен.</b>",
+                "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Автофарм остановлен.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Очистка диалога завершена.",
+                "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris — расклад</b>",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Фарм: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Аптайм: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Сессия: <b>{session} i¢</b> | Всего: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Фармов в сессии: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Часовой пояс: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Последний: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris-кд: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> План модуля: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Целевой бот: <b>{active_bot}</b>\n\n<b>Загрузка ботов</b>\n{loads}",
+                "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
+                "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
+                "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>Логи пусты.</b>",
+                "logs_bad_arg": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Формат:</b> <code>.irlogs</code>, <code>.irlogs 10</code>, <code>.irlogs 26.07</code>",
+                "logs_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Логи ({count})</b>",
+                "bag_title": "<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> <b>Мешок</b> ({bot})",
+                "bag_text": "<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Хозяин: <b>{owner}</b>\n🍬 Ириски: <b>{candies}</b> | 🌕 Голд: <b>{gold}</b>\n☢️ Коинов: <b>{icoins}</b> | ✨ Звёзд: <b>{stars}</b>\n⭐️ TG Stars: <b>{tg_stars}</b>{bag_extra}",
+                "bag_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить мешок у {bot}:</b>\n<code>{err}</code>",
+                "profile_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Анкета</b> ({bot})",
+                "profile_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить анкету у {bot}:</b>\n<code>{err}</code>",
+                "profile_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Бот вернул пустую анкету.</b>",
+                "profile_text": "{title}\n\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Это <b>{name}</b> ({status})\n🆔 <b>{handle}</b>\n\n⏱ {universe_label}: <b>{since_date}</b> ({since_span})\n👨 Пол: <b>{gender}</b>\n📆 Дата рождения: <b>{birth}</b>\n🗺 Город: <b>{city}</b>\n📊 Активность: <b>{day}</b> | <b>{week}</b> | <b>{month}</b> | <b>{total}</b>\n✨ Звёздность: <b>{rank}</b>\n\n<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> Баланс\n🍬 <b>{candies}</b> | ✨ <b>{stars}</b>\n☢️ <b>{icoins}</b> | 🌕 <b>{gold}</b>\n⭐️ <b>{tg_stars}</b>{profile_extra}\n\n• твой профиль iris •",
+                "profile_universe": "Во вселенной Iris",
+                "tg_stars_line": "\n⭐️ TG Stars: <b>{value}</b>",
+                "donate_points_line": "\n🥯 Донатки: <b>{value}</b>",
+                "super_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Супер Топ</b> ({bot})",
+                "day_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Дневной Топ</b> ({bot})",
+                "top_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось разобрать топ бесед.</b>",
+                "top_join_open": "Зайти",
+                "top_join_apply": "Попроситься через {name}",
+                "top_card": "Карточка",
+                "top_entry": "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                "no_response": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нет ответа от {bot}.</b>",
+                "reset_done": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Сброс данных Iris завершён.</b>",
+                "last_farm_line": "{time} через <b>{bot}</b> (+{coins} i¢)",
+                "start_now": "сейчас"
+            }
+        },
+        "tiktok": {
+            "name": "Iris",
+            "description": "Iris control: autofarm, bag, profile, chat tops across five Iris bots with load balancing.",
+            "commands": {
+                "irf": {
+                    "description": "<on/off> | iris autofarm"
+                },
+                "iris": {
+                    "description": "| iris status"
+                },
+                "irlogs": {
+                    "description": "<count/date> | farm logs"
+                },
+                "irbag": {
+                    "description": "| bag"
+                },
+                "irprofile": {
+                    "description": "| profile"
+                },
+                "irsupertop": {
+                    "description": "| super top"
+                },
+                "irdaytop": {
+                    "description": "| day top"
+                },
+                "irreset": {
+                    "description": "| reset data"
+                }
+            },
+            "strings": {
+                "state_on": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> вруб",
+                "state_off": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> выруб",
+                "unknown": "—",
+                "now": "сейчас",
+                "not_yet": "ещё не было",
+                "no_data": "нет данных",
+                "td_h": "h",
+                "td_m": "m",
+                "td_s": "s",
+                "loading_status": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Лутаю стату...</b>",
+                "loading_logs": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Тащу лог-дамп...</b>",
+                "loading_bag": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Открываю лут...</b>",
+                "loading_profile": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Пробиваю акк...</b>",
+                "loading_super_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Гружу топ-лутач...</b>",
+                "loading_day_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Гружу дейлик-топ...</b>",
+                "loading_reset": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Делаю вайп...</b>",
+                "checking_load": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Чекаю нагруз...</b>",
+                "farm_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже запущен.</b>",
+                "farm_started": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris стартанул</b>\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Таргет: <b>{bot}</b>\n<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Нагруз: <b>{load}%</b>\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Старт: <b>{first}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> UTC: <b>{tz}</b>",
+                "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже остановлен.</b>",
+                "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Автофарм остановлен.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Очистка диалога завершена.",
+                "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris — skid stat</b>",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Фарм: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Аптайм: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Сессия: <b>{session} i¢</b> | Всего: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Фармов в сессии: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Часовой пояс: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Последний: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris-кд: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> План модуля: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Целевой бот: <b>{active_bot}</b>\n\n<b>Загрузка ботов</b>\n{loads}",
+                "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
+                "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
+                "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>Логи пусты.</b>",
+                "logs_bad_arg": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Формат:</b> <code>.irlogs</code>, <code>.irlogs 10</code>, <code>.irlogs 26.07</code>",
+                "logs_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Логи ({count})</b>",
+                "bag_title": "<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> <b>Лут</b> ({bot})",
+                "bag_text": "<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Хозяин лута: <b>{owner}</b>\n🍬 Ириски: <b>{candies}</b> | 🌕 Голда: <b>{gold}</b>\n☢️ Коины: <b>{icoins}</b> | ✨ Старсы: <b>{stars}</b>\n⭐️ Тг-старсы: <b>{tg_stars}</b>{bag_extra}",
+                "bag_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить мешок у {bot}:</b>\n<code>{err}</code>",
+                "profile_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Профайл</b> ({bot})",
+                "profile_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить анкету у {bot}:</b>\n<code>{err}</code>",
+                "profile_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Бот вернул пустую анкету.</b>",
+                "profile_text": "{title}\n\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Это <b>{name}</b> ({status})\n🆔 <b>{handle}</b>\n\n⏱ {universe_label}: <b>{since_date}</b> ({since_span})\n👨 Пол: <b>{gender}</b>\n📆 Днюха: <b>{birth}</b>\n🗺 Лока: <b>{city}</b>\n📊 Актив: <b>{day}</b> | <b>{week}</b> | <b>{month}</b> | <b>{total}</b>\n✨ Ранг: <b>{rank}</b>\n\n<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> Балик\n🍬 <b>{candies}</b> | ✨ <b>{stars}</b>\n☢️ <b>{icoins}</b> | 🌕 <b>{gold}</b>\n⭐️ <b>{tg_stars}</b>{profile_extra}",
+                "profile_universe": "Во вселенной ириса",
+                "tg_stars_line": "\n⭐️ Тг-старсы: <b>{value}</b>",
+                "donate_points_line": "\n🥯 Донат поинты: <b>{value}</b>",
+                "super_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Супер Топ</b> ({bot})",
+                "day_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Топ Дня</b> ({bot})",
+                "top_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Топ не распарсился.</b>",
+                "top_join_open": "Залететь",
+                "top_join_apply": "Зайти через {name}",
+                "top_card": "Карточка",
+                "top_entry": "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                "no_response": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нет ответа от {bot}.</b>",
+                "reset_done": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Сброс данных Iris завершён.</b>",
+                "last_farm_line": "{time} через <b>{bot}</b> (+{coins} i¢)",
+                "start_now": "сейчас"
+            }
+        },
+        "leet": {
+            "name": "Iris",
+            "description": "Iris control: autofarm, bag, profile, chat tops across five Iris bots with load balancing.",
+            "commands": {
+                "irf": {
+                    "description": "<on/off> | iris autofarm"
+                },
+                "iris": {
+                    "description": "| iris status"
+                },
+                "irlogs": {
+                    "description": "<count/date> | farm logs"
+                },
+                "irbag": {
+                    "description": "| bag"
+                },
+                "irprofile": {
+                    "description": "| profile"
+                },
+                "irsupertop": {
+                    "description": "| super top"
+                },
+                "irdaytop": {
+                    "description": "| day top"
+                },
+                "irreset": {
+                    "description": "| reset data"
+                }
+            },
+            "strings": {
+                "state_on": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> 0N",
+                "state_off": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> 0FF",
+                "unknown": "—",
+                "now": "сейчас",
+                "not_yet": "ещё не было",
+                "no_data": "нет данных",
+                "td_h": "h",
+                "td_m": "m",
+                "td_s": "s",
+                "loading_status": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>L04d1n6 5747u5...</b>",
+                "loading_logs": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>L04d1n6 l065...</b>",
+                "loading_bag": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>L04d1n6 b46...</b>",
+                "loading_profile": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>L04d1n6 pr0f1l3...</b>",
+                "loading_super_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>L04d1n6 5up3r 70p...</b>",
+                "loading_day_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>L04d1n6 d4y 70p...</b>",
+                "loading_reset": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>R353771n6 d474...</b>",
+                "checking_load": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Ch3ck1n6 b07 l04d...</b>",
+                "farm_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже запущен.</b>",
+                "farm_started": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris запущен</b>\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Бот: <b>{bot}</b>\n<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Нагрузка: <b>{load}%</b>\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Первый запуск: <b>{first}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Пояс: <b>{tz}</b>",
+                "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже остановлен.</b>",
+                "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Автофарм остановлен.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Очистка диалога завершена.",
+                "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>1r15 5747u5</b>",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Фарм: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Аптайм: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Сессия: <b>{session} i¢</b> | Всего: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Фармов в сессии: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Часовой пояс: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Последний: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris-кд: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> План модуля: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Целевой бот: <b>{active_bot}</b>\n\n<b>Загрузка ботов</b>\n{loads}",
+                "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
+                "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
+                "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>Логи пусты.</b>",
+                "logs_bad_arg": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Формат:</b> <code>.irlogs</code>, <code>.irlogs 10</code>, <code>.irlogs 26.07</code>",
+                "logs_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Логи ({count})</b>",
+                "bag_title": "<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> <b>B46</b> ({bot})",
+                "bag_text": "<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> 0wn3r: <b>{owner}</b>\n🍬 C4nd135: <b>{candies}</b> | 🌕 60ld: <b>{gold}</b>\n☢️ 1¢: <b>{icoins}</b> | ✨ 574r5: <b>{stars}</b>\n⭐️ 76 574r5: <b>{tg_stars}</b>{bag_extra}",
+                "bag_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить мешок у {bot}:</b>\n<code>{err}</code>",
+                "profile_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Pr0f1l3</b> ({bot})",
+                "profile_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить анкету у {bot}:</b>\n<code>{err}</code>",
+                "profile_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Бот вернул пустую анкету.</b>",
+                "profile_text": "{title}\n\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> 17'5 <b>{name}</b> ({status})\n🆔 <b>{handle}</b>\n\n⏱ {universe_label}: <b>{since_date}</b> ({since_span})\n👨 63nd3r: <b>{gender}</b>\n📆 81r7hd4y: <b>{birth}</b>\n🗺 C17y: <b>{city}</b>\n📊 4c71v17y: <b>{day}</b> | <b>{week}</b> | <b>{month}</b> | <b>{total}</b>\n✨ R4nk: <b>{rank}</b>\n\n<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> 84l4nc3\n🍬 <b>{candies}</b> | ✨ <b>{stars}</b>\n☢️ <b>{icoins}</b> | 🌕 <b>{gold}</b>\n⭐️ <b>{tg_stars}</b>{profile_extra}\n\n• pr0f1l3 53c710n •",
+                "profile_universe": "1r15 un1v3r53",
+                "tg_stars_line": "\n⭐️ 76 574r5: <b>{value}</b>",
+                "donate_points_line": "\n🥯 d0n473 p01n75: <b>{value}</b>",
+                "super_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>5up3r Ch47 70p</b> ({bot})",
+                "day_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>D4y Ch47 70p</b> ({bot})",
+                "top_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>C4n'7 p4r53 ch47 70p.</b>",
+                "top_join_open": "0p3n j01n",
+                "top_join_apply": "45k v14 {name}",
+                "top_card": "C474l06 c4rd",
+                "top_entry": "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                "no_response": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нет ответа от {bot}.</b>",
+                "reset_done": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Сброс данных Iris завершён.</b>",
+                "last_farm_line": "{time} через <b>{bot}</b> (+{coins} i¢)",
+                "start_now": "сейчас"
+            }
+        },
+        "uwu": {
+            "name": "Iris",
+            "description": "Iris control: autofarm, bag, profile, chat tops across five Iris bots with load balancing.",
+            "commands": {
+                "irf": {
+                    "description": "<on/off> | iris autofarm"
+                },
+                "iris": {
+                    "description": "| iris status"
+                },
+                "irlogs": {
+                    "description": "<count/date> | farm logs"
+                },
+                "irbag": {
+                    "description": "| bag"
+                },
+                "irprofile": {
+                    "description": "| profile"
+                },
+                "irsupertop": {
+                    "description": "| super top"
+                },
+                "irdaytop": {
+                    "description": "| day top"
+                },
+                "irreset": {
+                    "description": "| reset data"
+                }
+            },
+            "strings": {
+                "state_on": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> on uwu",
+                "state_off": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> off uwu",
+                "unknown": "—",
+                "now": "сейчас",
+                "not_yet": "ещё не было",
+                "no_data": "нет данных",
+                "td_h": "h",
+                "td_m": "m",
+                "td_s": "s",
+                "loading_status": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Woading iwis status...</b>",
+                "loading_logs": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Woading wogs...</b>",
+                "loading_bag": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Wooking into bag...</b>",
+                "loading_profile": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Woading pwofiwe...</b>",
+                "loading_super_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Woading supew chat top...</b>",
+                "loading_day_top": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Woading day top...</b>",
+                "loading_reset": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Wesetting data...</b>",
+                "checking_load": "<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> <b>Checking bot woad...</b>",
+                "farm_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже запущен.</b>",
+                "farm_started": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iris запущен</b>\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Бот: <b>{bot}</b>\n<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> Нагрузка: <b>{load}%</b>\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Первый запуск: <b>{first}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Пояс: <b>{tz}</b>",
+                "farm_stopped_already": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Автофарм уже остановлен.</b>",
+                "farm_stopping": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Автофарм остановлен.</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Очистка диалога завершена.",
+                "status_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Iwis status uwu</b>",
+                "status": "{title}\n\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Фарм: {state}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Аптайм: <b>{uptime}</b>\n<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> Сессия: <b>{session} i¢</b> | Всего: <b>{total} i¢</b>\n<tg-emoji emoji-id=5253464392850221514>🔃</tg-emoji> Фармов в сессии: <b>{count}</b>\n<tg-emoji emoji-id=5253884483601442590>🔔</tg-emoji> Часовой пояс: <b>{tz}</b>\n\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Последний: {last_farm}\n<tg-emoji emoji-id=5255971360965930740>🕔</tg-emoji> Iris-кд: <b>{cooldown_left}</b> ({cooldown_at})\n<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> План модуля: <b>{planned_left}</b> ({planned_at})\n<tg-emoji emoji-id=5253952855185829086>⚙️</tg-emoji> Целевой бот: <b>{active_bot}</b>\n\n<b>Загрузка ботов</b>\n{loads}",
+                "load_line": "{emoji} <b>{bot}</b>: <b>{load}%</b>",
+                "load_unknown": "{emoji} <b>{bot}</b>: <b>{value}</b>",
+                "logs_empty": "<tg-emoji emoji-id=5256058608931580017>📦</tg-emoji> <b>Логи пусты.</b>",
+                "logs_bad_arg": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Формат:</b> <code>.irlogs</code>, <code>.irlogs 10</code>, <code>.irlogs 26.07</code>",
+                "logs_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Логи ({count})</b>",
+                "bag_title": "<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> <b>Baggy</b> ({bot})",
+                "bag_text": "<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> Ownew: <b>{owner}</b>\n🍬 Candies: <b>{candies}</b> | 🌕 Gowd: <b>{gold}</b>\n☢️ i¢: <b>{icoins}</b> | ✨ Staws: <b>{stars}</b>\n⭐️ TG staws: <b>{tg_stars}</b>{bag_extra}",
+                "bag_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить мешок у {bot}:</b>\n<code>{err}</code>",
+                "profile_title": "<tg-emoji emoji-id=5256230583717079814>📝</tg-emoji> <b>Pwofiwe</b> ({bot})",
+                "profile_error": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Не удалось получить анкету у {bot}:</b>\n<code>{err}</code>",
+                "profile_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Бот вернул пустую анкету.</b>",
+                "profile_text": "{title}\n\n<tg-emoji emoji-id=5255835635704408236>👤</tg-emoji> It's <b>{name}</b> ({status})\n🆔 <b>{handle}</b>\n\n⏱ {universe_label}: <b>{since_date}</b> ({since_span})\n👨 Gendew: <b>{gender}</b>\n📆 Biwthday: <b>{birth}</b>\n🗺 City: <b>{city}</b>\n📊 Activity: <b>{day}</b> | <b>{week}</b> | <b>{month}</b> | <b>{total}</b>\n✨ Stawness: <b>{rank}</b>\n\n<tg-emoji emoji-id=5256094480498436162>🎒</tg-emoji> Bawance\n🍬 <b>{candies}</b> | ✨ <b>{stars}</b>\n☢️ <b>{icoins}</b> | 🌕 <b>{gold}</b>\n⭐️ <b>{tg_stars}</b>{profile_extra}\n\n• pwofiwe section uwu •",
+                "profile_universe": "Iwis univewse",
+                "tg_stars_line": "\n⭐️ TG staws: <b>{value}</b>",
+                "donate_points_line": "\n🥯 Donyate points: <b>{value}</b>",
+                "super_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Supew Chat Top</b> ({bot})",
+                "day_top_title": "<tg-emoji emoji-id=5253877736207821121>🔥</tg-emoji> <b>Day Chat Top</b> ({bot})",
+                "top_empty": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Couldn't pawse chat top uwu.</b>",
+                "top_join_open": "Join nyow",
+                "top_join_apply": "Ask via {name}",
+                "top_card": "Catawog cawd",
+                "top_entry": "▫️ <b>{place}.</b> <b>{name}</b>\n☢️ <b>{coins} i¢</b>\n{join_line}{card_line}",
+                "no_response": "<tg-emoji emoji-id=5253864872780769235>❗️</tg-emoji> <b>Нет ответа от {bot}.</b>",
+                "reset_done": "<tg-emoji emoji-id=5255813619702049821>✅</tg-emoji> <b>Сброс данных Iris завершён.</b>",
+                "last_farm_line": "{time} через <b>{bot}</b> (+{coins} i¢)",
+                "start_now": "сейчас"
+            }
         }
     },
     "rise": "on_startup",
